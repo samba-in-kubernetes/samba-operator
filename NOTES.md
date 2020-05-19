@@ -16,7 +16,7 @@ https://sdk.operatorframework.io/docs/golang/quickstart/
 * operator-sdk add controller --kind SmbService --api-version smbservice.samba.org/v1alpha1
 * kubectl apply -f deploy/crds/smbservice.samba.org_smbservice_crd.yaml
 
-# there was a weirdness in the initialization. fixing it:
+* there was a weirdness in the initialization. fixing it:
 * cp github.com/obnoxxx/samba-operator/pkg/apis/smbservice/v1alpha1/zz_generated.deepcopy.go  pkg/apis/smbservice/v1alpha1/
 
 * operator-sdk build samba-operator
