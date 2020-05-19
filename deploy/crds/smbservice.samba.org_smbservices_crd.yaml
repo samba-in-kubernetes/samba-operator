@@ -30,6 +30,12 @@ spec:
           type: object
         spec:
           description: SmbServiceSpec defines the desired state of SmbService
+          properties:
+            pvcname:
+              description: Name of the PVC this smb service is serving out
+              type: string
+          required:
+          - pvcname
           type: object
         status:
           description: SmbServiceStatus defines the observed state of SmbService
