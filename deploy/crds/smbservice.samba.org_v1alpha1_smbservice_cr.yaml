@@ -1,0 +1,7 @@
+apiVersion: smbservice.samba.org/v1alpha1
+kind: SmbService
+metadata:
+  name: example-smbservice
+spec:
+  # Add fields here
+  size: 3
