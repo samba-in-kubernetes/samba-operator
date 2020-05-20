@@ -42,3 +42,12 @@ https://sdk.operatorframework.io/docs/golang/quickstart/
 * `kubectl create -f deploy/operator.yaml`
 * `kubectl get deployment`
 * `kubectl get pod`
+
+### Implement the mechanism to create smbservice deployments
+
+* edit Reconcile()  in `pkg/controller/smbservice/smbservice_controller.go`
+* `operator-sdk build quay.io/obnox/samba-operator:v0.0.1`
+* `docker push quay.io/obnox/samba-operator:v0.0.1`
+* `kubectl delete pod samba-operator-<TAB>`
+* `kubectl apply -f mysmbservice.yml`
+* `kubectl get pod` ==> see `my-smbservice-$HASH-$HASH`
