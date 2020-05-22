@@ -24,10 +24,10 @@ In order to create the operator, perform the following steps:
 
 ```
 $ kubectl apply -f deploy/crds/smbservice.samba.org_smbservice_crd.yaml
-$ kubectl create -f deploy/service_account.yaml
-$ kubectl create -f deploy/role.yaml
-$ kubectl create -f deploy/role_binding.yaml
-$ kubectl create -f deploy/operator.yaml
+$ kubectl apply -f deploy/service_account.yaml
+$ kubectl apply -f deploy/role.yaml
+$ kubectl apply -f deploy/role_binding.yaml
+$ kubectl apply -f deploy/operator.yaml
 ```
 
 ### Creating your smbservice
