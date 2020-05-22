@@ -1,0 +1,18 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: mypvc2
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 2Mi
+  storageClassName: glusterfile
+---
+apiVersion: smbservice.samba.org/v1alpha1
+kind: SmbService
+metadata:
+  name: "mypvc2-smb"
+spec:
+  pvcname: "mypvc2"
