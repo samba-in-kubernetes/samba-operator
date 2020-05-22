@@ -78,3 +78,15 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - smbpvc.samba.org
+  resources:
+  - '*'
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
