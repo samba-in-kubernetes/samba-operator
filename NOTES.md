@@ -51,3 +51,11 @@ https://sdk.operatorframework.io/docs/golang/quickstart/
 * `kubectl delete pod samba-operator-<TAB>`
 * `kubectl apply -f mysmbservice.yml`
 * `kubectl get pod` ==> see `my-smbservice-$HASH-$HASH`
+
+### Add new type SmbPvc
+
+* `operator-sdk add api --kind SmbPvc --api-version smbpvc.samba.org/v1alpha1`
+* edit `pkg/apis/smbpvc/v1alpha1/smbpvc_types.go`
+* `make generate`
+* `operator-sdk add controller --kind SmbPvc --api-version smbpvc.samba.org/v1alpha1`
+* edit `pkg/controller/smbpvc/smbpvc_controller.go` - adding logic
