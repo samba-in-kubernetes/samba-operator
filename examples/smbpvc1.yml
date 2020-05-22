@@ -1,0 +1,13 @@
+---
+apiVersion: smbpvc.samba.org/v1alpha1
+kind: SmbPvc
+metadata:
+  name: "mysmbpvc1"
+spec:
+  pvc:
+    accessModes:
+      - ReadWriteMany
+    resources:
+      requests:
+        storage: 2Mi
+    storageClassName: glusterfile
