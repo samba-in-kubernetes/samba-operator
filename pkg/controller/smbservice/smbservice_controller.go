@@ -200,7 +200,7 @@ func (r *ReconcileSmbService) deploymentForSmbService(s *smbservicev1alpha1.SmbS
 // belonging to the given smbservice CR name.
 func labelsForSmbService(name string) map[string]string {
 	return map[string]string{
-		"app":          "smbservice",
-		"memcached_cr": name,
+		"app":           "smbservice",
+		"smbservice_cr": name,
 	}
 }
