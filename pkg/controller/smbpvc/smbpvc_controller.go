@@ -4,6 +4,7 @@ import (
 	"context"
 
 	smbpvcv1alpha1 "github.com/obnoxxx/samba-operator/pkg/apis/smbpvc/v1alpha1"
+	smbservicev1alpha1 "github.com/obnoxxx/samba-operator/pkg/apis/smbservice/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -11,7 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	//"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -53,7 +54,15 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	// TODO(user): Modify this to be the types you create that are owned by the primary resource
 	// Watch for changes to secondary resource Pods and requeue the owner SmbPvc
-	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
+	err = c.Watch(&source.Kind{Type: &corev1.PersistentVolumeClaim{}}, &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &smbpvcv1alpha1.SmbPvc{},
+	})
+	if err != nil {
+		return err
+	}
+
+	err = c.Watch(&source.Kind{Type: &smbservicev1alpha1.SmbService{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &smbpvcv1alpha1.SmbPvc{},
 	})
@@ -77,8 +86,7 @@ type ReconcileSmbPvc struct {
 
 // Reconcile reads that state of the cluster for a SmbPvc object and makes changes based on the state read
 // and what is in the SmbPvc.Spec
-// TODO(user): Modify this Reconcile function to implement your Controller logic.  This example creates
-// a Pod as an example
+// TODO(user): Modify this Reconcile function to implement your Controller logic.
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
@@ -100,54 +108,75 @@ func (r *ReconcileSmbPvc) Reconcile(request reconcile.Request) (reconcile.Result
 		return reconcile.Result{}, err
 	}
 
-	// Define a new Pod object
-	pod := newPodForCR(instance)
+	pvcname := instance.Name + "-pvc"
+	svcname := instance.Name + "-svc"
 
-	// Set SmbPvc instance as the owner and controller
-	if err := controllerutil.SetControllerReference(instance, pod, r.scheme); err != nil {
-		return reconcile.Result{}, err
-	}
+	// create PVC as desired
 
-	// Check if this Pod already exists
-	found := &corev1.Pod{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, found)
+	// Check if the pvc already exists, if not create a new one
+	foundPvc := &corev1.PersistentVolumeClaim{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: pvcname, Namespace: instance.Namespace}, foundPvc)
 	if err != nil && errors.IsNotFound(err) {
-		reqLogger.Info("Creating a new Pod", "Pod.Namespace", pod.Namespace, "Pod.Name", pod.Name)
-		err = r.client.Create(context.TODO(), pod)
+		// not found - define a new pvc
+		pvc := pvcForSmbPvc(instance, pvcname)
+		reqLogger.Info("Creating a new Pvc", "Pvc.Name", pvc.Name)
+		err = r.client.Create(context.TODO(), pvc)
 		if err != nil {
+			reqLogger.Error(err, "Failed to create new PVC", "pvc.Namespace", pvc.Namespace, "pvc.Name", pvc.Name)
 			return reconcile.Result{}, err
 		}
-
-		// Pod created successfully - don't requeue
-		return reconcile.Result{}, nil
+		// Pvc created successfully - return and requeue
+		return reconcile.Result{Requeue: true}, nil
 	} else if err != nil {
+		reqLogger.Error(err, "Failed to get PVC")
 		return reconcile.Result{}, err
 	}
 
-	// Pod already exists - don't requeue
-	reqLogger.Info("Skip reconcile: Pod already exists", "Pod.Namespace", found.Namespace, "Pod.Name", found.Name)
+	// create an smbservice on top of the PVC
+
+	foundSvc := &smbservicev1alpha1.SmbService{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: svcname, Namespace: instance.Namespace}, foundSvc)
+	if err != nil && errors.IsNotFound(err) {
+		svc := svcForSmbPvc(instance, svcname, pvcname)
+		reqLogger.Info("Creating a new SmbService", "pvc.Name", pvcname)
+		err = r.client.Create(context.TODO(), svc)
+		if err != nil {
+			reqLogger.Error(err, "Failed to create new SmbService", "svc.Namespace", svc.Namespace, "svc.Name", svc.Name)
+			return reconcile.Result{}, err
+		}
+		// Svc created successfullt - return and requeue
+		return reconcile.Result{Requeue: true}, nil
+	} else if err != nil {
+		reqLogger.Error(err, "Failed to get PVC")
+		return reconcile.Result{}, err
+	}
+
+	// all is in shape - don't requeue
 	return reconcile.Result{}, nil
 }
 
-// newPodForCR returns a busybox pod with the same name/namespace as the cr
-func newPodForCR(cr *smbpvcv1alpha1.SmbPvc) *corev1.Pod {
-	labels := map[string]string{
-		"app": cr.Name,
-	}
-	return &corev1.Pod{
+func pvcForSmbPvc(s *smbpvcv1alpha1.SmbPvc, pvcname string) *corev1.PersistentVolumeClaim {
+	return &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Name + "-pod",
-			Namespace: cr.Namespace,
-			Labels:    labels,
+			Name:      pvcname,
+			Namespace: s.Namespace,
+			//Labels:       pvcLabels,
+			//Annotations:  pvcTemplate.Annotations,
 		},
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{
-				{
-					Name:    "busybox",
-					Image:   "busybox",
-					Command: []string{"sleep", "3600"},
-				},
-			},
+		Spec: *s.Spec.Pvc,
+	}
+}
+
+func svcForSmbPvc(s *smbpvcv1alpha1.SmbPvc, svcname string, pvcname string) *smbservicev1alpha1.SmbService {
+	return &smbservicev1alpha1.SmbService{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      svcname,
+			Namespace: s.Namespace,
+			//Labels:       pvcLabels,
+			//Annotations:  pvcTemplate.Annotations,
+		},
+		Spec: smbservicev1alpha1.SmbServiceSpec{
+			PvcName: pvcname,
 		},
 	}
 }
