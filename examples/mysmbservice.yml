@@ -1,6 +1,6 @@
 apiVersion: smbservice.samba.org/v1alpha1
 kind: SmbService
 metadata:
-  name: my-smbservice
+  name: "smb-mypvc"
 spec:
   pvcname: "mypvc"
