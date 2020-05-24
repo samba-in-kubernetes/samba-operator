@@ -5,10 +5,12 @@ An operator for Samba as a service on PVCs in kubernetes.
 ## Description
 
 This project implements the samba-operator. It it responsible for the
-project defines the `SmbService` custom resource
-([see here](deploy/crds/smbservice.samba.org_smbservice_crd.yaml)).
-This resource describes and SMB service deployment that is created
-for a given PersistentVolumeClaim (PVC).
+the `SmbService` and `SmbPvc` custom resources
+(see [here](deploy/crds/smbservice.samba.org_smbservice_crd.yaml)
+and [here](deploy/crds/smbpvc.samba.org_smbpvc_crd.yaml)).
+`SmbService` describes and SMB service deployment that is created
+for a given PersistentVolumeClaim (PVC) while `SmbPvc` describes a PVC with an
+SmbService.
 
 ## Trying it out
 
@@ -23,6 +25,7 @@ is sufficient.
 In order to create the operator, perform the following steps:
 
 ```
+$ kubectl apply -f deploy/crds/smbpvc.samba.org_smbpvc_crd.yaml
 $ kubectl apply -f deploy/crds/smbservice.samba.org_smbservice_crd.yaml
 $ kubectl apply -f deploy/service_account.yaml
 $ kubectl apply -f deploy/role.yaml
@@ -46,6 +49,24 @@ spec:
 
 And apply it with `kubectl apply -f mysmbservice.yml`.
 You will get a samba container deployment serving out your pvc as share `share`.
+
+For a `SmbPvc` example that uses the minikube gluster storage addon, see
+[examples/smbpvc.yml](examples/smbpvc1.yml). The yaml file looks like this:
+
+```
+apiVersion: smbpvc.samba.org/v1alpha1
+kind: SmbPvc
+metadata:
+  name: "mysmbpvc1"
+spec:
+  pvc:
+    accessModes:
+      - ReadWriteMany
+    resources:
+      requests:
+        storage: 2Mi
+    storageClassName: glusterfile
+```
 
 ## Containers on quay.io
 
