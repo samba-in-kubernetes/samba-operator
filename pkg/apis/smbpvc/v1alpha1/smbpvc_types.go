@@ -16,8 +16,8 @@ type SmbPvcSpec struct {
 
 	// TODO: Unsure yet whether we need the PVC params embedded or under
 	// their own layer...
-	//Pvc *corev1.PersistentVolumeClaim `json:"pvc"`
-	*corev1.PersistentVolumeClaimSpec `json:",inline"`
+	Pvc *corev1.PersistentVolumeClaimSpec `json:"pvc"`
+	//*corev1.PersistentVolumeClaimSpec `json:",inline"`
 }
 
 // SmbPvcStatus defines the observed state of SmbPvc
