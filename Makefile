@@ -14,4 +14,4 @@ build: generate
 push: build
 	docker push $(CONTAINER)
 
-.PHONY: build push
+.PHONY: build push generate generate.k8s generate.crds
