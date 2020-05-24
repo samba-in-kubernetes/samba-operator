@@ -1,5 +1,7 @@
 CONTAINER := quay.io/obnox/samba-operator:v0.0.1
 
+all: build
+
 generate: generate.crds generate.k8s
 
 generate.k8s:
