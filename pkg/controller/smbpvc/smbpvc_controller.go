@@ -12,7 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	//"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -118,7 +118,7 @@ func (r *ReconcileSmbPvc) Reconcile(request reconcile.Request) (reconcile.Result
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: pvcname, Namespace: instance.Namespace}, foundPvc)
 	if err != nil && errors.IsNotFound(err) {
 		// not found - define a new pvc
-		pvc := pvcForSmbPvc(instance, pvcname)
+		pvc := r.pvcForSmbPvc(instance, pvcname)
 		reqLogger.Info("Creating a new Pvc", "Pvc.Name", pvc.Name)
 		err = r.client.Create(context.TODO(), pvc)
 		if err != nil {
@@ -137,7 +137,7 @@ func (r *ReconcileSmbPvc) Reconcile(request reconcile.Request) (reconcile.Result
 	foundSvc := &smbservicev1alpha1.SmbService{}
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: svcname, Namespace: instance.Namespace}, foundSvc)
 	if err != nil && errors.IsNotFound(err) {
-		svc := svcForSmbPvc(instance, svcname, pvcname)
+		svc := r.svcForSmbPvc(instance, svcname, pvcname)
 		reqLogger.Info("Creating a new SmbService", "pvc.Name", pvcname)
 		err = r.client.Create(context.TODO(), svc)
 		if err != nil {
@@ -155,8 +155,8 @@ func (r *ReconcileSmbPvc) Reconcile(request reconcile.Request) (reconcile.Result
 	return reconcile.Result{}, nil
 }
 
-func pvcForSmbPvc(s *smbpvcv1alpha1.SmbPvc, pvcname string) *corev1.PersistentVolumeClaim {
-	return &corev1.PersistentVolumeClaim{
+func (r *ReconcileSmbPvc) pvcForSmbPvc(s *smbpvcv1alpha1.SmbPvc, pvcname string) *corev1.PersistentVolumeClaim {
+	pvc := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      pvcname,
 			Namespace: s.Namespace,
@@ -165,10 +165,15 @@ func pvcForSmbPvc(s *smbpvcv1alpha1.SmbPvc, pvcname string) *corev1.PersistentVo
 		},
 		Spec: *s.Spec.Pvc,
 	}
+
+	// set the smbpvc instance as the owner and controller
+	controllerutil.SetControllerReference(s, pvc, r.scheme)
+
+	return pvc
 }
 
-func svcForSmbPvc(s *smbpvcv1alpha1.SmbPvc, svcname string, pvcname string) *smbservicev1alpha1.SmbService {
-	return &smbservicev1alpha1.SmbService{
+func (r *ReconcileSmbPvc) svcForSmbPvc(s *smbpvcv1alpha1.SmbPvc, svcname string, pvcname string) *smbservicev1alpha1.SmbService {
+	svc := &smbservicev1alpha1.SmbService{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      svcname,
 			Namespace: s.Namespace,
@@ -179,4 +184,9 @@ func svcForSmbPvc(s *smbpvcv1alpha1.SmbPvc, svcname string, pvcname string) *smb
 			PvcName: pvcname,
 		},
 	}
+
+	// set the smbpvc instance as the owner and controller
+	controllerutil.SetControllerReference(s, svc, r.scheme)
+
+	return svc
 }
