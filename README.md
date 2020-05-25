@@ -25,8 +25,8 @@ is sufficient.
 In order to create the operator, perform the following steps:
 
 ```
-$ kubectl apply -f deploy/crds/smbpvc.samba.org_smbpvc_crd.yaml
-$ kubectl apply -f deploy/crds/smbservice.samba.org_smbservice_crd.yaml
+$ kubectl apply -f deploy/crds/smbpvc.samba.org_smbpvcs_crd.yaml
+$ kubectl apply -f deploy/crds/smbservice.samba.org_smbservices_crd.yaml
 $ kubectl apply -f deploy/service_account.yaml
 $ kubectl apply -f deploy/role.yaml
 $ kubectl apply -f deploy/role_binding.yaml
