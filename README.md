@@ -32,7 +32,7 @@ $ ./deploy/install.sh
 Correspondingly, the [uninstall script](deploy/uninstall.sh) will remove all
 traces of the operator and CRDs from the cluster again.
 
-### Creating your smbservice
+### Creating an `SmbService`
 
 If you have a PVC `mypvc`, create a `mysmbservice.yml` file as folows (see
 		[examples/mysmbservice.yml](examples/mysmbservice.yml)):
@@ -49,7 +49,9 @@ spec:
 And apply it with `kubectl apply -f mysmbservice.yml`.
 You will get a samba container deployment serving out your pvc as share `share`.
 
-For a `SmbPvc` example that uses the minikube gluster storage addon, see
+### Creating an `SmbPvc`
+
+For an `SmbPvc` example that uses the minikube gluster storage addon, see
 [examples/smbpvc.yml](examples/smbpvc1.yml). The yaml file looks like this:
 
 ```
