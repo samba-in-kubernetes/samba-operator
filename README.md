@@ -22,16 +22,15 @@ is sufficient.
 
 ### Start the operator
 
-In order to create the operator, perform the following steps:
+In order to install the CRDs and the operator, and start the operator,
+invoke the [install script](deploy/install.sh):
 
 ```
-$ kubectl apply -f deploy/crds/smbpvc.samba.org_smbpvcs_crd.yaml
-$ kubectl apply -f deploy/crds/smbservice.samba.org_smbservices_crd.yaml
-$ kubectl apply -f deploy/service_account.yaml
-$ kubectl apply -f deploy/role.yaml
-$ kubectl apply -f deploy/role_binding.yaml
-$ kubectl apply -f deploy/operator.yaml
+$ ./deploy/install.sh
 ```
+
+Correspondingly, the [uninstall script](deploy/uninstall.sh) will remove all
+traces of the operator and CRDs from the cluster again.
 
 ### Creating your smbservice
 
