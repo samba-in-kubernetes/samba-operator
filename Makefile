@@ -16,4 +16,10 @@ build: generate
 push: build
 	docker push $(CONTAINER)
 
-.PHONY: build push generate generate.k8s generate.crds
+install:
+	./deploy/install.sh
+
+uninstall:
+	./deploy/uninstall.sh
+
+.PHONY: build push generate generate.k8s generate.crds install uninstall
