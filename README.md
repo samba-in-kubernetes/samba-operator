@@ -25,14 +25,15 @@ is sufficient.
 ### Start the operator
 
 In order to install the CRDs and the operator, and start the operator,
-invoke the [install script](deploy/install.sh):
+invoke the [install script](deploy/install.sh) either directly or as
 
 ```
-$ ./deploy/install.sh
+$ make install
 ```
 
-Correspondingly, the [uninstall script](deploy/uninstall.sh) will remove all
-traces of the operator and CRDs from the cluster again.
+Correspondingly, the [uninstall script](deploy/uninstall.sh), also available as
+`make uninstall` will remove all traces of the operator and CRDs from the
+cluster again.
 
 ### Creating an `SmbService`
 
