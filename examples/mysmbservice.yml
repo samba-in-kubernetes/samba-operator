@@ -3,4 +3,4 @@ kind: SmbService
 metadata:
   name: "smb-mypvc"
 spec:
-  pvcname: "mypvc"
+  pvcname: "mypvc1"
