@@ -15,23 +15,28 @@ $(OPERATOR_SDK):
 	hack/ensure-operator-sdk.sh
 
 generate: generate.crds generate.k8s
+.PHONY: generate
 
 generate.k8s: $(OPERATOR_SDK)
 	$(OPERATOR_SDK) generate k8s
+.PHONY: generate.k8s
 
 generate.crds: $(OPERATOR_SDK)
 	$(OPERATOR_SDK) generate crds
+.PHONY: generate.crds
 
 build: $(OPERATOR_SDK) generate
 	$(OPERATOR_SDK) build $(CONTAINER)
+.PHONY: build
 
 push: build
 	docker push $(CONTAINER)
+.PHONY: push
 
 install:
 	./deploy/install.sh
+.PHONY: install
 
 uninstall:
 	./deploy/uninstall.sh
-
-.PHONY: build push generate generate.k8s generate.crds install uninstall
+.PHONY: uninstall
