@@ -10,6 +10,8 @@ export OPERATOR_SDK ?= $(TOOLS_DIR)/operator-sdk-$(OPERATOR_SDK_VERSION)
 export GOROOT ?= $(shell go env GOROOT)
 # use GOPROXY by default to speed up dependency operations
 export GOPROXY ?= https://proxy.golang.org
+# try to set  sane GOPATH if not set
+export GOPATH ?= $(shell cd ../../../.. ; pwd)
 
 all: build
 
