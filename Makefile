@@ -1,5 +1,6 @@
 CONTAINER := quay.io/obnox/samba-operator:v0.0.1
 
+OUTPUT ?= build/_output
 TOOLS_DIR ?= build/_tools
 
 export OPERATOR_SDK_VERSION ?= v0.17.1
@@ -28,6 +29,15 @@ generate.crds: $(OPERATOR_SDK)
 build: $(OPERATOR_SDK) generate
 	$(OPERATOR_SDK) build $(CONTAINER)
 .PHONY: build
+
+clean:
+	rm -rf $(OUTPUT)
+	rm -f go.sum
+.PHONY: clean
+
+realclean: clean
+	rm -rf $(TOOLS_DIR)
+.PHONY: realclean
 
 push: build
 	docker push $(CONTAINER)
