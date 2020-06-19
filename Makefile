@@ -6,6 +6,11 @@ TOOLS_DIR ?= build/_tools
 export OPERATOR_SDK_VERSION ?= v0.17.1
 export OPERATOR_SDK ?= $(TOOLS_DIR)/operator-sdk-$(OPERATOR_SDK_VERSION)
 
+# GOROOT is needed for the operator-sdk to work
+export GOROOT ?= $(shell go env GOROOT)
+# use GOPROXY by default to speed up dependency operations
+export GOPROXY ?= https://proxy.golang.org
+
 all: build
 
 operator-sdk: $(OPERATOR_SDK)
