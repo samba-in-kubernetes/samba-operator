@@ -21,33 +21,40 @@ operator-sdk: $(OPERATOR_SDK)
 $(OPERATOR_SDK):
 	@echo "Ensuring operator-sdk"
 	hack/ensure-operator-sdk.sh
+	@echo "[OK] operator-sdk"
 
 generate: generate.crds generate.k8s
 .PHONY: generate
 
 generate.k8s: $(OPERATOR_SDK)
 	$(OPERATOR_SDK) generate k8s
+	@echo "[OK] generate.k8s"
 .PHONY: generate.k8s
 
 generate.crds: $(OPERATOR_SDK)
 	$(OPERATOR_SDK) generate crds
+	@echo "[OK] generate.crds"
 .PHONY: generate.crds
 
 build: $(OPERATOR_SDK) generate
 	$(OPERATOR_SDK) build $(CONTAINER)
+	@echo "[OK] build"
 .PHONY: build
 
 clean:
 	rm -rf $(OUTPUT)
 	rm -f go.sum
+	@echo "[OK] clean"
 .PHONY: clean
 
 realclean: clean
 	rm -rf $(TOOLS_DIR)
+	@echo "[OK] realclean"
 .PHONY: realclean
 
 push: build
 	docker push $(CONTAINER)
+	@echo "[OK] push"
 .PHONY: push
 
 install:
