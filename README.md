@@ -72,6 +72,41 @@ spec:
     storageClassName: glusterfile
 ```
 
+### Testing it with a Local Connection
+
+Assuming a local Linux-based environment you can test out a connection to the
+container by forwarding the SMB port and using a local install of `smbclient`
+to access the share:
+
+```bash
+$ kubectl get pods              NAME                              READY
+STATUS    RESTARTS   AGE
+my-smbservice-7f779ddc8c-nb6k6    1/1     Running   0          62m
+samba-operator-5758b4dbbf-gk9pk   1/1     Running   0          70m
+$ kubectl port-forward pod/my-smbservice-7f779ddc8c-nb6k6  4455:445
+Forwarding from 127.0.0.1:4455 -> 445
+Forwarding from [::1]:4455 -> 445
+Handling connection for 4455
+```
+
+```
+$ smbclient -p 4455 -U sambauser //localhost/share
+Enter SAMBA\sambauser's password:
+Try "help" to get a list of possible commands.
+smb: \> ls
+.                                   D        0  Fri Aug 28 14:43:26 2020
+..                                  D        0  Fri Aug 28 14:32:53 2020
+x                                   A   359386  Fri Aug 28 14:35:18 2020
+gefcanilant                         A  5141264  Fri Aug 28 14:43:26 2020
+
+4184064 blocks of size 1024. 4141292 blocks available
+smb: \>
+```
+
+Above we forward the normal SMB port to an unprivileged local port, assuming
+you'll be running this as a normal user.
+
+
 ## Containers on quay.io
 
 This operator uses the container built from
