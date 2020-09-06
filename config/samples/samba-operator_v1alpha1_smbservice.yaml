@@ -1,0 +1,7 @@
+apiVersion: samba-operator.samba.org/v1alpha1
+kind: SmbService
+metadata:
+  name: smbservice-sample
+spec:
+  # Add fields here
+  foo: bar

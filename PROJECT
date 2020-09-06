@@ -2,6 +2,10 @@ domain: samba.org
 layout: go.kubebuilder.io/v2
 projectName: samba-operator
 repo: github.com/obnoxxx/samba-operator
+resources:
+- group: samba-operator
+  kind: SmbService
+  version: v1alpha1
 version: 3-alpha
 plugins:
   go.sdk.operatorframework.io/v2-alpha: {}
