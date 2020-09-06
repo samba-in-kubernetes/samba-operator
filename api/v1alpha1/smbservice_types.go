@@ -29,7 +29,8 @@ type SmbServiceSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Foo is an example field of SmbService. Edit SmbService_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// Name of the PVC this smb service is serving out
+	PvcName string `json:"pvcname"`
 }
 
 // SmbServiceStatus defines the observed state of SmbService
