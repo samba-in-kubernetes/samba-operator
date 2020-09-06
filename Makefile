@@ -23,6 +23,14 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
+CONTAINER_CMD ?=
+ifeq ($(CONTAINER_CMD),)
+	CONTAINER_CMD:=$(shell docker version >/dev/null 2>&1 && echo docker)
+endif
+ifeq ($(CONTAINER_CMD),)
+	CONTAINER_CMD:=$(shell podman version >/dev/null 2>&1 && echo podman)
+endif
+
 all: manager
 
 # Run tests
@@ -66,13 +74,15 @@ vet:
 generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
-# Build the docker image
-docker-build: test
-	docker build . -t ${IMG}
+# Build the container image
+docker-build: image-build
+image-build: test
+	$(CONTAINER_CMD) build . -t ${IMG}
 
-# Push the docker image
-docker-push:
-	docker push ${IMG}
+# Push the container image
+docker-push: container-push
+container-push:
+	$(CONTAINER_CMD) push ${IMG}
 
 # find or download controller-gen
 # download controller-gen if necessary
@@ -117,4 +127,4 @@ bundle: manifests
 # Build the bundle image.
 .PHONY: bundle-build
 bundle-build:
-	docker build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
+	$(CONTAINER_CMD) build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
