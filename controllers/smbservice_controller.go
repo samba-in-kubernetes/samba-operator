@@ -68,7 +68,7 @@ func (r *SmbServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 	err = r.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, found)
 	if err != nil && errors.IsNotFound(err) {
 		// not found - define a new deployment
-		dep := r.deploymentForSmbService(instance)
+		dep := r.deploymentForSmbService(instance, instance.Namespace)
 		reqLogger.Info("Creating a new Deployment", "Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
 		err = r.Create(ctx, dep)
 		if err != nil {
@@ -106,7 +106,7 @@ func (r *SmbServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 // deploymentForSmbService returns a smbservice deployment object
-func (r *SmbServiceReconciler) deploymentForSmbService(s *sambaoperatorv1alpha1.SmbService) *appsv1.Deployment {
+func (r *SmbServiceReconciler) deploymentForSmbService(s *sambaoperatorv1alpha1.SmbService, ns string) *appsv1.Deployment {
 	// labels - do I need them?
 	labels := labelsForSmbService(s.Name)
 	smb_volume := s.Spec.PvcName + "-smb"
@@ -114,9 +114,8 @@ func (r *SmbServiceReconciler) deploymentForSmbService(s *sambaoperatorv1alpha1.
 
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: s.Name,
-			// TODO: get namespace from pvc
-			Namespace: "default",
+			Name:      s.Name,
+			Namespace: ns,
 			Labels:    labels,
 		},
 		Spec: appsv1.DeploymentSpec{
