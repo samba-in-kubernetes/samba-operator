@@ -38,6 +38,8 @@ type SmbPvcReconciler struct {
 
 // +kubebuilder:rbac:groups=samba-operator.samba.org,resources=smbpvcs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=samba-operator.samba.org,resources=smbpvcs/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=samba-operator.samba.org,resources=smbservices,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile reads that state of the cluster for a SmbPvc object and makes changes based on the state read
 func (r *SmbPvcReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
