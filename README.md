@@ -47,7 +47,7 @@ If you have a PVC `mypvc`, create a `mysmbservice.yml` file as folows (see
 		[examples/mysmbservice.yml](examples/mysmbservice.yml)):
 
 ```
-apiVersion: smbservice.samba.org/v1alpha1
+apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbService
 metadata:
   name: my-smbservice
@@ -64,7 +64,7 @@ For an `SmbPvc` example that uses the minikube gluster storage addon, see
 [examples/smbpvc.yml](examples/smbpvc1.yml). The yaml file looks like this:
 
 ```
-apiVersion: smbpvc.samba.org/v1alpha1
+apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbPvc
 metadata:
   name: "mysmbpvc1"
