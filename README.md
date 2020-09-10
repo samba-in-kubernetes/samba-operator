@@ -24,16 +24,22 @@ is sufficient.
 
 ### Start the operator
 
-In order to install the CRDs and the operator, and start the operator,
-invoke the [install script](deploy/install.sh) either directly or as
+In order to install the CRDs, other resorces, and start the operator,
+invoke:
 
 ```
-$ make install
+make deploy
 ```
 
-Correspondingly, the [uninstall script](deploy/uninstall.sh), also available as
-`make uninstall` will remove all traces of the operator and CRDs from the
-cluster again.
+To use your own image, use:
+```
+make deploy IMG=<my-registry/and/image:tag>
+```
+
+To delete the operator and CRDs from the cluster, run:
+```
+make delete-deploy
+```
 
 ### Creating an `SmbService`
 
