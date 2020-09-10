@@ -7,10 +7,10 @@ An operator for Samba as a service on PVCs in kubernetes.
 This project implements the samba-operator. It it responsible for the
 the `SmbService` and `SmbPvc` custom resources:
 
-* [`SmbService`](deploy/crds/smbservice.samba.org_smbservice_crd.yaml)
+* [`SmbService`](./config/crd/bases/samba-operator.samba.org_smbservices.yaml)
 describes an SMB service deployment that is created
 for a given PersistentVolumeClaim (PVC).
-* [`SmbPvc`](deploy/crds/smbpvc.samba.org_smbpvc_crd.yaml))
+* [`SmbPvc`](./config/crd/bases/samba-operator.samba.org_smbpvcs.yaml)
 describes a PVC bundled with an SmbService. I.e. you request a pvc along with an
 SmbService. When you delete the `SmbPvc`, the created backend PVC will also be deleted.
 
