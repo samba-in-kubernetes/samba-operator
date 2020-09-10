@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -28,8 +29,10 @@ type SmbPvcSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of SmbPvc. Edit SmbPvc_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// TODO: Unsure yet whether we need the PVC params embedded or under
+	// their own layer...
+	Pvc *corev1.PersistentVolumeClaimSpec `json:"pvc"`
+	//*corev1.PersistentVolumeClaimSpec `json:",inline"`
 }
 
 // SmbPvcStatus defines the observed state of SmbPvc
