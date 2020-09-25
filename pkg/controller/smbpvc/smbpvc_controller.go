@@ -3,16 +3,13 @@ package smbpvc
 import (
 	"context"
 
+	"github.com/obnoxxx/samba-operator/internal/resources"
 	smbpvcv1alpha1 "github.com/obnoxxx/samba-operator/pkg/apis/smbpvc/v1alpha1"
 	smbservicev1alpha1 "github.com/obnoxxx/samba-operator/pkg/apis/smbservice/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -94,99 +91,12 @@ func (r *ReconcileSmbPvc) Reconcile(request reconcile.Request) (reconcile.Result
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling SmbPvc")
 
-	// Fetch the SmbPvc instance
-	instance := &smbpvcv1alpha1.SmbPvc{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			// Request object not found, could have been deleted after reconcile request.
-			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
-			// Return and don't requeue
-			return reconcile.Result{}, nil
-		}
-		// Error reading the object - requeue the request.
-		return reconcile.Result{}, err
+	smbPvcManager := resources.NewSmbPvcManager(
+		r.client, r.scheme, reqLogger)
+	res := smbPvcManager.Update(context.TODO(), request.NamespacedName)
+	err := res.Err()
+	if res.Requeue() {
+		return reconcile.Result{Requeue: true}, err
 	}
-
-	pvcname := instance.Name + "-pvc"
-	svcname := instance.Name + "-svc"
-
-	// create PVC as desired
-
-	// Check if the pvc already exists, if not create a new one
-	foundPvc := &corev1.PersistentVolumeClaim{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: pvcname, Namespace: instance.Namespace}, foundPvc)
-	if err != nil && errors.IsNotFound(err) {
-		// not found - define a new pvc
-		pvc := r.pvcForSmbPvc(instance, pvcname)
-		reqLogger.Info("Creating a new Pvc", "Pvc.Name", pvc.Name)
-		err = r.client.Create(context.TODO(), pvc)
-		if err != nil {
-			reqLogger.Error(err, "Failed to create new PVC", "pvc.Namespace", pvc.Namespace, "pvc.Name", pvc.Name)
-			return reconcile.Result{}, err
-		}
-		// Pvc created successfully - return and requeue
-		return reconcile.Result{Requeue: true}, nil
-	} else if err != nil {
-		reqLogger.Error(err, "Failed to get PVC")
-		return reconcile.Result{}, err
-	}
-
-	// create an smbservice on top of the PVC
-
-	foundSvc := &smbservicev1alpha1.SmbService{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: svcname, Namespace: instance.Namespace}, foundSvc)
-	if err != nil && errors.IsNotFound(err) {
-		svc := r.svcForSmbPvc(instance, svcname, pvcname)
-		reqLogger.Info("Creating a new SmbService", "pvc.Name", pvcname)
-		err = r.client.Create(context.TODO(), svc)
-		if err != nil {
-			reqLogger.Error(err, "Failed to create new SmbService", "svc.Namespace", svc.Namespace, "svc.Name", svc.Name)
-			return reconcile.Result{}, err
-		}
-		// Svc created successfullt - return and requeue
-		return reconcile.Result{Requeue: true}, nil
-	} else if err != nil {
-		reqLogger.Error(err, "Failed to get PVC")
-		return reconcile.Result{}, err
-	}
-
-	// all is in shape - don't requeue
-	return reconcile.Result{}, nil
-}
-
-func (r *ReconcileSmbPvc) pvcForSmbPvc(s *smbpvcv1alpha1.SmbPvc, pvcname string) *corev1.PersistentVolumeClaim {
-	pvc := &corev1.PersistentVolumeClaim{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      pvcname,
-			Namespace: s.Namespace,
-			//Labels:       pvcLabels,
-			//Annotations:  pvcTemplate.Annotations,
-		},
-		Spec: *s.Spec.Pvc,
-	}
-
-	// set the smbpvc instance as the owner and controller
-	controllerutil.SetControllerReference(s, pvc, r.scheme)
-
-	return pvc
-}
-
-func (r *ReconcileSmbPvc) svcForSmbPvc(s *smbpvcv1alpha1.SmbPvc, svcname string, pvcname string) *smbservicev1alpha1.SmbService {
-	svc := &smbservicev1alpha1.SmbService{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      svcname,
-			Namespace: s.Namespace,
-			//Labels:       pvcLabels,
-			//Annotations:  pvcTemplate.Annotations,
-		},
-		Spec: smbservicev1alpha1.SmbServiceSpec{
-			PvcName: pvcname,
-		},
-	}
-
-	// set the smbpvc instance as the owner and controller
-	controllerutil.SetControllerReference(s, svc, r.scheme)
-
-	return svc
+	return reconcile.Result{}, err
 }
