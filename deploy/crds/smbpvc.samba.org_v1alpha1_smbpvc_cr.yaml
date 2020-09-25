@@ -1,7 +1,0 @@
-apiVersion: smbpvc.samba.org/v1alpha1
-kind: SmbPvc
-metadata:
-  name: example-smbpvc
-spec:
-  # Add fields here
-  size: 3
