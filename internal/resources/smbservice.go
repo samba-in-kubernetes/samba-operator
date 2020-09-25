@@ -66,7 +66,7 @@ func (m *SmbServiceManager) Update(ctx context.Context, nsname types.NamespacedN
 	err = m.client.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, found)
 	if err != nil && errors.IsNotFound(err) {
 		// not found - define a new deployment
-		dep := m.deploymentForSmbService(instance)
+		dep := m.deploymentForSmbService(instance, instance.Namespace)
 		m.logger.Info("Creating a new Deployment", "Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
 		err = m.client.Create(ctx, dep)
 		if err != nil {
@@ -97,7 +97,7 @@ func (m *SmbServiceManager) Update(ctx context.Context, nsname types.NamespacedN
 }
 
 // deploymentForSmbService returns a smbservice deployment object
-func (m *SmbServiceManager) deploymentForSmbService(s *smbservicev1alpha1.SmbService) *appsv1.Deployment {
+func (m *SmbServiceManager) deploymentForSmbService(s *smbservicev1alpha1.SmbService, ns string) *appsv1.Deployment {
 	// labels - do I need them?
 	labels := labelsForSmbService(s.Name)
 	smb_volume := s.Spec.PvcName + "-smb"
@@ -105,9 +105,8 @@ func (m *SmbServiceManager) deploymentForSmbService(s *smbservicev1alpha1.SmbSer
 
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: s.Name,
-			// TODO: get namespace from pvc
-			Namespace: "default",
+			Name:      s.Name,
+			Namespace: ns,
 			Labels:    labels,
 		},
 		Spec: appsv1.DeploymentSpec{
