@@ -34,6 +34,14 @@ https://v1-0-x.sdk.operatorframework.io/docs/building-operators/golang/tutorial/
 * Fix up Makefile (some of us don't have a  `docker` command!)
 * `make manifests`
 * `make`
+* `operator-sdk-v1.0.0 create api --group=samba-operator --version=v1alpha1 --kind=SmbPvc --resource --controller`
+* `git show master:pkg/apis/smbpvc/v1alpha1/smbpvc_types.go > orig_smbpvc_types.go.txt`
+* Copy contents of spec and status types to new `smbservice_types.go` file.
+* `git show master:pkg/controller/smbpvc/smbpvc_controller.go > orig_smbpvc_controller.go.txt`
+* Copy significant sections of `orig_smbservice_controller.go.txt` to new `controllers/smbservice_controller.go` file
+* `make manifests`
+* `make`
+
 
 ----------------------------------------------------------------------
 
