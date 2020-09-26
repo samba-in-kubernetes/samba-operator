@@ -18,8 +18,7 @@ package resources
 import (
 	"context"
 
-	smbpvcv1alpha1 "github.com/obnoxxx/samba-operator/pkg/apis/smbpvc/v1alpha1"
-	smbservicev1alpha1 "github.com/obnoxxx/samba-operator/pkg/apis/smbservice/v1alpha1"
+	sambaoperatorv1alpha1 "github.com/obnoxxx/samba-operator/api/v1alpha1"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -48,7 +47,7 @@ func NewSmbPvcManager(client client.Client, scheme *runtime.Scheme, logger Logge
 
 func (m *SmbPvcManager) Update(ctx context.Context, nsname types.NamespacedName) Result {
 	// Fetch the SmbPvc instance
-	instance := &smbpvcv1alpha1.SmbPvc{}
+	instance := &sambaoperatorv1alpha1.SmbPvc{}
 	err := m.client.Get(ctx, nsname, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -87,7 +86,7 @@ func (m *SmbPvcManager) Update(ctx context.Context, nsname types.NamespacedName)
 
 	// create an smbservice on top of the PVC
 
-	foundSvc := &smbservicev1alpha1.SmbService{}
+	foundSvc := &sambaoperatorv1alpha1.SmbService{}
 	err = m.client.Get(ctx, types.NamespacedName{Name: svcname, Namespace: instance.Namespace}, foundSvc)
 	if err != nil && errors.IsNotFound(err) {
 		svc := m.svcForSmbPvc(instance, svcname, pvcname)
@@ -108,7 +107,7 @@ func (m *SmbPvcManager) Update(ctx context.Context, nsname types.NamespacedName)
 	return Done
 }
 
-func (m *SmbPvcManager) pvcForSmbPvc(s *smbpvcv1alpha1.SmbPvc, pvcname string) *corev1.PersistentVolumeClaim {
+func (m *SmbPvcManager) pvcForSmbPvc(s *sambaoperatorv1alpha1.SmbPvc, pvcname string) *corev1.PersistentVolumeClaim {
 	pvc := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      pvcname,
@@ -125,15 +124,15 @@ func (m *SmbPvcManager) pvcForSmbPvc(s *smbpvcv1alpha1.SmbPvc, pvcname string) *
 	return pvc
 }
 
-func (m *SmbPvcManager) svcForSmbPvc(s *smbpvcv1alpha1.SmbPvc, svcname string, pvcname string) *smbservicev1alpha1.SmbService {
-	svc := &smbservicev1alpha1.SmbService{
+func (m *SmbPvcManager) svcForSmbPvc(s *sambaoperatorv1alpha1.SmbPvc, svcname string, pvcname string) *sambaoperatorv1alpha1.SmbService {
+	svc := &sambaoperatorv1alpha1.SmbService{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      svcname,
 			Namespace: s.Namespace,
 			//Labels:       pvcLabels,
 			//Annotations:  pvcTemplate.Annotations,
 		},
-		Spec: smbservicev1alpha1.SmbServiceSpec{
+		Spec: sambaoperatorv1alpha1.SmbServiceSpec{
 			PvcName: pvcname,
 		},
 	}

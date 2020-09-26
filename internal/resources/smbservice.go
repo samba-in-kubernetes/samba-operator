@@ -18,7 +18,7 @@ package resources
 import (
 	"context"
 
-	smbservicev1alpha1 "github.com/obnoxxx/samba-operator/pkg/apis/smbservice/v1alpha1"
+	sambaoperatorv1alpha1 "github.com/obnoxxx/samba-operator/api/v1alpha1"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -48,7 +48,7 @@ func NewSmbServiceManager(client client.Client, scheme *runtime.Scheme, logger L
 
 // Update should be called when a SmbService resource changes.
 func (m *SmbServiceManager) Update(ctx context.Context, nsname types.NamespacedName) Result {
-	instance := &smbservicev1alpha1.SmbService{}
+	instance := &sambaoperatorv1alpha1.SmbService{}
 	err := m.client.Get(ctx, nsname, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -97,7 +97,7 @@ func (m *SmbServiceManager) Update(ctx context.Context, nsname types.NamespacedN
 }
 
 // deploymentForSmbService returns a smbservice deployment object
-func (m *SmbServiceManager) deploymentForSmbService(s *smbservicev1alpha1.SmbService, ns string) *appsv1.Deployment {
+func (m *SmbServiceManager) deploymentForSmbService(s *sambaoperatorv1alpha1.SmbService, ns string) *appsv1.Deployment {
 	// labels - do I need them?
 	labels := labelsForSmbService(s.Name)
 	smb_volume := s.Spec.PvcName + "-smb"
