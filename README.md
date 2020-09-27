@@ -74,7 +74,7 @@ spec:
       - ReadWriteMany
     resources:
       requests:
-        storage: 2Mi
+        storage: 1Gi
     storageClassName: glusterfile
 ```
 
