@@ -134,7 +134,9 @@ func (m *SmbPvcManager) svcForSmbPvc(s *sambaoperatorv1alpha1.SmbPvc, svcname st
 			//Annotations:  pvcTemplate.Annotations,
 		},
 		Spec: sambaoperatorv1alpha1.SmbServiceSpec{
-			PvcName: pvcname,
+			Pvc: sambaoperatorv1alpha1.SmbServicePvcSource{
+				Name: pvcname,
+			},
 		},
 	}
 

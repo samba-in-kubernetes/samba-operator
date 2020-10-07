@@ -64,7 +64,7 @@ func (m *SmbServiceManager) Update(ctx context.Context, nsname types.NamespacedN
 
 	pvcname := types.NamespacedName{
 		Namespace: instance.Namespace,
-		Name:      instance.Spec.PvcName,
+		Name:      instance.Spec.Pvc.Name,
 	}
 	depname := types.NamespacedName{
 		Name:      instance.Name,

@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -28,9 +29,16 @@ type SmbServiceSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of SmbService. Edit SmbService_types.go to remove/update
-	// Name of the PVC this smb service is serving out
-	PvcName string `json:"pvcname"`
+	// PVC this service is exporting over SMB
+	Pvc SmbServicePvcSource `json:"pvc"`
+}
+
+// SmbServicePvcSource defines what data will be exported over SMB
+type SmbServicePvcSource struct {
+	// Name is the name of a PVC not managed as part of the service
+	Name string `json:"name,omitempty"`
+	// Spec is the PVC spec automatically managed as part of the service
+	Spec *corev1.PersistentVolumeClaimSpec `json:"spec,omitempty"`
 }
 
 // SmbServiceStatus defines the observed state of SmbService
