@@ -62,10 +62,30 @@ func (m *SmbServiceManager) Update(ctx context.Context, nsname types.NamespacedN
 		return Done
 	}
 
+	if (instance.Spec.Pvc.Name != "" && instance.Spec.Pvc.Spec != nil) ||
+		(instance.Spec.Pvc.Name == "" && instance.Spec.Pvc.Spec == nil) {
+		// TODO: I didn't see a way to make mutually exclusive options via
+		// the kubebuilder annotations in the docs. This may be a situation
+		// where an admission webhook is needed. That will prevent "invalid"
+		// CRDs from being created. But I'm in favor of keeping double checks
+		// like this in the main logic.
+		return Result{err: ErrInvalidPvc}
+	}
 	pvcname := types.NamespacedName{
 		Namespace: instance.Namespace,
 		Name:      instance.Spec.Pvc.Name,
 	}
+	if instance.Spec.Pvc.Spec != nil {
+		pvcname.Name = instance.Name + "-pvc"
+		_, created, err := m.createPvcIfMissing(ctx, instance, pvcname)
+		if err != nil {
+			return Result{err: err}
+		}
+		if created {
+			return Requeue
+		}
+	}
+
 	depname := types.NamespacedName{
 		Name:      instance.Name,
 		Namespace: instance.Namespace,
@@ -187,4 +207,43 @@ func (m *SmbServiceManager) createDeploymentIfMissing(
 		return nil, false, err
 	}
 	return dep, true, nil
+}
+
+func (m *SmbServiceManager) pvcFromSmbService(s *sambaoperatorv1alpha1.SmbService, nsname types.NamespacedName) *corev1.PersistentVolumeClaim {
+	pvc := &corev1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      nsname.Name,
+			Namespace: nsname.Namespace,
+			//Labels:       pvcLabels,
+			//Annotations:  pvcTemplate.Annotations,
+		},
+		Spec: *s.Spec.Pvc.Spec,
+	}
+	// set the instance as the owner and controller
+	controllerutil.SetControllerReference(s, pvc, m.scheme)
+	return pvc
+}
+
+func (m *SmbServiceManager) createPvcIfMissing(
+	ctx context.Context,
+	s *sambaoperatorv1alpha1.SmbService,
+	nsname types.NamespacedName) (*corev1.PersistentVolumeClaim, bool, error) {
+	// Check if the pvc already exists, if not create a new one
+	pvc := &corev1.PersistentVolumeClaim{}
+	err := m.client.Get(ctx, nsname, pvc)
+	if err == nil {
+		return pvc, false, nil
+	} else if !errors.IsNotFound(err) {
+		m.logger.Error(err, "Failed to get PVC", nsname)
+		return nil, false, err
+	}
+	// not found - define a new pvc
+	pvc = m.pvcFromSmbService(s, nsname)
+	m.logger.Info("Creating a new Pvc", "Pvc.Name", pvc.Name)
+	err = m.client.Create(ctx, pvc)
+	if err != nil {
+		m.logger.Error(err, "Failed to create new PVC", "pvc.Namespace", pvc.Namespace, "pvc.Name", pvc.Name)
+		return nil, false, err
+	}
+	return pvc, true, nil
 }
