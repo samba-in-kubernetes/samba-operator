@@ -62,32 +62,30 @@ func (m *SmbServiceManager) Update(ctx context.Context, nsname types.NamespacedN
 		return Done
 	}
 
-	// Check if the deployment already exists, if not create a new one
-	found := &appsv1.Deployment{}
-	err = m.client.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, found)
-	if err != nil && errors.IsNotFound(err) {
-		// not found - define a new deployment
-		dep := m.deploymentForSmbService(instance, instance.Namespace)
-		m.logger.Info("Creating a new Deployment", "Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
-		err = m.client.Create(ctx, dep)
-		if err != nil {
-			m.logger.Error(err, "Failed to create new Deployment", "Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
-			return Result{err: err}
-		}
-		// Deployment created successfully - return and requeue
-		return Requeue
-	} else if err != nil {
-		m.logger.Error(err, "Failed to get Deployment")
+	pvcname := types.NamespacedName{
+		Namespace: instance.Namespace,
+		Name:      instance.Spec.PvcName,
+	}
+	depname := types.NamespacedName{
+		Name:      instance.Name,
+		Namespace: instance.Namespace,
+	}
+	dep, created, err := m.createDeploymentIfMissing(
+		ctx, instance, depname, pvcname)
+	if err != nil {
 		return Result{err: err}
+	}
+	if created {
+		return Requeue
 	}
 
 	// Ensure the deployment size is the same as the spec
 	var size int32 = 1
-	if *found.Spec.Replicas != size {
-		found.Spec.Replicas = &size
-		err = m.client.Update(ctx, found)
+	if *dep.Spec.Replicas != size {
+		dep.Spec.Replicas = &size
+		err = m.client.Update(ctx, dep)
 		if err != nil {
-			m.logger.Error(err, "Failed to update Deployment", "Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
+			m.logger.Error(err, "Failed to update Deployment", "Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
 			return Result{err: err}
 		}
 		// Spec updated - return and requeue
@@ -98,20 +96,20 @@ func (m *SmbServiceManager) Update(ctx context.Context, nsname types.NamespacedN
 }
 
 // deploymentForSmbService returns a smbservice deployment object
-func (m *SmbServiceManager) deploymentForSmbService(s *sambaoperatorv1alpha1.SmbService, ns string) *appsv1.Deployment {
+func (m *SmbServiceManager) deploymentForSmbService(s *sambaoperatorv1alpha1.SmbService, nsname, pvcname types.NamespacedName) *appsv1.Deployment {
 	// TODO: it is not the best to be grabbing the global conf this "deep" in
 	// the operator, but rather than refactor everything at once, we at least
 	// stop using hard coded parameters.
 	cfg := conf.Get()
 	// labels - do I need them?
 	labels := labelsForSmbService(s.Name)
-	smb_volume := s.Spec.PvcName + "-smb"
+	volname := pvcname.Name + "-smb"
 	var size int32 = 1
 
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      s.Name,
-			Namespace: ns,
+			Name:      nsname.Name,
+			Namespace: nsname.Namespace,
 			Labels:    labels,
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -125,10 +123,10 @@ func (m *SmbServiceManager) deploymentForSmbService(s *sambaoperatorv1alpha1.Smb
 				},
 				Spec: corev1.PodSpec{
 					Volumes: []corev1.Volume{{
-						Name: smb_volume,
+						Name: volname,
 						VolumeSource: corev1.VolumeSource{
 							PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-								ClaimName: s.Spec.PvcName,
+								ClaimName: pvcname.Name,
 							},
 						},
 					}},
@@ -145,7 +143,7 @@ func (m *SmbServiceManager) deploymentForSmbService(s *sambaoperatorv1alpha1.Smb
 						}},
 						VolumeMounts: []corev1.VolumeMount{{
 							MountPath: "/share",
-							Name:      smb_volume,
+							Name:      volname,
 						}},
 					}},
 				},
@@ -165,4 +163,28 @@ func labelsForSmbService(name string) map[string]string {
 		"app":           "smbservice",
 		"smbservice_cr": name,
 	}
+}
+
+func (m *SmbServiceManager) createDeploymentIfMissing(
+	ctx context.Context,
+	s *sambaoperatorv1alpha1.SmbService,
+	nsname, pvcname types.NamespacedName) (*appsv1.Deployment, bool, error) {
+	// Check if the deployment already exists, if not create a new one
+	dep := &appsv1.Deployment{}
+	err := m.client.Get(ctx, nsname, dep)
+	if err == nil {
+		return dep, false, nil
+	} else if !errors.IsNotFound(err) {
+		m.logger.Error(err, "Failed to get Deployment", nsname)
+		return nil, false, err
+	}
+	// not found - define a new deployment
+	dep = m.deploymentForSmbService(s, nsname, pvcname)
+	m.logger.Info("Creating a new Deployment", "Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
+	err = m.client.Create(ctx, dep)
+	if err != nil {
+		m.logger.Error(err, "Failed to create new Deployment", "Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
+		return nil, false, err
+	}
+	return dep, true, nil
 }
