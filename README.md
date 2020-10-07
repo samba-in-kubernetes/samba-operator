@@ -52,7 +52,8 @@ kind: SmbService
 metadata:
   name: my-smbservice
 spec:
-  pvcname: "mypvc"
+  pvc:
+    name: "mypvc"
 ```
 
 And apply it with `kubectl apply -f mysmbservice.yml`.
