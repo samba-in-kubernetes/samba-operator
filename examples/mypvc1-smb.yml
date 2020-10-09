@@ -1,4 +1,4 @@
-apiVersion: smbservice.samba.org/v1alpha1
+apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbService
 metadata:
   name: "mypvc1-smb"
