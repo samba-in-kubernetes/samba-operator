@@ -1,5 +1,5 @@
 ---
-apiVersion: smbpvc.samba.org/v1alpha1
+apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbPvc
 metadata:
   name: "mysmbpvc1"
