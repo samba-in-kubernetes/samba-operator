@@ -16,6 +16,8 @@ IMG ?=  quay.io/obnox/samba-operator:v0.0.1
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true"
 
+CHECK_GOFMT_FLAGS ?= -e -s -l
+
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -131,3 +133,30 @@ bundle: manifests
 .PHONY: bundle-build
 bundle-build:
 	$(CONTAINER_CMD) build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
+
+.PHONY: check check-revive check-format
+
+check: check-revive check-format
+
+check-format:
+	! gofmt $(CHECK_GOFMT_FLAGS) . | sed 's,^,formatting error: ,' | grep 'go$$'
+
+check-revive: revive
+	# revive's checks are configured using .revive.toml
+	# See: https://github.com/mgechev/revive
+	$(REVIVE) -config .revive.toml $$(go list ./... | grep -v /vendor/)
+
+revive:
+ifeq (, $(shell command -v revive))
+	@{ \
+	set -e ;\
+	REVIVE_TMP_DIR=$$(mktemp -d) ;\
+	cd $$REVIVE_TMP_DIR ;\
+	go mod init tmp ;\
+	go get  github.com/mgechev/revive  ;\
+	rm -rf $$REVIVE_TMP_DIR ;\
+	}
+REVIVE:=$(GOBIN)/revive
+else
+REVIVE:=$(shell command -v revive)
+endif
