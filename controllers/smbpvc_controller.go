@@ -56,6 +56,7 @@ func (r *SmbPvcReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	return ctrl.Result{}, err
 }
 
+// SetupWithManager sets up resource management.
 func (r *SmbPvcReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&sambaoperatorv1alpha1.SmbPvc{}).
