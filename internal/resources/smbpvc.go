@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-// SmbServiceManager is used to manage SmbService resources.
+// SmbPvcManager is used to manage SmbService resources.
 type SmbPvcManager struct {
 	client client.Client
 	scheme *runtime.Scheme
@@ -45,6 +45,7 @@ func NewSmbPvcManager(client client.Client, scheme *runtime.Scheme, logger Logge
 	}
 }
 
+// Update the managed resources on CR change.
 func (m *SmbPvcManager) Update(ctx context.Context, nsname types.NamespacedName) Result {
 	// Fetch the SmbPvc instance
 	instance := &sambaoperatorv1alpha1.SmbPvc{}

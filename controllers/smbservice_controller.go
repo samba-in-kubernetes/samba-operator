@@ -41,6 +41,7 @@ type SmbServiceReconciler struct {
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list
 
+// Reconcile resources.
 func (r *SmbServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
 	reqLogger := r.Log.WithValues("smbservice", req.NamespacedName)
@@ -55,6 +56,7 @@ func (r *SmbServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 	return ctrl.Result{}, err
 }
 
+// SetupWithManager sets up resource management.
 func (r *SmbServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&sambaoperatorv1alpha1.SmbService{}).
