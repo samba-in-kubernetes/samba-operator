@@ -29,6 +29,7 @@ import (
 
 	sambaoperatorv1alpha1 "github.com/obnoxxx/samba-operator/api/v1alpha1"
 	"github.com/obnoxxx/samba-operator/controllers"
+	"github.com/obnoxxx/samba-operator/internal/conf"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -45,15 +46,22 @@ func init() {
 }
 
 func main() {
+	confSource := conf.NewSource()
 	var metricsAddr string
 	var enableLeaderElection bool
 	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flag.CommandLine.AddFlagSet(confSource.Flags())
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
+
+	if err := conf.Load(confSource); err != nil {
+		setupLog.Error(err, "unable to configure")
+		os.Exit(1)
+	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
