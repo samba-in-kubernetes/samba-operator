@@ -18,8 +18,6 @@ package resources
 import (
 	"context"
 
-	sambaoperatorv1alpha1 "github.com/obnoxxx/samba-operator/api/v1alpha1"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -28,6 +26,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	sambaoperatorv1alpha1 "github.com/obnoxxx/samba-operator/api/v1alpha1"
+	"github.com/obnoxxx/samba-operator/internal/conf"
 )
 
 // SmbServiceManager is used to manage SmbService resources.
@@ -98,6 +99,10 @@ func (m *SmbServiceManager) Update(ctx context.Context, nsname types.NamespacedN
 
 // deploymentForSmbService returns a smbservice deployment object
 func (m *SmbServiceManager) deploymentForSmbService(s *sambaoperatorv1alpha1.SmbService, ns string) *appsv1.Deployment {
+	// TODO: it is not the best to be grabbing the global conf this "deep" in
+	// the operator, but rather than refactor everything at once, we at least
+	// stop using hard coded parameters.
+	cfg := conf.Get()
 	// labels - do I need them?
 	labels := labelsForSmbService(s.Name)
 	smb_volume := s.Spec.PvcName + "-smb"
@@ -128,8 +133,8 @@ func (m *SmbServiceManager) deploymentForSmbService(s *sambaoperatorv1alpha1.Smb
 						},
 					}},
 					Containers: []corev1.Container{{
-						Image: "quay.io/obnox/samba-centos8:latest",
-						Name:  "samba",
+						Image: cfg.SmbdContainerImage,
+						Name:  cfg.SmbdContainerName,
 						//NEEDED? - Command: []string{"cmd", "arg", "arg", "..."},
 						Ports: []corev1.ContainerPort{{
 							ContainerPort: 139,
