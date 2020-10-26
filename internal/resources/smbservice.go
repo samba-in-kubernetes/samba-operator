@@ -17,6 +17,7 @@ package resources
 
 import (
 	"context"
+	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -159,7 +160,25 @@ func (m *SmbServiceManager) deploymentForSmbService(s *sambaoperatorv1alpha1.Smb
 // belonging to the given smbservice CR name.
 func labelsForSmbService(name string) map[string]string {
 	return map[string]string{
-		"app":           "smbservice",
-		"smbservice_cr": name,
+		// top level labes
+		"app": "smbservice",
+		// k8s namespaced labels
+		// See: https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/
+		"app.kubernetes.io/name":       "samba",
+		"app.kubernetes.io/instance":   labelValue("samba", name),
+		"app.kubernetes.io/component":  "smbd",
+		"app.kubernetes.io/part-of":    "samba",
+		"app.kubernetes.io/managed-by": "samba-operator",
+		// our namespaced labels
+		"samba-operator.samba.org/smbservice": labelValue(name),
+		"samba-operator.samba.org/share":      "share",
 	}
+}
+
+func labelValue(s ...string) string {
+	out := strings.Join(s, "-")
+	if len(out) > 63 {
+		out = out[:63]
+	}
+	return out
 }
