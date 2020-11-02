@@ -148,17 +148,22 @@ check-revive: revive
 
 revive:
 ifeq (, $(shell command -v revive ;))
+	@echo "revive not found in PATH, checking in GOBIN ($(GOBIN))..."
 ifeq (, $(shell command -v $(GOBIN)/revive ;))
 	@{ \
 	set -e ;\
+	echo "revive not found in GOBIN, getting revive..." ;\
 	REVIVE_TMP_DIR=$$(mktemp -d) ;\
 	cd $$REVIVE_TMP_DIR ;\
 	go mod init tmp ;\
 	go get  github.com/mgechev/revive  ;\
 	rm -rf $$REVIVE_TMP_DIR ;\
 	}
+else
+	@echo "revive found in GOBIN"
 endif
 REVIVE:=$(shell command -v $(GOBIN)/revive ;)
 else
+	@echo "revive found in PATH"
 REVIVE:=$(shell command -v revive ;)
 endif
