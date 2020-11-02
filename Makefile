@@ -148,6 +148,7 @@ check-revive: revive
 
 revive:
 ifeq (, $(shell command -v revive ;))
+ifeq (, $(shell command -v $(GOBIN)/revive ;))
 	@{ \
 	set -e ;\
 	REVIVE_TMP_DIR=$$(mktemp -d) ;\
@@ -156,7 +157,8 @@ ifeq (, $(shell command -v revive ;))
 	go get  github.com/mgechev/revive  ;\
 	rm -rf $$REVIVE_TMP_DIR ;\
 	}
-REVIVE:=$(GOBIN)/revive
+endif
+REVIVE:=$(shell command -v $(GOBIN)/revive ;)
 else
-REVIVE:=$(shell command -v revive)
+REVIVE:=$(shell command -v revive ;)
 endif
