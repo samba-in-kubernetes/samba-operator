@@ -147,7 +147,7 @@ check-revive: revive
 	$(REVIVE) -config .revive.toml $$(go list ./... | grep -v /vendor/)
 
 revive:
-ifeq (, $(shell command -v revive))
+ifeq (, $(shell command -v revive ;))
 	@{ \
 	set -e ;\
 	REVIVE_TMP_DIR=$$(mktemp -d) ;\
