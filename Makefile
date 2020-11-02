@@ -146,6 +146,7 @@ check-revive: revive
 	# See: https://github.com/mgechev/revive
 	$(REVIVE) -config .revive.toml $$(go list ./... | grep -v /vendor/)
 
+.PHONY: revive
 revive:
 ifeq (, $(shell command -v revive ;))
 	@echo "revive not found in PATH, checking in GOBIN ($(GOBIN))..."
