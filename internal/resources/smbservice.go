@@ -137,9 +137,6 @@ func (m *SmbServiceManager) deploymentForSmbService(s *sambaoperatorv1alpha1.Smb
 						Name:  cfg.SmbdContainerName,
 						//NEEDED? - Command: []string{"cmd", "arg", "arg", "..."},
 						Ports: []corev1.ContainerPort{{
-							ContainerPort: 139,
-							Name:          "smb-netbios",
-						}, {
 							ContainerPort: 445,
 							Name:          "smb",
 						}},
