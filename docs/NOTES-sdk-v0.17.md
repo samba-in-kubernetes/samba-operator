@@ -1,3 +1,5 @@
+# Original creation of samba-operator with operator-sdk v0.17
+
 ## Followed docs
 
 https://opensource.com/article/20/3/kubernetes-operator-sdk
