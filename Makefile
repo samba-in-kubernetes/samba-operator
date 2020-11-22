@@ -163,8 +163,8 @@ ifeq (, $(shell command -v $(GOBIN)/revive ;))
 else
 	@echo "revive found in GOBIN"
 endif
-REVIVE:=$(shell command -v $(GOBIN)/revive ;)
+REVIVE=$(shell command -v $(GOBIN)/revive ;)
 else
 	@echo "revive found in PATH"
-REVIVE:=$(shell command -v revive ;)
+REVIVE=$(shell command -v revive ;)
 endif
