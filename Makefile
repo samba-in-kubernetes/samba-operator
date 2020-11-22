@@ -160,6 +160,7 @@ ifeq (, $(shell command -v $(GOBIN)/revive ;))
 	go get  github.com/mgechev/revive  ;\
 	rm -rf $$REVIVE_TMP_DIR ;\
 	}
+	@echo "revive installed in GOBIN"
 else
 	@echo "revive found in GOBIN"
 endif
