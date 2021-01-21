@@ -1,4 +1,4 @@
-module github.com/obnoxxx/samba-operator
+module github.com/samba-in-kubernetes/samba-operator
 
 go 1.13
 

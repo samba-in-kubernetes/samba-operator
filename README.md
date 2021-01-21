@@ -116,7 +116,7 @@ you'll be running this as a normal user.
 ## Containers on quay.io
 
 This operator uses the container built from
-[obnoxxx/samba-container](https://github.com/obnoxxx/samba-container)
+[samba-in-kubernetes/samba-container](https://github.com/samba-in-kubernetes/samba-container)
 as found on [quay.io](https://quay.io/repository/obnox/samba-centos8).
 
 The container from this codebase is published on

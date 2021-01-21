@@ -30,7 +30,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	sambaoperatorv1alpha1 "github.com/obnoxxx/samba-operator/api/v1alpha1"
+	sambaoperatorv1alpha1 "github.com/samba-in-kubernetes/samba-operator/api/v1alpha1"
 	// +kubebuilder:scaffold:imports
 )
 
