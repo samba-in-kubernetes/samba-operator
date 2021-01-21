@@ -28,8 +28,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	sambaoperatorv1alpha1 "github.com/obnoxxx/samba-operator/api/v1alpha1"
-	"github.com/obnoxxx/samba-operator/internal/conf"
+	sambaoperatorv1alpha1 "github.com/samba-in-kubernetes/samba-operator/api/v1alpha1"
+	"github.com/samba-in-kubernetes/samba-operator/internal/conf"
 )
 
 // SmbServiceManager is used to manage SmbService resources.
