@@ -27,9 +27,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	sambaoperatorv1alpha1 "github.com/obnoxxx/samba-operator/api/v1alpha1"
-	"github.com/obnoxxx/samba-operator/controllers"
-	"github.com/obnoxxx/samba-operator/internal/conf"
+	sambaoperatorv1alpha1 "github.com/samba-in-kubernetes/samba-operator/api/v1alpha1"
+	"github.com/samba-in-kubernetes/samba-operator/controllers"
+	"github.com/samba-in-kubernetes/samba-operator/internal/conf"
 	// +kubebuilder:scaffold:imports
 )
 

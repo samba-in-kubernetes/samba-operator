@@ -18,7 +18,7 @@ package resources
 import (
 	"context"
 
-	sambaoperatorv1alpha1 "github.com/obnoxxx/samba-operator/api/v1alpha1"
+	sambaoperatorv1alpha1 "github.com/samba-in-kubernetes/samba-operator/api/v1alpha1"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
