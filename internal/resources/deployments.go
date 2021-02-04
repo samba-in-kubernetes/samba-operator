@@ -23,19 +23,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/samba-in-kubernetes/samba-operator/internal/conf"
-	sambaoperatorv1alpha1 "github.com/samba-in-kubernetes/samba-operator/api/v1alpha1"
 )
 
 // buildDeployment returns a samba server deployment object
 func buildDeployment(cfg *conf.OperatorConfig,
-	s *sambaoperatorv1alpha1.SmbService, ns string) *appsv1.Deployment {
+	name, pvcName, ns string) *appsv1.Deployment {
 	// construct a deployment based on the following labels
-	labels := labelsForSmbServer(s.Name)
+	labels := labelsForSmbServer(name)
 	var size int32 = 1
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      s.Name,
+			Name:      name,
 			Namespace: ns,
 			Labels:    labels,
 		},
@@ -48,7 +47,7 @@ func buildDeployment(cfg *conf.OperatorConfig,
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: labels,
 				},
-				Spec: buildPodSpec(cfg, s.Spec.PvcName),
+				Spec: buildPodSpec(cfg, pvcName),
 			},
 		},
 	}
