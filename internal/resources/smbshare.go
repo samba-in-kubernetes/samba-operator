@@ -29,25 +29,25 @@ import (
 	"github.com/samba-in-kubernetes/samba-operator/internal/conf"
 )
 
-// SmbServiceManager is used to manage SmbService resources.
-type SmbServiceManager struct {
+// SmbShareManager is used to manage SmbShare resources.
+type SmbShareManager struct {
 	client client.Client
 	scheme *runtime.Scheme
 	logger Logger
 }
 
-// NewSmbServiceManager creates a SmbServiceManager.
-func NewSmbServiceManager(client client.Client, scheme *runtime.Scheme, logger Logger) *SmbServiceManager {
-	return &SmbServiceManager{
+// NewSmbShareManager creates a SmbShareManager.
+func NewSmbShareManager(client client.Client, scheme *runtime.Scheme, logger Logger) *SmbShareManager {
+	return &SmbShareManager{
 		client: client,
 		scheme: scheme,
 		logger: logger,
 	}
 }
 
-// Update should be called when a SmbService resource changes.
-func (m *SmbServiceManager) Update(ctx context.Context, nsname types.NamespacedName) Result {
-	instance := &sambaoperatorv1alpha1.SmbService{}
+// Update should be called when a SmbShare resource changes.
+func (m *SmbShareManager) Update(ctx context.Context, nsname types.NamespacedName) Result {
+	instance := &sambaoperatorv1alpha1.SmbShare{}
 	err := m.client.Get(ctx, nsname, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -57,7 +57,7 @@ func (m *SmbServiceManager) Update(ctx context.Context, nsname types.NamespacedN
 			return Done
 		}
 		// Error reading the object - requeue the request.
-		return Done
+		return Result{err: err}
 	}
 
 	// Check if the deployment already exists, if not create a new one
@@ -65,7 +65,7 @@ func (m *SmbServiceManager) Update(ctx context.Context, nsname types.NamespacedN
 	err = m.client.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, found)
 	if err != nil && errors.IsNotFound(err) {
 		// not found - define a new deployment
-		dep := m.deploymentForSmbService(instance, instance.Namespace)
+		dep := m.deploymentForSmbShare(instance, instance.Namespace)
 		m.logger.Info("Creating a new Deployment", "Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
 		err = m.client.Create(ctx, dep)
 		if err != nil {
@@ -95,15 +95,15 @@ func (m *SmbServiceManager) Update(ctx context.Context, nsname types.NamespacedN
 	return Done
 }
 
-// deploymentForSmbService returns a smbservice deployment object
-func (m *SmbServiceManager) deploymentForSmbService(s *sambaoperatorv1alpha1.SmbService, ns string) *appsv1.Deployment {
+// deploymentForSmbShare returns a smbshare deployment object
+func (m *SmbShareManager) deploymentForSmbShare(s *sambaoperatorv1alpha1.SmbShare, ns string) *appsv1.Deployment {
 	// TODO: it is not the best to be grabbing the global conf this "deep" in
 	// the operator, but rather than refactor everything at once, we at least
 	// stop using hard coded parameters.
 	cfg := conf.Get()
 	// labels - do I need them?
-	dep := buildDeployment(cfg, s.Name, s.Spec.PvcName, ns)
-	// set the smbservice instance as the owner and controller
+	dep := buildDeployment(cfg, s.Name, s.Spec.Storage.Pvc.Name, ns)
+	// set the smbshare instance as the owner and controller
 	controllerutil.SetControllerReference(s, dep, m.scheme)
 	return dep
 }

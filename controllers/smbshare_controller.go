@@ -20,11 +20,14 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sambaoperatorv1alpha1 "github.com/samba-in-kubernetes/samba-operator/api/v1alpha1"
+	"github.com/samba-in-kubernetes/samba-operator/internal/resources"
 )
 
 // SmbShareReconciler reconciles a SmbShare object
@@ -36,18 +39,29 @@ type SmbShareReconciler struct {
 
 // +kubebuilder:rbac:groups=samba-operator.samba.org,resources=smbshares,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=samba-operator.samba.org,resources=smbshares/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list
 
+// Reconcile SmbShare resources.
 func (r *SmbShareReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	_ = context.Background()
-	_ = r.Log.WithValues("smbshare", req.NamespacedName)
+	ctx := context.Background()
+	reqLogger := r.Log.WithValues("smbshare", req.NamespacedName)
+	reqLogger.Info("Reconciling SmbShare")
 
-	// your logic here
-
-	return ctrl.Result{}, nil
+	smbShareManager := resources.NewSmbShareManager(r, r.Scheme, reqLogger)
+	res := smbShareManager.Update(ctx, req.NamespacedName)
+	err := res.Err()
+	if res.Requeue() {
+		return ctrl.Result{Requeue: true}, err
+	}
+	return ctrl.Result{}, err
 }
 
+// SetupWithManager sets up resource management.
 func (r *SmbShareReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&sambaoperatorv1alpha1.SmbShare{}).
+		Owns(&corev1.PersistentVolumeClaim{}).
+		Owns(&appsv1.Deployment{}).
 		Complete(r)
 }
