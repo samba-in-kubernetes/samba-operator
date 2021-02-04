@@ -106,7 +106,6 @@ func (m *SmbServiceManager) deploymentForSmbService(s *sambaoperatorv1alpha1.Smb
 	cfg := conf.Get()
 	// labels - do I need them?
 	labels := labelsForSmbService(s.Name)
-	smb_volume := s.Spec.PvcName + "-smb"
 	var size int32 = 1
 
 	dep := &appsv1.Deployment{
@@ -124,29 +123,7 @@ func (m *SmbServiceManager) deploymentForSmbService(s *sambaoperatorv1alpha1.Smb
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: labels,
 				},
-				Spec: corev1.PodSpec{
-					Volumes: []corev1.Volume{{
-						Name: smb_volume,
-						VolumeSource: corev1.VolumeSource{
-							PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-								ClaimName: s.Spec.PvcName,
-							},
-						},
-					}},
-					Containers: []corev1.Container{{
-						Image: cfg.SmbdContainerImage,
-						Name:  cfg.SmbdContainerName,
-						//NEEDED? - Command: []string{"cmd", "arg", "arg", "..."},
-						Ports: []corev1.ContainerPort{{
-							ContainerPort: 445,
-							Name:          "smb",
-						}},
-						VolumeMounts: []corev1.VolumeMount{{
-							MountPath: "/share",
-							Name:      smb_volume,
-						}},
-					}},
-				},
+				Spec: buildPodSpec(cfg, s.Spec.PvcName),
 			},
 		},
 	}
