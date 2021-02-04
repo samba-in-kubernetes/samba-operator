@@ -4,6 +4,7 @@
 resources:
 - bases/samba-operator.samba.org_smbservices.yaml
 - bases/samba-operator.samba.org_smbpvcs.yaml
+- bases/samba-operator.samba.org_smbshares.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:
@@ -11,12 +12,14 @@ patchesStrategicMerge:
 # patches here are for enabling the conversion webhook for each CRD
 #- patches/webhook_in_smbservices.yaml
 #- patches/webhook_in_smbpvcs.yaml
+#- patches/webhook_in_smbshares.yaml
 # +kubebuilder:scaffold:crdkustomizewebhookpatch
 
 # [CERTMANAGER] To enable webhook, uncomment all the sections with [CERTMANAGER] prefix.
 # patches here are for enabling the CA injection for each CRD
 #- patches/cainjection_in_smbservices.yaml
 #- patches/cainjection_in_smbpvcs.yaml
+#- patches/cainjection_in_smbshares.yaml
 # +kubebuilder:scaffold:crdkustomizecainjectionpatch
 
 # the following config is for teaching kustomize how to do kustomization for CRDs.
