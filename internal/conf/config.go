@@ -25,7 +25,7 @@ type Source struct {
 // NewSource creates a new Source based on default configuration values.
 func NewSource() *Source {
 	v := viper.New()
-	v.SetDefault("smbd-container-image", "quay.io/obnox/samba-centos8:latest")
+	v.SetDefault("smbd-container-image", "quay.io/samba.org/samba-server:latest")
 	v.SetDefault("smbd-container-name", "samba")
 	return &Source{v: v}
 }
