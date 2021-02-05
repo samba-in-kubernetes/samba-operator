@@ -41,6 +41,7 @@ type SmbShareReconciler struct {
 // +kubebuilder:rbac:groups=samba-operator.samba.org,resources=smbshares/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list
+// +kubebuilder:rbac:groups=core,resources=persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile SmbShare resources.
 func (r *SmbShareReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
