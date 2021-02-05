@@ -19,7 +19,9 @@ import (
 	"context"
 
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -58,6 +60,18 @@ func (m *SmbShareManager) Update(ctx context.Context, nsname types.NamespacedNam
 		}
 		// Error reading the object - requeue the request.
 		return Result{err: err}
+	}
+
+	if shareNeedsPvc(instance) {
+		pvc, created, err := m.getOrCreatePvc(
+			ctx, instance, instance.Namespace)
+		if err != nil {
+			return Result{err: err}
+		} else if created {
+			return Requeue
+		}
+		// if name is unset in the YAML, set it here
+		instance.Spec.Storage.Pvc.Name = pvc.Name
 	}
 
 	deployment, created, err := m.getOrCreateDeployment(
@@ -111,6 +125,38 @@ func (m *SmbShareManager) getOrCreateDeployment(ctx context.Context,
 	return nil, false, err
 }
 
+func (m *SmbShareManager) getOrCreatePvc(ctx context.Context,
+	smbShare *sambaoperatorv1alpha1.SmbShare, ns string) (
+	*corev1.PersistentVolumeClaim, bool, error) {
+	// Check if the pvc already exists, if not create it
+	pvc := &corev1.PersistentVolumeClaim{}
+	err := m.client.Get(
+		ctx,
+		types.NamespacedName{
+			Name:      pvcName(smbShare),
+			Namespace: smbShare.Namespace,
+		},
+		pvc)
+	if err == nil {
+		return pvc, false, nil
+	}
+
+	if errors.IsNotFound(err) {
+		// not found - define a new pvc
+		pvc = m.pvcForSmbShare(smbShare, ns)
+		m.logger.Info("Creating a new Pvc", "Pvc.Name", pvc.Name)
+		err = m.client.Create(ctx, pvc)
+		if err != nil {
+			m.logger.Error(err, "Failed to create new PVC", "pvc.Namespace", pvc.Namespace, "pvc.Name", pvc.Name)
+			return pvc, false, err
+		}
+		// Pvc created successfully
+		return pvc, true, nil
+	}
+	m.logger.Error(err, "Failed to get PVC")
+	return nil, false, err
+}
+
 func (m *SmbShareManager) updateDeploymentSize(ctx context.Context,
 	deployment *appsv1.Deployment) (bool, error) {
 	// Ensure the deployment size is the same as the spec
@@ -140,4 +186,32 @@ func (m *SmbShareManager) deploymentForSmbShare(s *sambaoperatorv1alpha1.SmbShar
 	// set the smbshare instance as the owner and controller
 	controllerutil.SetControllerReference(s, dep, m.scheme)
 	return dep
+}
+
+func (m *SmbShareManager) pvcForSmbShare(
+	s *sambaoperatorv1alpha1.SmbShare, ns string) *corev1.PersistentVolumeClaim {
+	// build a new pvc
+	pvc := &corev1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      pvcName(s),
+			Namespace: ns,
+		},
+		Spec: *s.Spec.Storage.Pvc.Spec,
+	}
+
+	// set the smb share instance as the owner and controller
+	controllerutil.SetControllerReference(s, pvc, m.scheme)
+
+	return pvc
+}
+
+func pvcName(s *sambaoperatorv1alpha1.SmbShare) string {
+	if s.Spec.Storage.Pvc.Name != "" {
+		return s.Spec.Storage.Pvc.Name
+	}
+	return s.Name + "-pvc"
+}
+
+func shareNeedsPvc(s *sambaoperatorv1alpha1.SmbShare) bool {
+	return s.Spec.Storage.Pvc != nil && s.Spec.Storage.Pvc.Spec != nil
 }
