@@ -94,6 +94,8 @@ container-push:
 # download controller-gen if necessary
 controller-gen:
 ifeq (, $(shell command -v controller-gen ;))
+	@echo "controller-gen not found in PATH, checking in GOBIN ($(GOBIN))..."
+ifeq (, $(shell command -v $(GOBIN)/controller-gen ;))
 	@{ \
 	set -e ;\
 	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
@@ -102,6 +104,7 @@ ifeq (, $(shell command -v controller-gen ;))
 	go get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.3.0 ;\
 	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
 	}
+endif
 CONTROLLER_GEN=$(GOBIN)/controller-gen
 else
 CONTROLLER_GEN=$(shell command -v controller-gen ;)
@@ -109,6 +112,8 @@ endif
 
 kustomize:
 ifeq (, $(shell command -v kustomize ;))
+	@echo "kustomize not found in PATH, checking in GOBIN ($(GOBIN))..."
+ifeq (, $(shell command -v $(GOBIN)/kustomize ;))
 	@{ \
 	set -e ;\
 	KUSTOMIZE_GEN_TMP_DIR=$$(mktemp -d) ;\
@@ -117,6 +122,7 @@ ifeq (, $(shell command -v kustomize ;))
 	go get sigs.k8s.io/kustomize/kustomize/v3@v3.5.4 ;\
 	rm -rf $$KUSTOMIZE_GEN_TMP_DIR ;\
 	}
+endif
 KUSTOMIZE=$(GOBIN)/kustomize
 else
 KUSTOMIZE=$(shell command -v kustomize ;)
