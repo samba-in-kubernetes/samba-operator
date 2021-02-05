@@ -41,8 +41,11 @@ test: generate vet manifests
 	go test ./... -coverprofile cover.out
 
 # Build manager binary
-manager: generate vet
+manager: generate vet build
+
+build:
 	go build -o bin/manager main.go
+.PHONY: build
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate vet manifests
