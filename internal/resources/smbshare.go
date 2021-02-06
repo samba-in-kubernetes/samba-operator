@@ -62,6 +62,19 @@ func (m *SmbShareManager) Update(ctx context.Context, nsname types.NamespacedNam
 		return Result{err: err}
 	}
 
+	cm, created, err := getOrCreateConfigMap(ctx, m.client, instance.Namespace)
+	if err != nil {
+		return Result{err: err}
+	} else if created {
+		return Requeue
+	}
+	changed, err := m.updateConfiguration(ctx, cm, instance)
+	if err != nil {
+		return Result{err: err}
+	} else if changed {
+		return Requeue
+	}
+
 	if shareNeedsPvc(instance) {
 		pvc, created, err := m.getOrCreatePvc(
 			ctx, instance, instance.Namespace)
@@ -214,4 +227,36 @@ func pvcName(s *sambaoperatorv1alpha1.SmbShare) string {
 
 func shareNeedsPvc(s *sambaoperatorv1alpha1.SmbShare) bool {
 	return s.Spec.Storage.Pvc != nil && s.Spec.Storage.Pvc.Spec != nil
+}
+
+func (m *SmbShareManager) updateConfiguration(
+	ctx context.Context,
+	cm *corev1.ConfigMap, s *sambaoperatorv1alpha1.SmbShare) (bool, error) {
+	// extract config from map
+	cc, err := getContainerConfig(cm)
+	if err != nil {
+		m.logger.Error(err, "unable to read samba container config")
+		return false, err
+	}
+	// extract config from map
+	planner := newSharePlanner(s, cc)
+	changed, err := planner.update()
+	if err != nil {
+		m.logger.Error(err, "unable to update samba container config")
+		return false, err
+	}
+	if !changed {
+		return false, nil
+	}
+	err = setContainerConfig(cm, planner.Config)
+	if err != nil {
+		m.logger.Error(err, "unable to set container config in config map")
+		return false, err
+	}
+	err = m.client.Update(ctx, cm)
+	if err != nil {
+		m.logger.Error(err, "failed to update config map")
+		return false, err
+	}
+	return true, nil
 }
