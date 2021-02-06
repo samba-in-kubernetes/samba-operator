@@ -1,7 +1,0 @@
-apiVersion: samba-operator.samba.org/v1alpha1
-kind: SmbPvc
-metadata:
-  name: smbpvc-sample
-spec:
-  # Add fields here
-  foo: bar
