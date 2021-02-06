@@ -2,23 +2,17 @@
 # since it depends on service name and namespace that are out of this kustomize package.
 # It should be run by config/default
 resources:
-- bases/samba-operator.samba.org_smbservices.yaml
-- bases/samba-operator.samba.org_smbpvcs.yaml
 - bases/samba-operator.samba.org_smbshares.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:
 # [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix.
 # patches here are for enabling the conversion webhook for each CRD
-#- patches/webhook_in_smbservices.yaml
-#- patches/webhook_in_smbpvcs.yaml
 #- patches/webhook_in_smbshares.yaml
 # +kubebuilder:scaffold:crdkustomizewebhookpatch
 
 # [CERTMANAGER] To enable webhook, uncomment all the sections with [CERTMANAGER] prefix.
 # patches here are for enabling the CA injection for each CRD
-#- patches/cainjection_in_smbservices.yaml
-#- patches/cainjection_in_smbpvcs.yaml
 #- patches/cainjection_in_smbshares.yaml
 # +kubebuilder:scaffold:crdkustomizecainjectionpatch
 

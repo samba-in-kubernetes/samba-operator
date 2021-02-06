@@ -1,5 +1,4 @@
 ## Append samples you want in your CSV to this file as resources ##
 resources:
-- samba-operator_v1alpha1_smbservice.yaml
-- samba-operator_v1alpha1_smbpvc.yaml
+- samba-operator_v1alpha1_smbshare.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples
