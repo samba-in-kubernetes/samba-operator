@@ -28,3 +28,19 @@ jobs:
       run: go get github.com/mgechev/revive
     - name: Run checks
       run: make check
+
+  # push the container to quay.io - only for pushes, not PRs
+  push:
+    needs: [build, check]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v2
+      - name: log in to quay.io
+        run: podman login -u "${{ secrets.QUAY_USER }}" -p "${{ secrets.QUAY_PASS }}" quay.io
+      - name: build container image
+        # note: forcing use of podman here, since we did podman login above
+        run: make CONTAINER_CMD=podman image-build
+      - name: push container image
+        # note: forcing use of podman here, since we did podman login above
+        run: make CONTAINER_CMD=podman container-push
