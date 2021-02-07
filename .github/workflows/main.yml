@@ -36,6 +36,8 @@ jobs:
     if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v2
+      - name: check free space
+        run: df -h
       - name: build container image
         # note: forcing use of podman here since we are
         # using podman explicity for the push job
