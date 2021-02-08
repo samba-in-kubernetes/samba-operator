@@ -55,11 +55,11 @@ func buildDeployment(cfg *conf.OperatorConfig,
 }
 
 // labelsForSmbServer returns the labels for selecting the resources
-// belonging to the given smbservice CR name.
+// belonging to the given CR name.
 func labelsForSmbServer(name string) map[string]string {
 	return map[string]string{
 		// top level labes
-		"app": "smbservice",
+		"app": "samba",
 		// k8s namespaced labels
 		// See: https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/
 		"app.kubernetes.io/name":       "samba",
@@ -68,8 +68,8 @@ func labelsForSmbServer(name string) map[string]string {
 		"app.kubernetes.io/part-of":    "samba",
 		"app.kubernetes.io/managed-by": "samba-operator",
 		// our namespaced labels
-		"samba-operator.samba.org/smbservice": labelValue(name),
-		"samba-operator.samba.org/share":      "share",
+		"samba-operator.samba.org/service": labelValue(name),
+		"samba-operator.samba.org/share":   "share",
 	}
 }
 
