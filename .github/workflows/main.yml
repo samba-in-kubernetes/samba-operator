@@ -63,10 +63,12 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: log in to quay.io
-        run: podman login -u "${{ secrets.QUAY_USER }}" -p "${{ secrets.QUAY_PASS }}" quay.io
+        # using docker for now, since podman has an issue with space
+        # consumption: image build fails with no space left on device...
+        run: docker login -u "${{ secrets.QUAY_USER }}" -p "${{ secrets.QUAY_PASS }}" quay.io
       - name: build container image
-        # note: forcing use of podman here, since we did podman login above
-        run: make CONTAINER_CMD=podman image-build
+        # note: forcing use of docker here, since we did docker login above
+        run: make CONTAINER_CMD=docker image-build
       - name: push container image
-        # note: forcing use of podman here, since we did podman login above
-        run: make CONTAINER_CMD=podman container-push
+        # note: forcing use of docker here, since we did docker login above
+        run: make CONTAINER_CMD=docker container-push
