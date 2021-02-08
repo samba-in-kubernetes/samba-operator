@@ -73,7 +73,7 @@ jobs:
       - name: log in to quay.io
         # using docker for now, since podman has an issue with space
         # consumption: image build fails with no space left on device...
-        run: docker login -u "${{ secrets.QUAY_USER }}" -p "${{ secrets.QUAY_PASS }}" quay.io
+        run: echo "${{ secrets.QUAY_PASS }}" | docker login -u "${{ secrets.QUAY_USER }}" --password-stdin quay.io
       - name: build container image
         # note: forcing use of docker here, since we did docker login above
         run: make CONTAINER_CMD=docker image-build
