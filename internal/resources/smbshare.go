@@ -61,17 +61,22 @@ func (m *SmbShareManager) Update(ctx context.Context, nsname types.NamespacedNam
 		// Error reading the object - requeue the request.
 		return Result{err: err}
 	}
+	m.logger.Info("Updating state for SmbShare",
+		"name", instance.Name,
+		"UID", instance.UID)
 
 	cm, created, err := getOrCreateConfigMap(ctx, m.client, instance.Namespace)
 	if err != nil {
 		return Result{err: err}
 	} else if created {
+		m.logger.Info("Created config map")
 		return Requeue
 	}
 	changed, err := m.updateConfiguration(ctx, cm, instance)
 	if err != nil {
 		return Result{err: err}
 	} else if changed {
+		m.logger.Info("Updated config map")
 		return Requeue
 	}
 
@@ -81,6 +86,7 @@ func (m *SmbShareManager) Update(ctx context.Context, nsname types.NamespacedNam
 		if err != nil {
 			return Result{err: err}
 		} else if created {
+			m.logger.Info("Created PVC")
 			return Requeue
 		}
 		// if name is unset in the YAML, set it here
@@ -93,6 +99,7 @@ func (m *SmbShareManager) Update(ctx context.Context, nsname types.NamespacedNam
 		return Result{err: err}
 	} else if created {
 		// Deployment created successfully - return and requeue
+		m.logger.Info("Created deployment")
 		return Requeue
 	}
 
@@ -100,9 +107,11 @@ func (m *SmbShareManager) Update(ctx context.Context, nsname types.NamespacedNam
 	if err != nil {
 		return Result{err: err}
 	} else if resized {
+		m.logger.Info("Resized deployment")
 		return Requeue
 	}
 
+	m.logger.Info("Done updating SmbShare resources")
 	return Done
 }
 
