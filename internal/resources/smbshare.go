@@ -72,7 +72,7 @@ func (m *SmbShareManager) Update(ctx context.Context, nsname types.NamespacedNam
 		m.logger.Info("Created config map")
 		return Requeue
 	}
-	changed, err := m.updateConfiguration(ctx, cm, instance)
+	planner, changed, err := m.updateConfiguration(ctx, cm, instance)
 	if err != nil {
 		return Result{err: err}
 	} else if changed {
@@ -94,7 +94,7 @@ func (m *SmbShareManager) Update(ctx context.Context, nsname types.NamespacedNam
 	}
 
 	deployment, created, err := m.getOrCreateDeployment(
-		ctx, instance, instance.Namespace)
+		ctx, planner, instance.Namespace)
 	if err != nil {
 		return Result{err: err}
 	} else if created {
@@ -116,14 +116,14 @@ func (m *SmbShareManager) Update(ctx context.Context, nsname types.NamespacedNam
 }
 
 func (m *SmbShareManager) getOrCreateDeployment(ctx context.Context,
-	smbShare *sambaoperatorv1alpha1.SmbShare, ns string) (
+	planner *sharePlanner, ns string) (
 	*appsv1.Deployment, bool, error) {
 	// Check if the deployment already exists, if not create a new one
 	found := &appsv1.Deployment{}
 	err := m.client.Get(
 		ctx,
 		types.NamespacedName{
-			Name:      smbShare.Name,
+			Name:      planner.SmbShare.Name,
 			Namespace: ns,
 		},
 		found)
@@ -133,7 +133,7 @@ func (m *SmbShareManager) getOrCreateDeployment(ctx context.Context,
 
 	if errors.IsNotFound(err) {
 		// not found - define a new deployment
-		dep := m.deploymentForSmbShare(smbShare, ns)
+		dep := m.deploymentForSmbShare(planner, ns)
 		m.logger.Info("Creating a new Deployment", "Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
 		err = m.client.Create(ctx, dep)
 		if err != nil {
@@ -198,15 +198,15 @@ func (m *SmbShareManager) updateDeploymentSize(ctx context.Context,
 }
 
 // deploymentForSmbShare returns a smbshare deployment object
-func (m *SmbShareManager) deploymentForSmbShare(s *sambaoperatorv1alpha1.SmbShare, ns string) *appsv1.Deployment {
+func (m *SmbShareManager) deploymentForSmbShare(planner *sharePlanner, ns string) *appsv1.Deployment {
 	// TODO: it is not the best to be grabbing the global conf this "deep" in
 	// the operator, but rather than refactor everything at once, we at least
 	// stop using hard coded parameters.
 	cfg := conf.Get()
 	// labels - do I need them?
-	dep := buildDeployment(cfg, s.Name, s.Spec.Storage.Pvc.Name, ns)
+	dep := buildDeployment(cfg, planner, planner.SmbShare.Spec.Storage.Pvc.Name, ns)
 	// set the smbshare instance as the owner and controller
-	controllerutil.SetControllerReference(s, dep, m.scheme)
+	controllerutil.SetControllerReference(planner.SmbShare, dep, m.scheme)
 	return dep
 }
 
@@ -240,32 +240,32 @@ func shareNeedsPvc(s *sambaoperatorv1alpha1.SmbShare) bool {
 
 func (m *SmbShareManager) updateConfiguration(
 	ctx context.Context,
-	cm *corev1.ConfigMap, s *sambaoperatorv1alpha1.SmbShare) (bool, error) {
+	cm *corev1.ConfigMap, s *sambaoperatorv1alpha1.SmbShare) (*sharePlanner, bool, error) {
 	// extract config from map
 	cc, err := getContainerConfig(cm)
 	if err != nil {
 		m.logger.Error(err, "unable to read samba container config")
-		return false, err
+		return nil, false, err
 	}
 	// extract config from map
 	planner := newSharePlanner(s, cc)
 	changed, err := planner.update()
 	if err != nil {
 		m.logger.Error(err, "unable to update samba container config")
-		return false, err
+		return nil, false, err
 	}
 	if !changed {
-		return false, nil
+		return planner, false, nil
 	}
 	err = setContainerConfig(cm, planner.Config)
 	if err != nil {
 		m.logger.Error(err, "unable to set container config in config map")
-		return false, err
+		return nil, false, err
 	}
 	err = m.client.Update(ctx, cm)
 	if err != nil {
 		m.logger.Error(err, "failed to update config map")
-		return false, err
+		return nil, false, err
 	}
-	return true, nil
+	return planner, true, nil
 }

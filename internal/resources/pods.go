@@ -21,29 +21,55 @@ import (
 	"github.com/samba-in-kubernetes/samba-operator/internal/conf"
 )
 
-func buildPodSpec(cfg *conf.OperatorConfig, pvcName string) corev1.PodSpec {
+func buildPodSpec(planner *sharePlanner, cfg *conf.OperatorConfig, pvcName string) corev1.PodSpec {
 	pvcVolName := pvcName + "-smb"
+	cmSrc := &corev1.ConfigMapVolumeSource{}
+	cmSrc.Name = ConfigMapName
 	podSpec := corev1.PodSpec{
-		Volumes: []corev1.Volume{{
-			Name: pvcVolName,
-			VolumeSource: corev1.VolumeSource{
-				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-					ClaimName: pvcName,
+		Volumes: []corev1.Volume{
+			{
+				Name: pvcVolName,
+				VolumeSource: corev1.VolumeSource{
+					PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+						ClaimName: pvcName,
+					},
 				},
 			},
-		}},
+			{
+				Name: ConfigMapName,
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: cmSrc,
+				},
+			},
+		},
 		Containers: []corev1.Container{{
 			Image: cfg.SmbdContainerImage,
 			Name:  cfg.SmbdContainerName,
-			//NEEDED? - Command: []string{"cmd", "arg", "arg", "..."},
+			Args:  []string{"run", "smbd"},
+			Env: []corev1.EnvVar{
+				{
+					Name:  "SAMBA_CONTAINER_ID",
+					Value: string(planner.instanceID()),
+				},
+				{
+					Name:  "SAMBACC_CONFIG",
+					Value: "/etc/samba-container/config.json",
+				},
+			},
 			Ports: []corev1.ContainerPort{{
 				ContainerPort: 445,
 				Name:          "smb",
 			}},
-			VolumeMounts: []corev1.VolumeMount{{
-				MountPath: "/share",
-				Name:      pvcVolName,
-			}},
+			VolumeMounts: []corev1.VolumeMount{
+				{
+					MountPath: "/share",
+					Name:      pvcVolName,
+				},
+				{
+					MountPath: "/etc/samba-container",
+					Name:      ConfigMapName,
+				},
+			},
 		}},
 	}
 	return podSpec
