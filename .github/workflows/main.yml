@@ -29,6 +29,14 @@ jobs:
     - name: Run checks
       run: make check
 
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/setup-go@v2
+    - uses: actions/checkout@v2
+    - name: run the tests
+      run: make test
+
   podmanbuild:
     runs-on: ubuntu-latest
     # don't run on push, since the "push" job contains the
