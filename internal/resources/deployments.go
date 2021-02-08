@@ -27,14 +27,14 @@ import (
 
 // buildDeployment returns a samba server deployment object
 func buildDeployment(cfg *conf.OperatorConfig,
-	name, pvcName, ns string) *appsv1.Deployment {
+	planner *sharePlanner, pvcName, ns string) *appsv1.Deployment {
 	// construct a deployment based on the following labels
-	labels := labelsForSmbServer(name)
+	labels := labelsForSmbServer(planner.instanceName())
 	var size int32 = 1
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      planner.instanceName(),
 			Namespace: ns,
 			Labels:    labels,
 		},
@@ -47,7 +47,7 @@ func buildDeployment(cfg *conf.OperatorConfig,
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: labels,
 				},
-				Spec: buildPodSpec(cfg, pvcName),
+				Spec: buildPodSpec(planner, cfg, pvcName),
 			},
 		},
 	}
