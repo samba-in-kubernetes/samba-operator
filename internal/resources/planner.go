@@ -55,9 +55,8 @@ func (sp *sharePlanner) shareName() string {
 	return "share"
 }
 
-func (*sharePlanner) sharePath() string {
-	// for now, everything mounts at /share
-	return "/share"
+func (sp *sharePlanner) sharePath() string {
+	return path.Join("/mnt", string(sp.SmbShare.UID))
 }
 
 func (sp *sharePlanner) containerConfigPath() string {
