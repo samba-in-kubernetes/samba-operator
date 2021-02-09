@@ -53,7 +53,7 @@ func buildPodSpec(planner *sharePlanner, cfg *conf.OperatorConfig, pvcName strin
 				},
 				{
 					Name:  "SAMBACC_CONFIG",
-					Value: "/etc/samba-container/config.json",
+					Value: planner.containerConfigPath(),
 				},
 			},
 			Ports: []corev1.ContainerPort{{
@@ -62,11 +62,11 @@ func buildPodSpec(planner *sharePlanner, cfg *conf.OperatorConfig, pvcName strin
 			}},
 			VolumeMounts: []corev1.VolumeMount{
 				{
-					MountPath: "/share",
+					MountPath: planner.sharePath(),
 					Name:      pvcVolName,
 				},
 				{
-					MountPath: "/etc/samba-container",
+					MountPath: planner.containerConfigDir(),
 					Name:      ConfigMapName,
 				},
 			},

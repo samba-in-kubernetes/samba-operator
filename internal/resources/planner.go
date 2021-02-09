@@ -16,6 +16,8 @@ limitations under the License.
 package resources
 
 import (
+	"path"
+
 	sambaoperatorv1alpha1 "github.com/samba-in-kubernetes/samba-operator/api/v1alpha1"
 	"github.com/samba-in-kubernetes/samba-operator/internal/smbcc"
 )
@@ -56,6 +58,14 @@ func (sp *sharePlanner) shareName() string {
 func (*sharePlanner) sharePath() string {
 	// for now, everything mounts at /share
 	return "/share"
+}
+
+func (sp *sharePlanner) containerConfigPath() string {
+	return path.Join(sp.containerConfigDir(), "config.json")
+}
+
+func (*sharePlanner) containerConfigDir() string {
+	return "/etc/container-config"
 }
 
 func (sp *sharePlanner) update() (changed bool, err error) {
