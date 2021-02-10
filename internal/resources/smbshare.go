@@ -146,9 +146,22 @@ func (m *SmbShareManager) Update(ctx context.Context, instance *sambaoperatorv1a
 // and we need to do some cleanup.
 func (m *SmbShareManager) Finalize(ctx context.Context, instance *sambaoperatorv1alpha1.SmbShare) Result {
 
+	cm, err := getConfigMap(ctx, m.client, instance.Namespace)
+	if err == nil {
+		_, changed, err := m.updateConfiguration(ctx, cm, instance)
+		if err != nil {
+			return Result{err: err}
+		} else if changed {
+			m.logger.Info("Updated config map")
+			return Requeue
+		}
+	} else if err != nil && !errors.IsNotFound(err) {
+		return Result{err: err}
+	}
+
 	m.logger.Info("Removing finalizer")
 	controllerutil.RemoveFinalizer(instance, shareFinalizer)
-	err := m.client.Update(ctx, instance)
+	err = m.client.Update(ctx, instance)
 	if err != nil {
 		return Result{err: err}
 	}
@@ -289,7 +302,12 @@ func (m *SmbShareManager) updateConfiguration(
 	}
 	// extract config from map
 	planner := newSharePlanner(s, cc)
-	changed, err := planner.update()
+	var changed bool
+	if s.GetDeletionTimestamp() == nil {
+		changed, err = planner.update()
+	} else {
+		changed, err = planner.prune()
+	}
 	if err != nil {
 		m.logger.Error(err, "unable to update samba container config")
 		return nil, false, err
