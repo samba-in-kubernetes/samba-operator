@@ -52,7 +52,9 @@ func (sp *sharePlanner) shareName() string {
 	if sp.SmbShare.Spec.ShareName != "" {
 		return sp.SmbShare.Spec.ShareName
 	}
-	return "share"
+	// It was not named explicitly. Name it after the CR.
+	// todo: may need massaging too.
+	return sp.SmbShare.Name
 }
 
 func (sp *sharePlanner) sharePath() string {
