@@ -31,6 +31,8 @@ import (
 	"github.com/samba-in-kubernetes/samba-operator/internal/conf"
 )
 
+const shareFinalizer = "samba-operator.samba.org/shareFinalizer"
+
 // SmbShareManager is used to manage SmbShare resources.
 type SmbShareManager struct {
 	client client.Client
@@ -47,23 +49,48 @@ func NewSmbShareManager(client client.Client, scheme *runtime.Scheme, logger Log
 	}
 }
 
-// Update should be called when a SmbShare resource changes.
-func (m *SmbShareManager) Update(ctx context.Context, nsname types.NamespacedName) Result {
+// Process is called by the controller on any type of reconciliation.
+func (m *SmbShareManager) Process(ctx context.Context, nsname types.NamespacedName) Result {
+	// fetch our resource to determine what to do next
 	instance := &sambaoperatorv1alpha1.SmbShare{}
 	err := m.client.Get(ctx, nsname, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			// Request object not found, could have been deleted after reconcile request.
-			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
-			// Return and don't requeue
+			// Request object not found. Not a fatal error.
 			return Done
 		}
-		// Error reading the object - requeue the request.
+		m.logger.Error(err, "get failed for SmbShare",
+			"ns", nsname.Namespace,
+			"name", nsname.Name)
 		return Result{err: err}
 	}
+
+	// now that we have the resource. determine if its live or pending deletion
+	if instance.GetDeletionTimestamp() != nil {
+		// its being deleted
+		if controllerutil.ContainsFinalizer(instance, shareFinalizer) {
+			// and our finalizer is present
+			return m.Finalize(ctx, instance)
+		}
+		return Done
+	}
+	// resource is alive
+	return m.Update(ctx, instance)
+}
+
+// Update should be called when a SmbShare resource changes.
+func (m *SmbShareManager) Update(ctx context.Context, instance *sambaoperatorv1alpha1.SmbShare) Result {
 	m.logger.Info("Updating state for SmbShare",
 		"name", instance.Name,
 		"UID", instance.UID)
+
+	changed, err := m.addFinalizer(ctx, instance)
+	if err != nil {
+		return Result{err: err}
+	} else if changed {
+		m.logger.Info("Added finalizer")
+		return Requeue
+	}
 
 	cm, created, err := getOrCreateConfigMap(ctx, m.client, instance.Namespace)
 	if err != nil {
@@ -112,6 +139,19 @@ func (m *SmbShareManager) Update(ctx context.Context, nsname types.NamespacedNam
 	}
 
 	m.logger.Info("Done updating SmbShare resources")
+	return Done
+}
+
+// Finalize should be called when there's a finalizer on the resource
+// and we need to do some cleanup.
+func (m *SmbShareManager) Finalize(ctx context.Context, instance *sambaoperatorv1alpha1.SmbShare) Result {
+
+	m.logger.Info("Removing finalizer")
+	controllerutil.RemoveFinalizer(instance, shareFinalizer)
+	err := m.client.Update(ctx, instance)
+	if err != nil {
+		return Result{err: err}
+	}
 	return Done
 }
 
@@ -268,4 +308,12 @@ func (m *SmbShareManager) updateConfiguration(
 		return nil, false, err
 	}
 	return planner, true, nil
+}
+
+func (m *SmbShareManager) addFinalizer(ctx context.Context, s *sambaoperatorv1alpha1.SmbShare) (bool, error) {
+	if controllerutil.ContainsFinalizer(s, shareFinalizer) {
+		return false, nil
+	}
+	controllerutil.AddFinalizer(s, shareFinalizer)
+	return true, m.client.Update(ctx, s)
 }
