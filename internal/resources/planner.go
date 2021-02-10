@@ -80,6 +80,12 @@ func (sp *sharePlanner) update() (changed bool, err error) {
 	share, found := sp.Config.Shares[shareKey]
 	if !found {
 		share = smbcc.NewSimpleShare(sp.sharePath())
+		if !sp.SmbShare.Spec.Browseable {
+			share.Options[smbcc.BrowseableParam] = smbcc.No
+		}
+		if sp.SmbShare.Spec.ReadOnly {
+			share.Options[smbcc.ReadOnlyParam] = smbcc.Yes
+		}
 		sp.Config.Shares[shareKey] = share
 		changed = true
 	}
