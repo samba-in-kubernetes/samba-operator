@@ -50,7 +50,7 @@ func (r *SmbShareReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	reqLogger.Info("Reconciling SmbShare")
 
 	smbShareManager := resources.NewSmbShareManager(r, r.Scheme, reqLogger)
-	res := smbShareManager.Update(ctx, req.NamespacedName)
+	res := smbShareManager.Process(ctx, req.NamespacedName)
 	err := res.Err()
 	if res.Requeue() {
 		return ctrl.Result{Requeue: true}, err
