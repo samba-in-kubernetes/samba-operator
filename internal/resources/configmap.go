@@ -35,9 +35,9 @@ const (
 	ConfigJSONKey = "config.json"
 )
 
-func getOrCreateConfigMap(
+func getConfigMap(
 	ctx context.Context, client client.Client, ns string) (
-	*corev1.ConfigMap, bool, error) {
+	*corev1.ConfigMap, error) {
 	// fetch the existing config, if available
 	cm := &corev1.ConfigMap{}
 	err := client.Get(
@@ -47,6 +47,14 @@ func getOrCreateConfigMap(
 			Namespace: ns,
 		},
 		cm)
+	return cm, err
+}
+
+func getOrCreateConfigMap(
+	ctx context.Context, client client.Client, ns string) (
+	*corev1.ConfigMap, bool, error) {
+	// fetch the existing config, if available
+	cm, err := getConfigMap(ctx, client, ns)
 	if err == nil {
 		return cm, false, nil
 	}
