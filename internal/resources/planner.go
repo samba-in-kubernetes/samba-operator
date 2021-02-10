@@ -106,3 +106,17 @@ func (sp *sharePlanner) update() (changed bool, err error) {
 	}
 	return
 }
+
+func (sp *sharePlanner) prune() (changed bool, err error) {
+	cfgKey := sp.instanceID()
+	if _, found := sp.Config.Configs[cfgKey]; found {
+		delete(sp.Config.Configs, cfgKey)
+		changed = true
+	}
+	shareKey := smbcc.Key(sp.shareName())
+	if _, found := sp.Config.Shares[shareKey]; found {
+		delete(sp.Config.Shares, shareKey)
+		changed = true
+	}
+	return
+}
