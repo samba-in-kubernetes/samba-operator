@@ -14,8 +14,9 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 # Image URL to use all building/pushing image targets
 TAG ?= latest
 IMG ?= quay.io/samba.org/samba-operator:$(TAG)
-# Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
-CRD_OPTIONS ?= "crd:trivialVersions=true"
+
+# Produce CRDs that work on Kubernetes 1.16 or later
+CRD_OPTIONS ?= "crd:trivialVersions=true,crdVersions=v1"
 
 CHECK_GOFMT_FLAGS ?= -e -s -l
 
