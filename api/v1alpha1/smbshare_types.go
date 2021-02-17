@@ -39,11 +39,13 @@ type SmbShareSpec struct {
 	Storage SmbShareStorageSpec `json:"storage"`
 
 	// ReadOnly controls if this share is to be read-only or not.
+	// +kubebuilder:default:=false
 	// +optional
 	ReadOnly bool `json:"readOnly"`
 
 	// Browseable controls if the share will be browseable. A browseable share
 	// is visible in listings.
+	// +kubebuilder:default:=true
 	// +optional
 	Browseable bool `json:"browseable"`
 }
