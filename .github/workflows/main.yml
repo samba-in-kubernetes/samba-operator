@@ -38,14 +38,29 @@ jobs:
       run: make test
 
   podmanbuild:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     # don't run on push, since the "push" job contains the
     # image build step, so no need to do it twice.
     if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v2
-      - name: check free space
-        run: df -h
+      - name: Install fuse-overlayfs
+        run: sudo apt-get -y install fuse-overlayfs
+      - name: Setup podman config
+        run: |
+          mkdir -p /home/runner/.config/containers/
+          cat >/home/runner/.config/containers/storage.conf <<EOF
+          [storage]
+          driver = "overlay"
+          graphroot = "${HOME}/.local/share/containers/storage2"
+
+            [storage.options]
+              mount_program = "/usr/bin/fuse-overlayfs"
+          EOF
+          cat >/home/runner/.config/containers/containers.conf <<EOF
+          [containers]
+          netns = "host"
+          EOF
       - name: build container image
         # note: forcing use of podman here since we are
         # using podman explicity for the push job
