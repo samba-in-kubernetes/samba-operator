@@ -4,10 +4,7 @@ projectName: samba-operator
 repo: github.com/samba-in-kubernetes/samba-operator
 resources:
 - group: samba-operator
-  kind: SmbService
-  version: v1alpha1
-- group: samba-operator
-  kind: SmbPvc
+  kind: SmbShare
   version: v1alpha1
 version: 3-alpha
 plugins:

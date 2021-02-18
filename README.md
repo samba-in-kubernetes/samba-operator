@@ -5,14 +5,10 @@ An operator for Samba as a service on PVCs in kubernetes.
 ## Description
 
 This project implements the samba-operator. It it responsible for the
-the `SmbService` and `SmbPvc` custom resources:
+the `SmbShare` custom resource:
 
-* [`SmbService`](./config/crd/bases/samba-operator.samba.org_smbservices.yaml)
-describes an SMB service deployment that is created
-for a given PersistentVolumeClaim (PVC).
-* [`SmbPvc`](./config/crd/bases/samba-operator.samba.org_smbpvcs.yaml)
-describes a PVC bundled with an SmbService. I.e. you request a pvc along with an
-SmbService. When you delete the `SmbPvc`, the created backend PVC will also be deleted.
+* [`SmbShare`](./config/crd/bases/samba-operator.samba.org_smbshares.yaml)
+describes an SMB Share that will be used to share data with clients.
 
 ## Trying it out
 
@@ -41,41 +37,50 @@ To delete the operator and CRDs from the cluster, run:
 make delete-deploy
 ```
 
-### Creating an `SmbService`
+### Creating new Shares
 
-If you have a PVC `mypvc`, create a `mysmbservice.yml` file as folows (see
-		[examples/mysmbservice.yml](examples/mysmbservice.yml)):
+#### Use a PVC you define
 
-```
-apiVersion: samba-operator.samba.org/v1alpha1
-kind: SmbService
-metadata:
-  name: my-smbservice
-spec:
-  pvcname: "mypvc"
-```
+A share can be created that uses pre-existing PVCs, ones that are not directly
+managed by the operator.
 
-And apply it with `kubectl apply -f mysmbservice.yml`.
-You will get a samba container deployment serving out your pvc as share `share`.
-
-### Creating an `SmbPvc`
-
-For an `SmbPvc` example that uses the minikube gluster storage addon, see
-[examples/smbpvc.yml](examples/smbpvc1.yml). The yaml file looks like this:
+Assuming you have a PVC named `mypvc`, you can create a new SmbShare using
+the example YAML below:
 
 ```
 apiVersion: samba-operator.samba.org/v1alpha1
-kind: SmbPvc
+kind: SmbShare
 metadata:
-  name: "mysmbpvc1"
+  name: smbshare1
 spec:
-  pvc:
-    accessModes:
-      - ReadWriteMany
-    resources:
-      requests:
-        storage: 1Gi
-    storageClassName: glusterfile
+  storage:
+    pvc:
+      name: "mypvc"
+  readOnly: false
+```
+
+### Use a PVC embedded in the SmbShare
+
+A share can be created that embeds a PVC definition. In this case the operator
+will automatically manage the PVC along with the share. This example assumes
+you have a default storage class enabled.
+
+For example:
+```
+apiVersion: samba-operator.samba.org/v1alpha1
+kind: SmbShare
+metadata:
+  name: smbshare2
+spec:
+  storage:
+    pvc:
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+  readOnly: false
 ```
 
 ### Testing it with a Local Connection

@@ -1,6 +1,0 @@
-apiVersion: samba-operator.samba.org/v1alpha1
-kind: SmbService
-metadata:
-  name: "smb-mypvc"
-spec:
-  pvcname: "mypvc1"

@@ -75,22 +75,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.SmbServiceReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("SmbService"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "SmbService")
-		os.Exit(1)
-	}
-	if err = (&controllers.SmbPvcReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("SmbPvc"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "SmbPvc")
-		os.Exit(1)
-	}
 	if err = (&controllers.SmbShareReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("SmbShare"),
