@@ -301,7 +301,7 @@ func (m *SmbShareManager) updateConfiguration(
 		return nil, false, err
 	}
 	// extract config from map
-	planner := newSharePlanner(s, cc)
+	planner := newSharePlanner(s, nil, cc)
 	var changed bool
 	if s.GetDeletionTimestamp() == nil {
 		changed, err = planner.update()
