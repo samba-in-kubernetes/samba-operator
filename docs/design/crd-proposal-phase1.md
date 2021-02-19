@@ -49,6 +49,9 @@ Spec Options:
   * `secret` - string - The name of a secret containing user and group
     definitions that will be used to create the local users and groups for the
     service
+  * `key` - string - The key within the secret containing user and group
+    definitions that will be used to create the local users and group for the
+    service.
 * `instanceNamePrefix` - string - Optional string used to construct an
   identifier that will be used to refer to a samba instance. The instance name
   may be used to identify resources in Active Directory, for example.
