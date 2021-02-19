@@ -46,6 +46,12 @@ spec:
                 description: ReadOnly controls if this share is to be read-only or
                   not.
                 type: boolean
+              securityConfig:
+                description: SecurityConfig specifies which SmbSecurityConfig CR is
+                  to be used for this share. If left blank, the operator's default
+                  will be used.
+                minLength: 1
+                type: string
               shareName:
                 description: ShareName is an optional string that lets you define
                   an SMB compliant name for the share. If unset, the name will be

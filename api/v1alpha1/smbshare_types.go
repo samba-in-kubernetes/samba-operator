@@ -48,6 +48,13 @@ type SmbShareSpec struct {
 	// +kubebuilder:default:=true
 	// +optional
 	Browseable bool `json:"browseable"`
+
+	// SecurityConfig specifies which SmbSecurityConfig CR is to be used
+	// for this share. If left blank, the operator's default will be
+	// used.
+	// +kubebuilder:validation:MinLength:=1
+	// +optional
+	SecurityConfig string `json:"securityConfig,omitempty"`
 }
 
 // SmbShareStorageSpec defines how storage is associated with a share.
