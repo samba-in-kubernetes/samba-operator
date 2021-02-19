@@ -22,6 +22,20 @@ import (
 	"github.com/samba-in-kubernetes/samba-operator/internal/smbcc"
 )
 
+type securityMode string
+
+const (
+	userMode = securityMode("user")
+	adMode   = securityMode("active-directory")
+)
+
+type userSecuritySource struct {
+	Configured bool
+	Namespace  string
+	Secret     string
+	Key        string
+}
+
 type sharePlanner struct {
 	SmbShare       *sambaoperatorv1alpha1.SmbShare
 	SecurityConfig *sambaoperatorv1alpha1.SmbSecurityConfig
@@ -65,11 +79,49 @@ func (sp *sharePlanner) sharePath() string {
 }
 
 func (sp *sharePlanner) containerConfigPath() string {
-	return path.Join(sp.containerConfigDir(), "config.json")
+	cpath := path.Join(sp.containerConfigDir(), "config.json")
+	if sp.userSecuritySource().Configured {
+		upath := path.Join(sp.usersConfigDir(), sp.usersConfigFileName())
+		cpath += ":" + upath
+	}
+	return cpath
 }
 
 func (*sharePlanner) containerConfigDir() string {
 	return "/etc/container-config"
+}
+
+func (*sharePlanner) usersConfigFileName() string {
+	return "users.json"
+}
+
+func (*sharePlanner) usersConfigDir() string {
+	return "/etc/container-users"
+}
+
+func (sp *sharePlanner) securityMode() securityMode {
+	if sp.SecurityConfig == nil {
+		return userMode
+	}
+	m := securityMode(sp.SecurityConfig.Spec.Mode)
+	if m != userMode && m != adMode {
+		// this shouldn't normally be possible unless kube validation
+		// fails or is out of sync.
+		m = userMode
+	}
+	return m
+}
+
+func (sp *sharePlanner) userSecuritySource() userSecuritySource {
+	s := userSecuritySource{}
+	if sp.SecurityConfig == nil || sp.SecurityConfig.Spec.Users == nil {
+		return s
+	}
+	s.Configured = true
+	s.Namespace = sp.SecurityConfig.Namespace
+	s.Secret = sp.SecurityConfig.Spec.Users.Secret
+	s.Key = sp.SecurityConfig.Spec.Users.Key
+	return s
 }
 
 func (sp *sharePlanner) update() (changed bool, err error) {
