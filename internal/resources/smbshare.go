@@ -300,13 +300,30 @@ func (m *SmbShareManager) updateConfiguration(
 		m.logger.Error(err, "unable to read samba container config")
 		return nil, false, err
 	}
+	isDeleting := s.GetDeletionTimestamp() != nil
+	security, err := m.getSecurityConfig(ctx, s)
+	if err != nil {
+		if isDeleting && errors.IsNotFound(err) {
+			// we can't block deleting the share if the security config
+			// is missing. Otherwise, we may just get stuck here forever.
+			// This is easy to do if you typo or give a invalid security
+			// config name and then try to delete your bad Share.
+			m.logger.Info(
+				"failed to get SmbSecurityConfig while deleting SmbShare",
+				"error", err)
+			security = nil
+		} else {
+			m.logger.Error(err, "failed to get SmbSecurityConfig")
+			return nil, false, err
+		}
+	}
 	// extract config from map
-	planner := newSharePlanner(s, nil, cc)
+	planner := newSharePlanner(s, security, cc)
 	var changed bool
-	if s.GetDeletionTimestamp() == nil {
-		changed, err = planner.update()
-	} else {
+	if isDeleting {
 		changed, err = planner.prune()
+	} else {
+		changed, err = planner.update()
 	}
 	if err != nil {
 		m.logger.Error(err, "unable to update samba container config")
@@ -334,4 +351,24 @@ func (m *SmbShareManager) addFinalizer(ctx context.Context, s *sambaoperatorv1al
 	}
 	controllerutil.AddFinalizer(s, shareFinalizer)
 	return true, m.client.Update(ctx, s)
+}
+
+func (m *SmbShareManager) getSecurityConfig(
+	ctx context.Context, s *sambaoperatorv1alpha1.SmbShare) (
+	*sambaoperatorv1alpha1.SmbSecurityConfig, error) {
+	// check if the share specifies a security config
+	if s.Spec.SecurityConfig == "" {
+		return nil, nil
+	}
+
+	nsname := types.NamespacedName{
+		Name:      s.Spec.SecurityConfig,
+		Namespace: s.Namespace,
+	}
+	security := &sambaoperatorv1alpha1.SmbSecurityConfig{}
+	err := m.client.Get(ctx, nsname, security)
+	if err != nil {
+		return nil, err
+	}
+	return security, nil
 }
