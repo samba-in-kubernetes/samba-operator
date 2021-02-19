@@ -21,27 +21,63 @@ import (
 	"github.com/samba-in-kubernetes/samba-operator/internal/conf"
 )
 
+const (
+	userSecretVolName = "users-config"
+)
+
 func buildPodSpec(planner *sharePlanner, cfg *conf.OperatorConfig, pvcName string) corev1.PodSpec {
 	pvcVolName := pvcName + "-smb"
 	cmSrc := &corev1.ConfigMapVolumeSource{}
 	cmSrc.Name = ConfigMapName
-	podSpec := corev1.PodSpec{
-		Volumes: []corev1.Volume{
-			{
-				Name: pvcVolName,
-				VolumeSource: corev1.VolumeSource{
-					PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-						ClaimName: pvcName,
-					},
-				},
-			},
-			{
-				Name: ConfigMapName,
-				VolumeSource: corev1.VolumeSource{
-					ConfigMap: cmSrc,
+	volumes := []corev1.Volume{
+		{
+			Name: pvcVolName,
+			VolumeSource: corev1.VolumeSource{
+				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+					ClaimName: pvcName,
 				},
 			},
 		},
+		{
+			Name: ConfigMapName,
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: cmSrc,
+			},
+		},
+	}
+	mounts := []corev1.VolumeMount{
+		{
+			MountPath: planner.sharePath(),
+			Name:      pvcVolName,
+		},
+		{
+			MountPath: planner.containerConfigDir(),
+			Name:      ConfigMapName,
+		},
+	}
+	if planner.securityMode() == userMode {
+		uss := planner.userSecuritySource()
+		if uss.Configured {
+			volumes = append(volumes, corev1.Volume{
+				Name: userSecretVolName,
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: uss.Secret,
+						Items: []corev1.KeyToPath{{
+							Key:  uss.Key,
+							Path: planner.usersConfigFileName(),
+						}},
+					},
+				},
+			})
+			mounts = append(mounts, corev1.VolumeMount{
+				MountPath: planner.usersConfigDir(),
+				Name:      userSecretVolName,
+			})
+		}
+	}
+	podSpec := corev1.PodSpec{
+		Volumes: volumes,
 		Containers: []corev1.Container{{
 			Image: cfg.SmbdContainerImage,
 			Name:  cfg.SmbdContainerName,
@@ -60,16 +96,7 @@ func buildPodSpec(planner *sharePlanner, cfg *conf.OperatorConfig, pvcName strin
 				ContainerPort: 445,
 				Name:          "smb",
 			}},
-			VolumeMounts: []corev1.VolumeMount{
-				{
-					MountPath: planner.sharePath(),
-					Name:      pvcVolName,
-				},
-				{
-					MountPath: planner.containerConfigDir(),
-					Name:      ConfigMapName,
-				},
-			},
+			VolumeMounts: mounts,
 		}},
 	}
 	return podSpec
