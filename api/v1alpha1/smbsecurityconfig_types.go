@@ -32,6 +32,9 @@ type SmbSecurityConfigSpec struct {
 
 	// Users is used to configure "local" user and group based security.
 	Users *SmbSecurityUsersSpec `json:"users,omitempty"`
+
+	// Realm specifies the active directory domain to use.
+	Realm string `json:"realm,omitempty"`
 }
 
 // SmbSecurityUsersSpec configures user level security.

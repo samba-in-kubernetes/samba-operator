@@ -42,6 +42,9 @@ spec:
                 - user
                 - active-directory
                 type: string
+              realm:
+                description: Realm specifies the active directory domain to use.
+                type: string
               users:
                 description: Users is used to configure "local" user and group based
                   security.
