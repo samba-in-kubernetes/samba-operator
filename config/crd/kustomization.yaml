@@ -3,6 +3,7 @@
 # It should be run by config/default
 resources:
 - bases/samba-operator.samba.org_smbshares.yaml
+- bases/samba-operator.samba.org_smbsecurityconfigs.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:
