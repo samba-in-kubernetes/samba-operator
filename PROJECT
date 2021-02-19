@@ -6,6 +6,9 @@ resources:
 - group: samba-operator
   kind: SmbShare
   version: v1alpha1
+- group: samba-operator
+  kind: SmbSecurityConfig
+  version: v1alpha1
 version: 3-alpha
 plugins:
   go.sdk.operatorframework.io/v2-alpha: {}
