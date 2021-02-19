@@ -23,17 +23,20 @@ import (
 )
 
 type sharePlanner struct {
-	SmbShare *sambaoperatorv1alpha1.SmbShare
-	Config   *smbcc.SambaContainerConfig
+	SmbShare       *sambaoperatorv1alpha1.SmbShare
+	SecurityConfig *sambaoperatorv1alpha1.SmbSecurityConfig
+	Config         *smbcc.SambaContainerConfig
 }
 
 func newSharePlanner(
 	share *sambaoperatorv1alpha1.SmbShare,
+	security *sambaoperatorv1alpha1.SmbSecurityConfig,
 	config *smbcc.SambaContainerConfig) *sharePlanner {
 	// return a new sharePlanner
 	return &sharePlanner{
-		SmbShare: share,
-		Config:   config,
+		SmbShare:       share,
+		SecurityConfig: security,
+		Config:         config,
 	}
 }
 
