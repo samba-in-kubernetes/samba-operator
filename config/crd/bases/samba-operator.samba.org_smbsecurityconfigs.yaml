@@ -36,6 +36,29 @@ spec:
           spec:
             description: SmbSecurityConfigSpec defines the desired state of SmbSecurityConfig
             properties:
+              joinSources:
+                description: JoinSources holds a list of sources for domain join data
+                  for this configuration.
+                items:
+                  description: SmbSecurityJoinSpec configures how samba instances
+                    are allowed to join to active directory if needed.
+                  properties:
+                    userJoin:
+                      description: SmbSecurityUserJoinSpec configures samba container
+                        instances to use a secret containing a username and password.
+                      properties:
+                        key:
+                          default: join.json
+                          description: Key within the secret containing the username
+                            and password.
+                          type: string
+                        secret:
+                          description: Secret that contains the username and password.
+                          minLength: 1
+                          type: string
+                      type: object
+                  type: object
+                type: array
               mode:
                 description: Mode specifies what approach to security is being used.
                 enum:
