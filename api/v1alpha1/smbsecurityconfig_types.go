@@ -35,6 +35,10 @@ type SmbSecurityConfigSpec struct {
 
 	// Realm specifies the active directory domain to use.
 	Realm string `json:"realm,omitempty"`
+
+	// JoinSources holds a list of sources for domain join data for
+	// this configuration.
+	JoinSources []SmbSecurityJoinSpec `json:"joinSources,omitempty"`
 }
 
 // SmbSecurityUsersSpec configures user level security.
@@ -49,6 +53,25 @@ type SmbSecurityUsersSpec struct {
 	// group configuration json.
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength:=1
+	Key string `json:"key,omitempty"`
+}
+
+// SmbSecurityJoinSpec configures how samba instances are allowed to
+// join to active directory if needed.
+type SmbSecurityJoinSpec struct {
+	UserJoin *SmbSecurityUserJoinSpec `json:"userJoin,omitempty"`
+}
+
+// SmbSecurityUserJoinSpec configures samba container instances to
+// use a secret containing a username and password.
+type SmbSecurityUserJoinSpec struct {
+	// Secret that contains the username and password.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength:=1
+	Secret string `json:"secret,omitempty"`
+	// Key within the secret containing the username and password.
+	// +kubebuilder:default:=join.json
+	// +optional
 	Key string `json:"key,omitempty"`
 }
 
