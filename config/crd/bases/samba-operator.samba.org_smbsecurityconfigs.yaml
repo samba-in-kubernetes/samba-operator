@@ -36,6 +36,27 @@ spec:
           spec:
             description: SmbSecurityConfigSpec defines the desired state of SmbSecurityConfig
             properties:
+              domains:
+                description: Domains holds a list of primary & trusted domain configurations.
+                  If left empty a simple default that automatically works with trusted
+                  domains will be used.
+                items:
+                  description: SmbSecurityDomainSpec configures samba's domain management
+                    and ID mapping behavior for the specified domain.
+                  properties:
+                    backend:
+                      description: Mode specifies what approach to security is being
+                        used.
+                      enum:
+                      - autorid
+                      - ad-rfc2307
+                      type: string
+                    name:
+                      description: Name of the domain.
+                      minLength: 1
+                      type: string
+                  type: object
+                type: array
               joinSources:
                 description: JoinSources holds a list of sources for domain join data
                   for this configuration.

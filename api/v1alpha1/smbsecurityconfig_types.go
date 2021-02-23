@@ -39,6 +39,12 @@ type SmbSecurityConfigSpec struct {
 	// JoinSources holds a list of sources for domain join data for
 	// this configuration.
 	JoinSources []SmbSecurityJoinSpec `json:"joinSources,omitempty"`
+
+	// Domains holds a list of primary & trusted domain configurations.
+	// If left empty a simple default that automatically works with
+	// trusted domains will be used.
+	// +optional
+	Domains []SmbSecurityDomainSpec `json:"domains,omitempty"`
 }
 
 // SmbSecurityUsersSpec configures user level security.
@@ -73,6 +79,22 @@ type SmbSecurityUserJoinSpec struct {
 	// +kubebuilder:default:=join.json
 	// +optional
 	Key string `json:"key,omitempty"`
+}
+
+// SmbSecurityDomainSpec configures samba's domain management and ID mapping
+// behavior for the specified domain.
+type SmbSecurityDomainSpec struct {
+	// Name of the domain.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength:=1
+	Name string `json:"name,omitempty"`
+
+	// Mode specifies what approach to security is being used.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Enum:=autorid;ad-rfc2307
+	Backend string `json:"backend,omitempty"`
+
+	// TODO: add support for id mapping ranges, etc.
 }
 
 // SmbSecurityConfigStatus defines the observed state of SmbSecurityConfig
