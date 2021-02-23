@@ -61,6 +61,13 @@ Spec Options:
   * `backend` - enumerated string - the name of a (supported) ID mapping back-end
   * `name` - string - the name of the domain being configured
   * TBD - options to configure the back end, ID range, etc.
+* `joinSources` - list-of-sources - A subsection that describes one or
+  more source for AD join information.
+  * `userJoin` - A subsection of config data configuring join based on
+    username and password information stored in a secret.
+    * `Secret` - string - the name of a secret that stores join auth data.
+    * `Key` - string - the name of the key within the secret storing the
+      data (optional)
 
 
 ## SmbShare
