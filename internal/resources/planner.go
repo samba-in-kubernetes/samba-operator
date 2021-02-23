@@ -164,6 +164,47 @@ func (sp *sharePlanner) userSecuritySource() userSecuritySource {
 	return s
 }
 
+func (sp *sharePlanner) idmapOptions() smbcc.SmbOptions {
+	if sp.SecurityConfig == nil || len(sp.SecurityConfig.Spec.Domains) == 0 {
+		// default idmap config
+		return smbcc.SmbOptions{
+			"idmap config * : backend": "autorid",
+			"idmap config * : range":   "2000-9999999",
+		}
+	}
+	// this is hacky and needs both config to support user supplied ID
+	// ranges as well as a decent algo to deal with ID map ranges.
+	// for now we're just punting though (call it prototyping) :-)
+	o := smbcc.SmbOptions{}
+	doms := []sambaoperatorv1alpha1.SmbSecurityDomainSpec{}
+	userDefault := false
+	for _, d := range sp.SecurityConfig.Spec.Domains {
+		doms = append(doms, d)
+		if d.Name == "*" {
+			userDefault = true
+		}
+	}
+	if !userDefault {
+		doms = append(doms, sambaoperatorv1alpha1.SmbSecurityDomainSpec{
+			Name:    "*",
+			Backend: "autorid",
+		})
+	}
+	step := 10000
+	for i, d := range doms {
+		pfx := fmt.Sprintf("idmap config %s : ", d.Name)
+		if d.Backend == "autorid" {
+			o[pfx+"backend"] = "autorid"
+		} else {
+			o[pfx+"backend"] = "ad"
+			o[pfx+"schema_mode"] = "rfc2307"
+		}
+		rs := (i * step) + 2000
+		o[pfx+"range"] = fmt.Sprintf("%d-%d", rs, rs+step-1)
+	}
+	return o
+}
+
 func (sp *sharePlanner) update() (changed bool, err error) {
 	noprinting, found := sp.Config.Globals[smbcc.NoPrintingKey]
 	if !found {
@@ -205,21 +246,17 @@ func (sp *sharePlanner) update() (changed bool, err error) {
 	}
 	if sp.securityMode() == adMode {
 		realmKey := smbcc.Key(sp.realm())
-		dglobals, found := sp.Config.Globals[realmKey]
+		_, found := sp.Config.Globals[realmKey]
 		if !found {
-			dglobals = smbcc.GlobalConfig{
-				Options: smbcc.SmbOptions{
-					// security mode
-					"security": "ads",
-					// workgroup and realm
-					"workgroup": sp.workgroup(),
-					"realm":     sp.realm(),
-					// default idmap config
-					"idmap config * : backend": "autorid",
-					"idmap config * : range":   "2000-9999999",
-				},
+			opts := sp.idmapOptions()
+			// security mode
+			opts["security"] = "ads"
+			// workgroup and realm
+			opts["workgroup"] = sp.workgroup()
+			opts["realm"] = sp.realm()
+			sp.Config.Globals[realmKey] = smbcc.GlobalConfig{
+				Options: opts,
 			}
-			sp.Config.Globals[realmKey] = dglobals
 			changed = true
 		}
 	}
