@@ -16,7 +16,9 @@ limitations under the License.
 package resources
 
 import (
+	"fmt"
 	"path"
+	"strings"
 
 	sambaoperatorv1alpha1 "github.com/samba-in-kubernetes/samba-operator/api/v1alpha1"
 	"github.com/samba-in-kubernetes/samba-operator/internal/smbcc"
@@ -99,6 +101,14 @@ func (*sharePlanner) usersConfigDir() string {
 	return "/etc/container-users"
 }
 
+func (*sharePlanner) winbindSocketsDir() string {
+	return "/run/samba/winbindd"
+}
+
+func (*sharePlanner) sambaStateDir() string {
+	return "/var/lib/samba"
+}
+
 func (sp *sharePlanner) securityMode() securityMode {
 	if sp.SecurityConfig == nil {
 		return userMode
@@ -110,6 +120,36 @@ func (sp *sharePlanner) securityMode() securityMode {
 		m = userMode
 	}
 	return m
+}
+
+func (sp *sharePlanner) realm() string {
+	return strings.ToUpper(sp.SecurityConfig.Spec.Realm)
+}
+
+func (sp *sharePlanner) workgroup() string {
+	// todo: this is a big hack. needs thought and cleanup
+	parts := strings.SplitN(sp.realm(), ".", 2)
+	return parts[0]
+}
+
+func (*sharePlanner) joinJsonSuffix(index int) string {
+	return fmt.Sprintf("-%d", index)
+}
+
+func (*sharePlanner) joinJsonSourceDir(index int) string {
+	return fmt.Sprintf("/var/tmp/join/%d", index)
+}
+
+func (*sharePlanner) joinJsonFileName() string {
+	return "join.json"
+}
+
+func (sp *sharePlanner) joinJsonSourcePath(index int) string {
+	return path.Join(sp.joinJsonSourceDir(index), sp.joinJsonFileName())
+}
+
+func (*sharePlanner) joinEnvPaths(p []string) string {
+	return strings.Join(p, ":")
 }
 
 func (sp *sharePlanner) userSecuritySource() userSecuritySource {
@@ -152,12 +192,36 @@ func (sp *sharePlanner) update() (changed bool, err error) {
 			Globals:      []smbcc.Key{smbcc.NoPrintingKey},
 			InstanceName: sp.instanceName(),
 		}
+		if sp.securityMode() == adMode {
+			realmKey := smbcc.Key(sp.realm())
+			cfg.Globals = append(cfg.Globals, realmKey)
+		}
 		sp.Config.Configs[cfgKey] = cfg
 		changed = true
 	}
 	if len(sp.Config.Users) == 0 {
 		sp.Config.Users = smbcc.NewDefaultUsers()
 		changed = true
+	}
+	if sp.securityMode() == adMode {
+		realmKey := smbcc.Key(sp.realm())
+		dglobals, found := sp.Config.Globals[realmKey]
+		if !found {
+			dglobals = smbcc.GlobalConfig{
+				Options: smbcc.SmbOptions{
+					// security mode
+					"security": "ads",
+					// workgroup and realm
+					"workgroup": sp.workgroup(),
+					"realm":     sp.realm(),
+					// default idmap config
+					"idmap config * : backend": "autorid",
+					"idmap config * : range":   "2000-9999999",
+				},
+			}
+			sp.Config.Globals[realmKey] = dglobals
+			changed = true
+		}
 	}
 	return
 }
