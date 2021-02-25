@@ -105,10 +105,10 @@ func New() *SambaContainerConfig {
 func NewNoPrintingGlobals() GlobalConfig {
 	return GlobalConfig{
 		Options: SmbOptions{
-			"load printers":   "no",
+			"load printers":   No,
 			"printing":        "bsd",
 			"printcap name":   "/dev/null",
-			"disable spoolss": "yes",
+			"disable spoolss": Yes,
 		},
 	}
 }
@@ -118,7 +118,7 @@ func NewSimpleShare(path string) ShareConfig {
 	return ShareConfig{
 		Options: SmbOptions{
 			"path":      path,
-			"read only": "no",
+			"read only": No,
 		},
 	}
 }
