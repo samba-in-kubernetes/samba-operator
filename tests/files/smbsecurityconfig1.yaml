@@ -1,0 +1,41 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: users1
+type: Opaque
+stringData:
+  demousers: |
+    {
+      "samba-container-config": "v0",
+      "users": {
+        "all_entries": [
+          {
+            "name": "sambauser",
+            "password": "1nsecurely"
+          },
+          {
+            "name": "alice",
+            "password": "wond3r1and"
+          },
+          {
+            "name": "bob",
+            "password": "r0b0t"
+          },
+          {
+            "name": "carol",
+            "password": "Xm4sd4y"
+          }
+        ]
+      }
+    }
+---
+apiVersion: samba-operator.samba.org/v1alpha1
+kind: SmbSecurityConfig
+metadata:
+  name: sharesec1
+spec:
+  mode: user
+  users:
+    secret: users1
+    key: demousers
