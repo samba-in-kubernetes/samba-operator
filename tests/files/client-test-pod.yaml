@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: smbclient
+  labels:
+    app: samba-operator-test-smbclient
+spec:
+  containers:
+    - name: client
+      image: quay.io/samba.org/samba-client:latest
+      command:
+      - sleep
+      - infinity
+      workingDir: "/srv"
+      volumeMounts:
+      - mountPath: "/srv"
+        name: data
+  volumes:
+  - configMap:
+      name: sample-data1
+    name: data
+

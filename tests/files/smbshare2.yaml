@@ -1,0 +1,17 @@
+---
+apiVersion: samba-operator.samba.org/v1alpha1
+kind: SmbShare
+metadata:
+  name: tshare2
+spec:
+  shareName: "My Kingdom"
+  readOnly: false
+  securityConfig: adsec1
+  storage:
+    pvc:
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
