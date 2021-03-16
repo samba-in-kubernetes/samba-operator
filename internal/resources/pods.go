@@ -17,6 +17,7 @@ package resources
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/samba-in-kubernetes/samba-operator/internal/conf"
 )
@@ -95,6 +96,13 @@ func buildADPodSpec(planner *sharePlanner, cfg *conf.OperatorConfig, pvcName str
 					Name:          "smb",
 				}},
 				VolumeMounts: append(mounts, wbSockMount, shareMount),
+				LivenessProbe: &corev1.Probe{
+					Handler: corev1.Handler{
+						TCPSocket: &corev1.TCPSocketAction{
+							Port: intstr.FromInt(445),
+						},
+					},
+				},
 			},
 			{
 				Image:        cfg.SmbdContainerImage,
@@ -102,6 +110,17 @@ func buildADPodSpec(planner *sharePlanner, cfg *conf.OperatorConfig, pvcName str
 				Args:         []string{"run", "winbindd"},
 				Env:          podEnv,
 				VolumeMounts: append(mounts, wbSockMount),
+				LivenessProbe: &corev1.Probe{
+					Handler: corev1.Handler{
+						Exec: &corev1.ExecAction{
+							Command: []string{
+								"samba-container",
+								"check",
+								"winbind",
+							},
+						},
+					},
+				},
 			},
 		},
 	}
@@ -138,6 +157,13 @@ func buildUserPodSpec(planner *sharePlanner, cfg *conf.OperatorConfig, pvcName s
 				Name:          "smb",
 			}},
 			VolumeMounts: mounts,
+			LivenessProbe: &corev1.Probe{
+				Handler: corev1.Handler{
+					TCPSocket: &corev1.TCPSocketAction{
+						Port: intstr.FromInt(445),
+					},
+				},
+			},
 		}},
 	}
 	return podSpec
