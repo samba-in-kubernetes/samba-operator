@@ -78,6 +78,22 @@ jobs:
         # using podman explicity for the push job
         run: make CONTAINER_CMD=docker image-build
 
+  test-kubernetes:
+    #runs-on: ubuntu-latest
+    # need to explicitly use 20.04 to avoid problems with jq...
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+    - uses: nolar/setup-k3d-k3s@v1
+    - name: get nodes
+      run: kubectl get nodes
+    - name: build and deploy container
+      run: make CONTAINER_CMD=docker deploy
+    - name: install crds
+      run: make CONTAINER_CMD=docker install
+    - name: run tests
+      run: KUBECONFIG=~/.kube/config go test -tags integration -v -count 1 ./tests/integration -run TestSmbShares/1
+
   # push the container to quay.io - only for pushes, not PRs
   push:
     needs: [build, check]
