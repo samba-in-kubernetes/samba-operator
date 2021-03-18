@@ -93,6 +93,10 @@ jobs:
       run: make CONTAINER_CMD=docker install
     - name: run tests
       run: KUBECONFIG=~/.kube/config go test -tags integration -v -count 1 ./tests/integration -run TestSmbShares/1
+    - name: deploy ad server
+      run: ./tests/test-deploy-ad-server.sh
+    - name: run ad-level test
+      run: KUBECONFIG=~/.kube/config go test -tags integration -v -count 1 ./tests/integration -run TestSmbShares/2
 
   # push the container to quay.io - only for pushes, not PRs
   push:
