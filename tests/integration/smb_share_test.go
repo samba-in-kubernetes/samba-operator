@@ -42,10 +42,6 @@ func (s *SmbShareSuite) SetupSuite() {
 	}
 	require.NoError(s.waitForPodExist(), "smb server pod does not exist")
 	require.NoError(s.waitForPodReady(), "smb server pod is not ready")
-
-	// this is a hack to avoid poking smbd too soon. Can be dropped once
-	// the operator sets up liveness and readiness probes.
-	time.Sleep(200 * time.Millisecond)
 }
 
 func (s *SmbShareSuite) TearDownSuite() {
