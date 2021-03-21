@@ -27,6 +27,7 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
+CONTAINER_BUILD_OPTS ?=
 CONTAINER_CMD ?=
 ifeq ($(CONTAINER_CMD),)
 	CONTAINER_CMD:=$(shell docker version >/dev/null 2>&1 && echo docker)
@@ -87,7 +88,7 @@ generate: controller-gen
 # Build the container image
 docker-build: image-build
 image-build:
-	$(CONTAINER_CMD) build . -t ${IMG}
+	$(CONTAINER_CMD) build $(CONTAINER_BUILD_OPTS) . -t ${IMG}
 
 # Push the container image
 docker-push: container-push
@@ -143,7 +144,7 @@ bundle: manifests
 # Build the bundle image.
 .PHONY: bundle-build
 bundle-build:
-	$(CONTAINER_CMD) build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
+	$(CONTAINER_CMD) build $(CONTAINER_BUILD_OPTS) -f bundle.Dockerfile -t $(BUNDLE_IMG) .
 
 .PHONY: check check-revive check-format
 
