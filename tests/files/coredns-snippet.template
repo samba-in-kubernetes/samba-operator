@@ -1,0 +1,5 @@
+    x.asynchrono.us:53 {
+        errors
+        cache 30
+        forward . AD_SERVER_IP
+    }
