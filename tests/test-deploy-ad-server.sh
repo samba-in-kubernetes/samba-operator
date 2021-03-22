@@ -11,8 +11,15 @@ _error() {
 	exit 1
 }
 
-kubectl create -f "${DEPLOYMENT_YAML}"
-#[ $? -eq 0 ] || _error "Error creating ad server deployment"
+echo "Creating ad server deployment..."
+ERROR_MSG=$(kubectl create -f "${DEPLOYMENT_YAML}" 2>&1 1>/dev/null)
+if [ $? -ne 0 ] ; then
+	if [[ "${ERROR_MSG}" =~ "AlreadyExists" ]] ; then
+		echo "Deployment exists already. Continuing."
+	else
+		_error "Error creating ad server deployment."
+	fi
+fi
 
 kubectl get deployment
 
@@ -70,6 +77,12 @@ kubectl get cm -n kube-system coredns -o jsonpath='{ .data.Corefile }' \
 	>> "${TMPFILE}"
 
 echo >> "${TMPFILE}"
+
+# don't repeat an existing block for our domain
+FIRSTLINE="$(head -1 ./tests/files/coredns-snippet.template)"
+LASTLINE="    }"
+
+sed -i .backup -e "/$FIRSTLINE/,/$LASTLINE/d" ${TMPFILE}
 
 cat tests/files/coredns-snippet.template \
 	| sed -e "s/AD_SERVER_IP/${AD_POD_IP}/" \
