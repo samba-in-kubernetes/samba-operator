@@ -5,6 +5,7 @@ package integration
 import (
 	"context"
 	"fmt"
+	"path"
 	"time"
 
 	"github.com/stretchr/testify/suite"
@@ -112,8 +113,8 @@ func allSmbShareSuites() map[string]suite.TestingSuite {
 	m := map[string]suite.TestingSuite{}
 	m["users1"] = &SmbShareSuite{
 		fileSources: []string{
-			"../files/smbsecurityconfig1.yaml",
-			"../files/smbshare1.yaml",
+			path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
+			path.Join(testFilesDir, "smbshare1.yaml"),
 		},
 		smbShareResourceName: "tshare1",
 		shareName:            "My Share",
@@ -125,8 +126,8 @@ func allSmbShareSuites() map[string]suite.TestingSuite {
 
 	m["domainMember1"] = &SmbShareSuite{
 		fileSources: []string{
-			"../files/smbsecurityconfig2.yaml",
-			"../files/smbshare2.yaml",
+			path.Join(testFilesDir, "smbsecurityconfig2.yaml"),
+			path.Join(testFilesDir, "smbshare2.yaml"),
 		},
 		smbShareResourceName: "tshare2",
 		shareName:            "My Kingdom",

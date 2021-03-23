@@ -4,6 +4,7 @@ package integration
 
 import (
 	"context"
+	"path"
 	"time"
 
 	"github.com/stretchr/testify/suite"
@@ -28,14 +29,14 @@ func (s *ShareAccessSuite) SetupSuite() {
 	_, err := tc.CreateFromFileIfMissing(
 		context.TODO(),
 		kube.FileSource{
-			Path:      "../files/data1.yaml",
+			Path:      path.Join(testFilesDir, "data1.yaml"),
 			Namespace: testNamespace,
 		})
 	s.Require().NoError(err)
 	_, err = tc.CreateFromFileIfMissing(
 		context.TODO(),
 		kube.FileSource{
-			Path:      "../files/client-test-pod.yaml",
+			Path:      path.Join(testFilesDir, "client-test-pod.yaml"),
 			Namespace: testNamespace,
 		})
 	s.Require().NoError(err)
