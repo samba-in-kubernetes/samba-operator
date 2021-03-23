@@ -116,14 +116,23 @@ func (tc *TestClient) DeleteResourceMatchingFile(
 	return nil
 }
 
-func getUnstructuredObjects(src InputSource) ([]*unstructured.Unstructured, error) {
+func getUnstructuredObjects(src InputSource) (objects []*unstructured.Unstructured, err error) {
 	r, err := src.Open()
 	if err != nil {
 		return nil, err
 	}
-	defer r.Close()
+	defer func() {
+		if closeErr := r.Close(); closeErr != nil && err == nil {
+			// it is unfortunate that error-on-close is only captured if
+			// no other errors occur, but I don't want to lose what is
+			// likely to be the more interesting error. And fmt.Errorf
+			// doesn't support multiple %w's and I don't want to pull in
+			// dependencies or write a lot of code for just this.
+			err = closeErr
+		}
+	}()
 
-	objects := []*unstructured.Unstructured{}
+	objects = []*unstructured.Unstructured{}
 	dec := yaml.NewYAMLOrJSONDecoder(r, 1024)
 	for {
 		obj := &unstructured.Unstructured{}
