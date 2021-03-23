@@ -87,16 +87,14 @@ jobs:
     - uses: nolar/setup-k3d-k3s@v1
     - name: get nodes
       run: kubectl get nodes
+    - name: deploy ad server
+      run: ./tests/test-deploy-ad-server.sh
     - name: build and deploy container
       run: make CONTAINER_CMD=docker deploy
     - name: install crds
       run: make CONTAINER_CMD=docker install
     - name: run tests
-      run: KUBECONFIG=~/.kube/config go test -tags integration -v -count 1 ./tests/integration -run TestSmbShares/1
-    - name: deploy ad server
-      run: ./tests/test-deploy-ad-server.sh
-    - name: run ad-level test
-      run: KUBECONFIG=~/.kube/config go test -tags integration -v -count 1 ./tests/integration -run TestSmbShares/2
+      run: KUBECONFIG=~/.kube/config ./tests/test.sh
 
   # push the container to quay.io - only for pushes, not PRs
   push:
