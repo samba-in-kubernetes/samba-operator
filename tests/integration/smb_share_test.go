@@ -5,7 +5,6 @@ package integration
 import (
 	"context"
 	"fmt"
-	"testing"
 	"time"
 
 	"github.com/stretchr/testify/suite"
@@ -109,36 +108,33 @@ func (s *SmbShareSuite) TestShareAccess() {
 	suite.Run(s.T(), shareAccessSuite)
 }
 
-func TestSmbShares(t *testing.T) {
-	t.Run("1", func(t *testing.T) {
-		smbShareSuite1 := &SmbShareSuite{
-			fileSources: []string{
-				"../files/smbsecurityconfig1.yaml",
-				"../files/smbshare1.yaml",
-			},
-			smbShareResourceName: "tshare1",
-			shareName:            "My Share",
-			testAuths: []smbclient.Auth{{
-				Username: "sambauser",
-				Password: "1nsecurely",
-			}},
-		}
-		suite.Run(t, smbShareSuite1)
-	})
+func allSmbShareSuites() map[string]suite.TestingSuite {
+	m := map[string]suite.TestingSuite{}
+	m["users1"] = &SmbShareSuite{
+		fileSources: []string{
+			"../files/smbsecurityconfig1.yaml",
+			"../files/smbshare1.yaml",
+		},
+		smbShareResourceName: "tshare1",
+		shareName:            "My Share",
+		testAuths: []smbclient.Auth{{
+			Username: "sambauser",
+			Password: "1nsecurely",
+		}},
+	}
 
-	t.Run("2", func(t *testing.T) {
-		smbShareSuite2 := &SmbShareSuite{
-			fileSources: []string{
-				"../files/smbsecurityconfig2.yaml",
-				"../files/smbshare2.yaml",
-			},
-			smbShareResourceName: "tshare2",
-			shareName:            "My Kingdom",
-			testAuths: []smbclient.Auth{{
-				Username: "DOMAIN1\\bwayne",
-				Password: "1115Rose.",
-			}},
-		}
-		suite.Run(t, smbShareSuite2)
-	})
+	m["domainMember1"] = &SmbShareSuite{
+		fileSources: []string{
+			"../files/smbsecurityconfig2.yaml",
+			"../files/smbshare2.yaml",
+		},
+		smbShareResourceName: "tshare2",
+		shareName:            "My Kingdom",
+		testAuths: []smbclient.Auth{{
+			Username: "DOMAIN1\\bwayne",
+			Password: "1115Rose.",
+		}},
+	}
+
+	return m
 }
