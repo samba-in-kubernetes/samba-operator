@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/suite"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/samba-in-kubernetes/samba-operator/tests/utils/kube"
 )
@@ -64,6 +65,30 @@ func (s DeploySuite) TestOperatorReady() {
 		fmt.Sprintf("control-plane=controller-manager"),
 		testNamespace)
 	s.Require().NoError(err)
+}
+
+// TestImageAndTag is an optional test that verifies the container
+// image and tag for the deployment is what was specified for the
+// test.
+func (s DeploySuite) TestImageAndTag() {
+	if testExpectedImage == "" {
+		s.T().Skip("testExpectedImage variable unset")
+		return
+	}
+	deploy, err := s.tc.Clientset().AppsV1().Deployments(testNamespace).Get(
+		context.TODO(),
+		"samba-operator-controller-manager",
+		metav1.GetOptions{})
+	require := s.Require()
+	require.NoError(err)
+	var ctrImage string
+	for _, ctr := range deploy.Spec.Template.Spec.Containers {
+		if ctr.Name == "manager" {
+			ctrImage = ctr.Image
+			break
+		}
+	}
+	require.Equal(testExpectedImage, ctrImage)
 }
 
 func allDeploySuites() map[string]suite.TestingSuite {
