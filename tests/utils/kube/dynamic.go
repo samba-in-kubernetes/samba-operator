@@ -45,6 +45,23 @@ func (f FileSource) GetNamespace() string {
 	return f.Namespace
 }
 
+// DirectSource interfaces are used to specify k8s resources directly
+// from a ReadCloser stream.
+type DirectSource struct {
+	Source    io.ReadCloser
+	Namespace string
+}
+
+// Open returns the source.
+func (d DirectSource) Open() (io.ReadCloser, error) {
+	return d.Source, nil
+}
+
+// GetNamespace returns the specified namespace.
+func (d DirectSource) GetNamespace() string {
+	return d.Namespace
+}
+
 // CreateFromFile creates new resources given a (yaml) file input.
 // It returns an error if the resource already exists.
 func (tc *TestClient) CreateFromFile(
