@@ -36,7 +36,7 @@ ifeq ($(CONTAINER_CMD),)
 	CONTAINER_CMD:=$(shell podman version >/dev/null 2>&1 && echo podman)
 endif
 
-all: manager
+all: manager build-integration-tests
 
 # Run tests
 test: generate vet manifests
@@ -48,6 +48,10 @@ manager: generate vet build
 build:
 	go build -o bin/manager main.go
 .PHONY: build
+
+build-integration-tests:
+	go test -c -o bin/integration-tests -tags integration ./tests/integration
+.PHONY: build-integration-tests
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate vet manifests
