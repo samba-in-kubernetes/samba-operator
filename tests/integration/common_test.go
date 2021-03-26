@@ -9,7 +9,10 @@ import (
 var (
 	testNamespace = "samba-operator-system"
 
-	testFilesDir = "../files"
+	testFilesDir      = "../files"
+	operatorConfigDir = "../../config"
+
+	kustomizeCmd = "kustomize"
 )
 
 func init() {
@@ -19,7 +22,21 @@ func init() {
 	}
 
 	fdir := os.Getenv("SMBOP_TEST_FILES_DIR")
-	if ns != "" {
+	if fdir != "" {
 		testFilesDir = fdir
+	}
+
+	cdir := os.Getenv("SMBOP_TEST_CONFIG_DIR")
+	if cdir != "" {
+		operatorConfigDir = cdir
+	}
+
+	km := os.Getenv("SMBOP_TEST_KUSTOMIZE")
+	if km != "" {
+		kustomizeCmd = km
+	}
+	km2 := os.Getenv("KUSTOMIZE")
+	if km == "" && km2 != "" {
+		kustomizeCmd = km2
 	}
 }
