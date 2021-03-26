@@ -19,5 +19,6 @@ func runSuiteTests(sm map[string]suite.TestingSuite) func(t *testing.T) {
 }
 
 func TestIntegration(t *testing.T) {
+	t.Run("deploy", runSuiteTests(allDeploySuites()))
 	t.Run("smbShares", runSuiteTests(allSmbShareSuites()))
 }
