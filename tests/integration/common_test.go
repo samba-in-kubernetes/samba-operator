@@ -13,6 +13,8 @@ var (
 	operatorConfigDir = "../../config"
 
 	kustomizeCmd = "kustomize"
+
+	testExpectedImage = "quay.io/samba.org/samba-operator:latest"
 )
 
 func init() {
@@ -38,5 +40,10 @@ func init() {
 	km2 := os.Getenv("KUSTOMIZE")
 	if km == "" && km2 != "" {
 		kustomizeCmd = km2
+	}
+
+	timg := os.Getenv("SMBOP_TEST_EXPECT_MANAGER_IMG")
+	if timg != "" {
+		testExpectedImage = timg
 	}
 }
