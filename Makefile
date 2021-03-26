@@ -62,12 +62,15 @@ uninstall: manifests kustomize
 	$(KUSTOMIZE) build config/crd | kubectl delete -f -
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
-deploy: manifests kustomize
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+deploy: manifests kustomize set-image
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
 delete-deploy: manifests kustomize
 	$(KUSTOMIZE) build config/default | kubectl delete -f -
+
+set-image: kustomize
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+.PHONY: set-image
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
