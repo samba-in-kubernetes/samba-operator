@@ -135,7 +135,7 @@ func TestSmbShares(t *testing.T) {
 			smbShareResourceName: "tshare2",
 			shareName:            "My Kingdom",
 			testAuths: []smbclient.Auth{{
-				Username: "ZZZ-BEST\\bwayne",
+				Username: "DOMAIN1\\bwayne",
 				Password: "1115Rose.",
 			}},
 		}
