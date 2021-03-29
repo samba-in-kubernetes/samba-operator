@@ -18,7 +18,7 @@ metadata:
   name: adsec1
 spec:
   mode: active-directory
-  realm: zzz-best.x.asynchrono.us
+  realm: domain1.sink.test
   joinSources:
   - userJoin:
       secret: join1
