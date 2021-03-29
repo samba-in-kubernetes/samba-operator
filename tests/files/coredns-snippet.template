@@ -1,4 +1,4 @@
-    x.asynchrono.us:53 {
+    domain1.sink.test:53 {
         errors
         cache 30
         forward . AD_SERVER_IP
