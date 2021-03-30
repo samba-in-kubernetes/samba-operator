@@ -68,20 +68,34 @@ jobs:
 
   dockerbuild:
     runs-on: ubuntu-latest
+    env:
+      CONTAINER_CMD: docker
+      PR_NUM: ${{ github.event.pull_request.number }}
+      TAG: "pr-${{ github.event.pull_request.number }}"
+      IMG: "quay.io/samba.org/scratch-samba-container:pr-${{ github.event.pull_request.number }}"
     # don't run on push, since the "push" job contains the
     # image build step, so no need to do it twice.
     if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v2
       - name: build container image
-        # note: forcing use of podman here since we are
-        # using podman explicity for the push job
-        run: make CONTAINER_CMD=docker image-build
+        run: make image-build
+      - name: log in to quay.io
+        run: echo "${{ secrets.QUAY_PASS }}" | docker login -u "${{ secrets.QUAY_USER }}" --password-stdin quay.io
+      - name: push container image (scratch repo)
+        run: make container-push
 
   test-kubernetes:
     #runs-on: ubuntu-latest
     # need to explicitly use 20.04 to avoid problems with jq...
     runs-on: ubuntu-20.04
+    needs: [dockerbuild]
+    env:
+      CONTAINER_CMD: docker
+      PR_NUM: ${{ github.event.pull_request.number }}
+      TAG: "pr-${{ github.event.pull_request.number }}"
+      IMG: "quay.io/samba.org/scratch-samba-container:pr-${{ github.event.pull_request.number }}"
+    if: github.event_name == 'pull_request'
     steps:
     - uses: actions/checkout@v2
     - uses: nolar/setup-k3d-k3s@v1
@@ -89,10 +103,8 @@ jobs:
       run: kubectl get nodes
     - name: deploy ad server
       run: ./tests/test-deploy-ad-server.sh
-    - name: build and deploy container
-      run: make CONTAINER_CMD=docker deploy
-    - name: install crds
-      run: make CONTAINER_CMD=docker install
+    - name: set kustomize parameters
+      run: make set-image
     - name: run tests
       run: KUBECONFIG=~/.kube/config ./tests/test.sh
 
