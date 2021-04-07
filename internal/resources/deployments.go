@@ -69,7 +69,6 @@ func labelsForSmbServer(name string) map[string]string {
 		"app.kubernetes.io/managed-by": "samba-operator",
 		// our namespaced labels
 		"samba-operator.samba.org/service": labelValue(name),
-		"samba-operator.samba.org/share":   "share",
 	}
 }
 
