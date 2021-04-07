@@ -92,6 +92,16 @@ func (m *SmbShareManager) Update(ctx context.Context, instance *sambaoperatorv1a
 		return Requeue
 	}
 
+	// assign the share to a Server Group. Currently we only support 1:1
+	// shares to servers & it simply reflects the name of the resource.
+	changed, err = m.setServerGroup(ctx, instance)
+	if err != nil {
+		return Result{err: err}
+	} else if changed {
+		m.logger.Info("Updated server group")
+		return Requeue
+	}
+
 	cm, created, err := getOrCreateConfigMap(ctx, m.client, instance.Namespace)
 	if err != nil {
 		return Result{err: err}
@@ -371,4 +381,19 @@ func (m *SmbShareManager) getSecurityConfig(
 		return nil, err
 	}
 	return security, nil
+}
+
+func (m *SmbShareManager) setServerGroup(
+	ctx context.Context, s *sambaoperatorv1alpha1.SmbShare) (bool, error) {
+	// check to see if there's already a group for this
+	if s.Status.ServerGroup != "" {
+		// already assigned, nothing extra to do
+		return false, nil
+	}
+
+	// NOTE: currently the ServerGroup is only assigned the exact name of the
+	// resource. In the future this may change if/when multiple SmbShares can
+	// be hosted by one smbd pod.
+	s.Status.ServerGroup = s.ObjectMeta.Name
+	return true, m.client.Status().Update(ctx, s)
 }
