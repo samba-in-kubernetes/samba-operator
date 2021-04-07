@@ -78,8 +78,10 @@ type SmbSharePvcSpec struct {
 
 // SmbShareStatus defines the observed state of SmbShare
 type SmbShareStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// ServerGroup is a string indicating a name for the smb server or group of
+	// servers hosting this share. The name is assigned by the operator but is
+	// frequently the same as the SmbShare resource's name.
+	ServerGroup string `json:"serverGroup,omitempty"`
 }
 
 // +kubebuilder:object:root=true
