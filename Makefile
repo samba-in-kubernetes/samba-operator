@@ -90,6 +90,14 @@ docker-build: image-build
 image-build:
 	$(CONTAINER_CMD) build $(CONTAINER_BUILD_OPTS) . -t ${IMG}
 
+.PHONY: image-build-buildah
+image-build-buildah: build
+	cn=$$(buildah from registry.access.redhat.com/ubi8/ubi-minimal:latest) && \
+	buildah copy $$cn bin/manager /manager && \
+	buildah config --cmd='[]' $$cn && \
+	buildah config --entrypoint='["/manager"]' $$cn && \
+	buildah commit $$cn ${IMG}
+
 # Push the container image
 docker-push: container-push
 container-push:
