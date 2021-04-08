@@ -96,12 +96,26 @@ func (s *SmbShareSuite) TestPodsReady() {
 	s.Require().NoError(s.waitForPodReady())
 }
 
-func (s *SmbShareSuite) TestShareAccess() {
+func (s *SmbShareSuite) TestShareAccessByIP() {
 	ip, err := s.getPodIP()
 	s.Require().NoError(err)
 	shareAccessSuite := &ShareAccessSuite{
 		share: smbclient.Share{
 			Host: smbclient.Host(ip),
+			Name: s.shareName,
+		},
+		auths: s.testAuths,
+	}
+	suite.Run(s.T(), shareAccessSuite)
+}
+
+func (s *SmbShareSuite) TestShareAccessByServiceName() {
+	svcname := fmt.Sprintf("%s.%s.svc.cluster.local",
+		s.smbShareResourceName,
+		testNamespace)
+	shareAccessSuite := &ShareAccessSuite{
+		share: smbclient.Share{
+			Host: smbclient.Host(svcname),
 			Name: s.shareName,
 		},
 		auths: s.testAuths,
