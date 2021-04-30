@@ -84,6 +84,14 @@ rules:
 - apiGroups:
   - samba-operator.samba.org
   resources:
+  - smbshares/finalizers
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - samba-operator.samba.org
+  resources:
   - smbshares/status
   verbs:
   - get
