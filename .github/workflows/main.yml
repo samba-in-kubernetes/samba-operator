@@ -82,17 +82,51 @@ jobs:
     #runs-on: ubuntu-latest
     # need to explicitly use 20.04 to avoid problems with jq...
     runs-on: ubuntu-20.04
+    env:
+      CONTAINER_CMD: docker
+      PR_NUM: ${{ github.event.pull_request.number }}
     steps:
     - uses: actions/checkout@v2
-    - uses: nolar/setup-k3d-k3s@v1
+    - name: Install k3d
+      run: curl -L --silent --fail "https://raw.githubusercontent.com/rancher/k3d/main/install.sh" | bash
+    # The TAG env var can interfere with the k3d install script.
+    # Env vars must be set up *after* k3d is installed.
+    - name: Set environment vars
+      run: |
+        tag="latest-scratch"
+        if [ "${PR_NUM}" ] ; then tag="pr-${PR_NUM}" ; fi
+        reg_base="registry.localhost"
+        reg_port="5000"
+        reg="k3d-${reg_base}:${reg_port}"
+        img="${reg}/samba.org/samba-operator:${tag}"
+        {
+          # registry params
+          echo "REG_BASE=${reg_base}"
+          echo "REG_PORT=${reg_port}"
+          echo "REGISTRY=${reg}"
+          # tag and image name for build+push
+          echo "TAG=${tag}"
+          echo "IMG=${img}"
+          # operator image for verification by test suite
+          echo "SMBOP_TEST_EXPECT_MANAGER_IMG=${img}"
+        } >> $GITHUB_ENV
+    - name: Create k3d registry
+      run: k3d registry create "${REG_BASE}" --port "${REG_PORT}"
+    - name: Create k3d cluster
+      run: k3d cluster create --wait --registry-use "${REGISTRY}"
+    - name: Wait for cluster ready
+      run: |
+        while ! kubectl get serviceaccount default >/dev/null; do sleep 1; done
     - name: get nodes
       run: kubectl get nodes
     - name: deploy ad server
       run: ./tests/test-deploy-ad-server.sh
-    - name: build and deploy container
-      run: make CONTAINER_CMD=docker deploy
-    - name: install crds
-      run: make CONTAINER_CMD=docker install
+    - name: build image
+      run: make image-build
+    - name: push image to k3d registry
+      run: make container-push
+    - name: configure kustomize
+      run: make set-image
     - name: run tests
       run: KUBECONFIG=~/.kube/config ./tests/test.sh
 
