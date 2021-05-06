@@ -68,6 +68,10 @@ Spec Options:
     * `Secret` - string - the name of a secret that stores join auth data.
     * `Key` - string - the name of the key within the secret storing the
       data (optional)
+* `dns` - A subsection for configuring DNS related behaviors
+  * `register` - enumerated string - "never", "external-ip" - Only used if
+    mode="active-directory"; configures if server instances created by the
+    operator should register IP addresses with AD DNS.
 
 
 ## SmbShare
