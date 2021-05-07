@@ -16,6 +16,6 @@ first prototype of the samba-operator at the annual sambaXP conference in May 20
 [John](https://github.com/phlogistonjohn) and [Michael](https://github.com/obnoxxx) presented "samba-operator -
 The Next Phase" at the virtual sambaXP 2021.
 
-* [Slides](<./samba in kubernetes - sambaXP 2020.pdf>)
-* [Recording - pending]()
+* [Slides](<./samba in kubernetes - sambaXP 2021.pdf>)
+* Recording - pending
 
