@@ -65,8 +65,8 @@ Spec Options:
   more source for AD join information.
   * `userJoin` - A subsection of config data configuring join based on
     username and password information stored in a secret.
-    * `Secret` - string - the name of a secret that stores join auth data.
-    * `Key` - string - the name of the key within the secret storing the
+    * `secret` - string - the name of a secret that stores join auth data.
+    * `key` - string - the name of the key within the secret storing the
       data (optional)
 
 
