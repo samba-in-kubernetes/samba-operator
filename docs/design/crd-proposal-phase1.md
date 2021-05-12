@@ -19,6 +19,9 @@ The following CRD types are proposed for Phase 1:
   single share
 * SmbSecurityConfig - A CR that encapsulates the knowledge needed to define
   "local" users or become part of an Active Directory domain
+* SmbCommonConfig - A optional CR that helps define properties common across
+  many shares. For example, if shares should be "exported" outside of the
+  kuberntes cluster.
 
 The operator will take the SmbShare and SmbSecurityConfig resources as inputs
 and create as many smbd, winbind, or other backing services as needed. Users
@@ -26,12 +29,16 @@ will have limited input into what backing services the operator will create.
 The operator may, or may not, combine one or more share into a single smbd
 instance.
 
-One or more SmbSecurityConfig resources can be defined in the cluster.  Each
-SmbShare CR can refer to one of those SmbSecurityConfig resources, or rely on
-the default settings of the operator.  The SmbSecurityConfig reference will
-define the security properties of the smbd instance that hosts the share. If
-two SmbShare CRs are defined and each one refers to different SmbSecurityConfig
-they must not be combined using one smbd.
+One or more SmbSecurityConfig resources can be defined in the cluster. One or
+more SmbCommonConfig resources can be defined in the cluster. Each SmbShare CR
+can refer to one SmbSecurityConfig resource and one SmbCommonConfig resource.
+The operator will provide a mechanism for marking SmbSecurityConfig and
+SmbCommonConfig resources as "default". If an SmbShare does not name a specifc
+config resource the operator will use settings from the "default" resources, or
+if no defaults are set rely on the default settings of the operator.  The
+SmbSecurityConfig reference will define the security properties of the smbd
+instance that hosts the share. If two SmbShare CRs are defined and each one
+refers to different SmbSecurityConfig they must not be combined using one smbd.
 
 The listings below are not meant to be entirely complete but they outline
 the general direction to make the operator a fully-fledged tool to
@@ -69,6 +76,15 @@ Spec Options:
     * `key` - string - the name of the key within the secret storing the
       data (optional)
 
+## SmbCommonConfig
+
+Spec Options:
+* `network` - subsection - Settings pertaining to current and possible future
+  pod/service/etc networking config.
+  * `publish` - enumerated string - "cluster", "external" - Controls if the smb
+    services should be set up for in-cluster use or made available to systems
+    external to the Kubernetes cluster.
+
 
 ## SmbShare
 
@@ -85,6 +101,8 @@ Spec Options:
           the life-cycle of the PVC with the share
     * TBD - Any other more custom storage back-ends if needed
 * `securityConfig` - string - The name of the SmbSecurityConfig CR associated
+  with this share
+* `commonConfig` - string - The name of the SmbCommonConfig CR associated
   with this share
 * `scaling` - mapping - Settings pertaining to how resources (servers) managed
   by the operator may be scaled
@@ -243,6 +261,38 @@ spec:
     availabilityMode: clustered
     minClusterSize: 5
   browsable: false
+```
+
+
+An AD enabled share, configured to be accessed outside the kubernetes cluster:
+```yaml
+---
+apiVersion: samba-operator.samba.org/v1alpha1
+kind: SmbSecurityConfig
+metadata:
+  name: "rad-domain"
+spec:
+  mode: "active-directory"
+  realm: "my-rad-ad.int.example.org"
+---
+apiVersion: samba-operator.samba.org/v1alpha1
+kind: SmbCommonConfig
+metadata:
+  name: "public1"
+spec:
+  network:
+    publish: external
+---
+apiVersion: samba-operator.samba.org/v1alpha1
+kind: SmbShare
+metadata:
+  name: "documents"
+spec:
+  securityConfig: "rad-domain"
+  commonConfig: "public1"
+  storage:
+    pvc:
+      name: "docs"
 ```
 
 
