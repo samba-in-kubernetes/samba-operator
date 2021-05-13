@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/suite"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/samba-in-kubernetes/samba-operator/tests/utils/kube"
 	"github.com/samba-in-kubernetes/samba-operator/tests/utils/smbclient"
@@ -18,10 +19,10 @@ import (
 type SmbShareSuite struct {
 	suite.Suite
 
-	fileSources          []string
-	smbShareResourceName string
-	shareName            string
-	testAuths            []smbclient.Auth
+	fileSources      []kube.FileSource
+	smbShareResource types.NamespacedName
+	shareName        string
+	testAuths        []smbclient.Auth
 
 	// cached values
 	tc *kube.TestClient
@@ -31,13 +32,10 @@ func (s *SmbShareSuite) SetupSuite() {
 	// ensure the smbclient test pod exists
 	require := s.Require()
 	s.tc = kube.NewTestClient("")
-	for _, f := range s.fileSources {
+	for _, fs := range s.fileSources {
 		_, err := s.tc.CreateFromFileIfMissing(
 			context.TODO(),
-			kube.FileSource{
-				Path:      f,
-				Namespace: testNamespace,
-			},
+			fs,
 		)
 		require.NoError(err)
 	}
@@ -46,13 +44,10 @@ func (s *SmbShareSuite) SetupSuite() {
 }
 
 func (s *SmbShareSuite) TearDownSuite() {
-	for _, f := range s.fileSources {
+	for _, fs := range s.fileSources {
 		err := s.tc.DeleteResourceMatchingFile(
 			context.TODO(),
-			kube.FileSource{
-				Path:      f,
-				Namespace: testNamespace,
-			},
+			fs,
 		)
 		s.Require().NoError(err)
 	}
@@ -66,7 +61,7 @@ func (s *SmbShareSuite) waitForPodExist() error {
 	return kube.WaitForPodExistsByLabel(
 		ctx,
 		s.tc,
-		fmt.Sprintf("samba-operator.samba.org/service=%s", s.smbShareResourceName),
+		fmt.Sprintf("samba-operator.samba.org/service=%s", s.smbShareResource.Name),
 		testNamespace)
 }
 
@@ -78,14 +73,14 @@ func (s *SmbShareSuite) waitForPodReady() error {
 	return kube.WaitForPodReadyByLabel(
 		ctx,
 		s.tc,
-		fmt.Sprintf("samba-operator.samba.org/service=%s", s.smbShareResourceName),
+		fmt.Sprintf("samba-operator.samba.org/service=%s", s.smbShareResource.Name),
 		testNamespace)
 }
 
 func (s *SmbShareSuite) getPodIP() (string, error) {
 	pod, err := s.tc.GetPodByLabel(
 		context.TODO(),
-		fmt.Sprintf("samba-operator.samba.org/service=%s", s.smbShareResourceName),
+		fmt.Sprintf("samba-operator.samba.org/service=%s", s.smbShareResource.Name),
 		testNamespace)
 	if err != nil {
 		return "", err
@@ -112,7 +107,7 @@ func (s *SmbShareSuite) TestShareAccessByIP() {
 
 func (s *SmbShareSuite) TestShareAccessByServiceName() {
 	svcname := fmt.Sprintf("%s.%s.svc.cluster.local",
-		s.smbShareResourceName,
+		s.smbShareResource.Name,
 		testNamespace)
 	shareAccessSuite := &ShareAccessSuite{
 		share: smbclient.Share{
@@ -153,12 +148,22 @@ func (s *SmbShareSuite) TestShareEvents() {
 func allSmbShareSuites() map[string]suite.TestingSuite {
 	m := map[string]suite.TestingSuite{}
 	m["users1"] = &SmbShareSuite{
-		fileSources: []string{
-			path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
-			path.Join(testFilesDir, "smbshare1.yaml"),
+		fileSources: []kube.FileSource{
+			{
+				Path:      path.Join(testFilesDir, "userssecret1.yaml"),
+				Namespace: testNamespace,
+			},
+			{
+				Path:      path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
+				Namespace: testNamespace,
+			},
+			{
+				Path:      path.Join(testFilesDir, "smbshare1.yaml"),
+				Namespace: testNamespace,
+			},
 		},
-		smbShareResourceName: "tshare1",
-		shareName:            "My Share",
+		smbShareResource: types.NamespacedName{testNamespace, "tshare1"},
+		shareName:        "My Share",
 		testAuths: []smbclient.Auth{{
 			Username: "sambauser",
 			Password: "1nsecurely",
@@ -166,12 +171,22 @@ func allSmbShareSuites() map[string]suite.TestingSuite {
 	}
 
 	m["domainMember1"] = &SmbShareSuite{
-		fileSources: []string{
-			path.Join(testFilesDir, "smbsecurityconfig2.yaml"),
-			path.Join(testFilesDir, "smbshare2.yaml"),
+		fileSources: []kube.FileSource{
+			{
+				Path:      path.Join(testFilesDir, "joinsecret1.yaml"),
+				Namespace: testNamespace,
+			},
+			{
+				Path:      path.Join(testFilesDir, "smbsecurityconfig2.yaml"),
+				Namespace: testNamespace,
+			},
+			{
+				Path:      path.Join(testFilesDir, "smbshare2.yaml"),
+				Namespace: testNamespace,
+			},
 		},
-		smbShareResourceName: "tshare2",
-		shareName:            "My Kingdom",
+		smbShareResource: types.NamespacedName{testNamespace, "tshare2"},
+		shareName:        "My Kingdom",
 		testAuths: []smbclient.Auth{{
 			Username: "DOMAIN1\\bwayne",
 			Password: "1115Rose.",
