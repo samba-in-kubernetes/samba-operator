@@ -206,5 +206,31 @@ func allSmbShareSuites() map[string]suite.TestingSuite {
 		}},
 	}
 
+	// Test that the operator functions when the SmbShare resources are created
+	// in a different ns (for example, "default").
+	// IMPORTANT: the secrets MUST be in the same namespace as the pods.
+	m["smbSharesInDefault"] = &SmbShareSuite{
+		fileSources: []kube.FileSource{
+			{
+				Path:      path.Join(testFilesDir, "userssecret1.yaml"),
+				Namespace: testNamespace,
+			},
+			{
+				Path:      path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
+				Namespace: "default",
+			},
+			{
+				Path:      path.Join(testFilesDir, "smbshare3.yaml"),
+				Namespace: "default",
+			},
+		},
+		smbShareResource: types.NamespacedName{"default", "tshare3"},
+		shareName:        "My Other Share",
+		testAuths: []smbclient.Auth{{
+			Username: "sambauser",
+			Password: "1nsecurely",
+		}},
+	}
+
 	return m
 }
