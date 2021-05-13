@@ -1,17 +1,4 @@
 ---
-apiVersion: v1
-kind: Secret
-metadata:
-  name: join1
-type: Opaque
-stringData:
-  # Change the value below to match the username and password for a user that
-  # can join systems your test AD Domain
-  join.json: |
-    {"username": "Administrator", "password": "P4ssw0rd"}
-  join2.json: |
-    {"username": "Administrator", "password": "Passw0rd"}
----
 apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbSecurityConfig
 metadata:
