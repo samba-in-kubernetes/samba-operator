@@ -109,7 +109,8 @@ func (m *SmbShareManager) Update(ctx context.Context, instance *sambaoperatorv1a
 		return Requeue
 	}
 
-	cm, created, err := getOrCreateConfigMap(ctx, m.client, instance.Namespace)
+	destNamespace := m.cfg.WorkingNamespace
+	cm, created, err := getOrCreateConfigMap(ctx, m.client, destNamespace)
 	if err != nil {
 		return Result{err: err}
 	} else if created {
@@ -126,7 +127,7 @@ func (m *SmbShareManager) Update(ctx context.Context, instance *sambaoperatorv1a
 
 	if shareNeedsPvc(instance) {
 		pvc, created, err := m.getOrCreatePvc(
-			ctx, instance, instance.Namespace)
+			ctx, instance, destNamespace)
 		if err != nil {
 			return Result{err: err}
 		} else if created {
@@ -142,7 +143,7 @@ func (m *SmbShareManager) Update(ctx context.Context, instance *sambaoperatorv1a
 	}
 
 	deployment, created, err := m.getOrCreateDeployment(
-		ctx, planner, instance.Namespace)
+		ctx, planner, destNamespace)
 	if err != nil {
 		return Result{err: err}
 	} else if created {
@@ -164,7 +165,7 @@ func (m *SmbShareManager) Update(ctx context.Context, instance *sambaoperatorv1a
 	}
 
 	_, created, err = m.getOrCreateService(
-		ctx, planner, instance.Namespace)
+		ctx, planner, destNamespace)
 	if err != nil {
 		return Result{err: err}
 	} else if created {
@@ -180,7 +181,7 @@ func (m *SmbShareManager) Update(ctx context.Context, instance *sambaoperatorv1a
 // and we need to do some cleanup.
 func (m *SmbShareManager) Finalize(ctx context.Context, instance *sambaoperatorv1alpha1.SmbShare) Result {
 
-	cm, err := getConfigMap(ctx, m.client, instance.Namespace)
+	cm, err := getConfigMap(ctx, m.client, m.cfg.WorkingNamespace)
 	if err == nil {
 		_, changed, err := m.updateConfiguration(ctx, cm, instance)
 		if err != nil {
