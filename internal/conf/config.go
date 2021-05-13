@@ -14,6 +14,19 @@ import (
 type OperatorConfig struct {
 	SmbdContainerImage string `mapstructure:"smbd-container-image"`
 	SmbdContainerName  string `mapstructure:"smbd-container-name"`
+	WorkingNamespace   string `mapstructure:"working-namespace"`
+}
+
+// Validate the OperatorConfig returning an error if the config is not
+// directly usable by the operator. This may occur if certain required
+// values are unset or invalid.
+func (oc *OperatorConfig) Validate() error {
+	// Ensure that WorkingNamespace is set. We don't default it to anything.
+	// It must be passed in, typically by the operator's own pod spec.
+	if oc.WorkingNamespace == "" {
+		return fmt.Errorf("WorkingNamespace value [%s] invalid", oc.WorkingNamespace)
+	}
+	return nil
 }
 
 // Source is how external configuration sources populate the operator config.
@@ -27,6 +40,7 @@ func NewSource() *Source {
 	v := viper.New()
 	v.SetDefault("smbd-container-image", "quay.io/samba.org/samba-server:latest")
 	v.SetDefault("smbd-container-name", "samba")
+	v.SetDefault("working-namespace", "")
 	return &Source{v: v}
 }
 
