@@ -251,10 +251,12 @@ func (m *SmbShareManager) getOrCreatePvc(ctx context.Context,
 	if errors.IsNotFound(err) {
 		// not found - define a new pvc
 		pvc = m.pvcForSmbShare(smbShare, ns)
-		m.logger.Info("Creating a new Pvc", "Pvc.Name", pvc.Name)
+		m.logger.Info("Creating a new PVC",
+			"pvc.Namespace", pvc.Namespace, "pvc.Name", pvc.Name)
 		err = m.client.Create(ctx, pvc)
 		if err != nil {
-			m.logger.Error(err, "Failed to create new PVC", "pvc.Namespace", pvc.Namespace, "pvc.Name", pvc.Name)
+			m.logger.Error(err, "Failed to create new PVC",
+				"pvc.Namespace", pvc.Namespace, "pvc.Name", pvc.Name)
 			return pvc, false, err
 		}
 		// Pvc created successfully
