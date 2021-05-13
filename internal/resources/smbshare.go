@@ -40,6 +40,7 @@ type SmbShareManager struct {
 	scheme   *runtime.Scheme
 	recorder record.EventRecorder
 	logger   Logger
+	cfg      *conf.OperatorConfig
 }
 
 // NewSmbShareManager creates a SmbShareManager.
@@ -51,6 +52,7 @@ func NewSmbShareManager(
 		scheme:   scheme,
 		recorder: recorder,
 		logger:   logger,
+		cfg:      conf.Get(),
 	}
 }
 
@@ -286,12 +288,8 @@ func (m *SmbShareManager) updateDeploymentSize(ctx context.Context,
 
 // deploymentForSmbShare returns a smbshare deployment object
 func (m *SmbShareManager) deploymentForSmbShare(planner *sharePlanner, ns string) *appsv1.Deployment {
-	// TODO: it is not the best to be grabbing the global conf this "deep" in
-	// the operator, but rather than refactor everything at once, we at least
-	// stop using hard coded parameters.
-	cfg := conf.Get()
 	// labels - do I need them?
-	dep := buildDeployment(cfg, planner, planner.SmbShare.Spec.Storage.Pvc.Name, ns)
+	dep := buildDeployment(m.cfg, planner, planner.SmbShare.Spec.Storage.Pvc.Name, ns)
 	// set the smbshare instance as the owner and controller
 	controllerutil.SetControllerReference(planner.SmbShare, dep, m.scheme)
 	return dep
