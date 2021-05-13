@@ -241,7 +241,7 @@ func (m *SmbShareManager) getOrCreatePvc(ctx context.Context,
 		ctx,
 		types.NamespacedName{
 			Name:      pvcName(smbShare),
-			Namespace: smbShare.Namespace,
+			Namespace: ns,
 		},
 		pvc)
 	if err == nil {
