@@ -129,6 +129,10 @@ func (m *SmbShareManager) Update(ctx context.Context, instance *sambaoperatorv1a
 			return Result{err: err}
 		} else if created {
 			m.logger.Info("Created PVC")
+			m.recorder.Eventf(instance,
+				EventNormal,
+				ReasonCreatedPersistentVolumeClaim,
+				"Created PVC %s for SmbShare", pvc.Name)
 			return Requeue
 		}
 		// if name is unset in the YAML, set it here
@@ -142,6 +146,10 @@ func (m *SmbShareManager) Update(ctx context.Context, instance *sambaoperatorv1a
 	} else if created {
 		// Deployment created successfully - return and requeue
 		m.logger.Info("Created deployment")
+		m.recorder.Eventf(instance,
+			EventNormal,
+			ReasonCreatedDeployment,
+			"Created deployment %s for SmbShare", deployment.Name)
 		return Requeue
 	}
 
