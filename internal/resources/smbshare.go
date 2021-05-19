@@ -24,6 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -35,17 +36,21 @@ const shareFinalizer = "samba-operator.samba.org/shareFinalizer"
 
 // SmbShareManager is used to manage SmbShare resources.
 type SmbShareManager struct {
-	client client.Client
-	scheme *runtime.Scheme
-	logger Logger
+	client   client.Client
+	scheme   *runtime.Scheme
+	recorder record.EventRecorder
+	logger   Logger
 }
 
 // NewSmbShareManager creates a SmbShareManager.
-func NewSmbShareManager(client client.Client, scheme *runtime.Scheme, logger Logger) *SmbShareManager {
+func NewSmbShareManager(
+	client client.Client, scheme *runtime.Scheme,
+	recorder record.EventRecorder, logger Logger) *SmbShareManager {
 	return &SmbShareManager{
-		client: client,
-		scheme: scheme,
-		logger: logger,
+		client:   client,
+		scheme:   scheme,
+		recorder: recorder,
+		logger:   logger,
 	}
 }
 
