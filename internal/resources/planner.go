@@ -109,6 +109,10 @@ func (*sharePlanner) sambaStateDir() string {
 	return "/var/lib/samba"
 }
 
+func (*sharePlanner) osRunDir() string {
+	return "/run"
+}
+
 func (sp *sharePlanner) securityMode() securityMode {
 	if sp.SecurityConfig == nil {
 		return userMode
