@@ -92,6 +92,16 @@ func (m *SmbShareManager) Update(ctx context.Context, instance *sambaoperatorv1a
 		return Requeue
 	}
 
+	// assign the share to a Server Group. Currently we only support 1:1
+	// shares to servers & it simply reflects the name of the resource.
+	changed, err = m.setServerGroup(ctx, instance)
+	if err != nil {
+		return Result{err: err}
+	} else if changed {
+		m.logger.Info("Updated server group")
+		return Requeue
+	}
+
 	cm, created, err := getOrCreateConfigMap(ctx, m.client, instance.Namespace)
 	if err != nil {
 		return Result{err: err}
@@ -135,6 +145,15 @@ func (m *SmbShareManager) Update(ctx context.Context, instance *sambaoperatorv1a
 		return Result{err: err}
 	} else if resized {
 		m.logger.Info("Resized deployment")
+		return Requeue
+	}
+
+	_, created, err = m.getOrCreateService(
+		ctx, planner, instance.Namespace)
+	if err != nil {
+		return Result{err: err}
+	} else if created {
+		m.logger.Info("Created service")
 		return Requeue
 	}
 
@@ -371,4 +390,57 @@ func (m *SmbShareManager) getSecurityConfig(
 		return nil, err
 	}
 	return security, nil
+}
+
+func (m *SmbShareManager) setServerGroup(
+	ctx context.Context, s *sambaoperatorv1alpha1.SmbShare) (bool, error) {
+	// check to see if there's already a group for this
+	if s.Status.ServerGroup != "" {
+		// already assigned, nothing extra to do
+		return false, nil
+	}
+
+	// NOTE: currently the ServerGroup is only assigned the exact name of the
+	// resource. In the future this may change if/when multiple SmbShares can
+	// be hosted by one smbd pod.
+	s.Status.ServerGroup = s.ObjectMeta.Name
+	return true, m.client.Status().Update(ctx, s)
+}
+
+func (m *SmbShareManager) getOrCreateService(
+	ctx context.Context, planner *sharePlanner, ns string) (
+	*corev1.Service, bool, error) {
+	// Check if the service already exists, if not create a new one
+	found := &corev1.Service{}
+	err := m.client.Get(
+		ctx,
+		types.NamespacedName{
+			Name:      planner.instanceName(),
+			Namespace: ns,
+		},
+		found)
+	if err == nil {
+		return found, false, nil
+	}
+
+	if errors.IsNotFound(err) {
+		// not found - define a new deployment
+		svc := newServiceForSmb(planner, ns)
+		// set the smbshare instance as the owner and controller
+		controllerutil.SetControllerReference(planner.SmbShare, svc, m.scheme)
+		m.logger.Info("Creating a new Service",
+			"Service.Namespace", svc.Namespace,
+			"Service.Name", svc.Name)
+		err = m.client.Create(ctx, svc)
+		if err != nil {
+			m.logger.Error(err, "Failed to create new Service",
+				"Service.Namespace", svc.Namespace,
+				"Service.Name", svc.Name)
+			return svc, false, err
+		}
+		// Deployment created successfully
+		return svc, true, nil
+	}
+	m.logger.Error(err, "Failed to get Service")
+	return nil, false, err
 }

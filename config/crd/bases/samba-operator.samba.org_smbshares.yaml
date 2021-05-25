@@ -206,6 +206,13 @@ spec:
             type: object
           status:
             description: SmbShareStatus defines the observed state of SmbShare
+            properties:
+              serverGroup:
+                description: ServerGroup is a string indicating a name for the smb
+                  server or group of servers hosting this share. The name is assigned
+                  by the operator but is frequently the same as the SmbShare resource's
+                  name.
+                type: string
             type: object
         type: object
     served: true

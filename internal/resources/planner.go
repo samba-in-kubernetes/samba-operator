@@ -57,8 +57,8 @@ func newSharePlanner(
 }
 
 func (sp *sharePlanner) instanceName() string {
-	// for now, its just the name of the k8s resource
-	return sp.SmbShare.Name
+	// for now, its the name of the Server Group
+	return sp.SmbShare.Status.ServerGroup
 }
 
 func (sp *sharePlanner) instanceID() smbcc.Key {
@@ -107,6 +107,10 @@ func (*sharePlanner) winbindSocketsDir() string {
 
 func (*sharePlanner) sambaStateDir() string {
 	return "/var/lib/samba"
+}
+
+func (*sharePlanner) osRunDir() string {
+	return "/run"
 }
 
 func (sp *sharePlanner) securityMode() securityMode {
