@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/suite"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/samba-in-kubernetes/samba-operator/tests/utils/kube"
 	"github.com/samba-in-kubernetes/samba-operator/tests/utils/smbclient"
@@ -121,6 +122,32 @@ func (s *SmbShareSuite) TestShareAccessByServiceName() {
 		auths: s.testAuths,
 	}
 	suite.Run(s.T(), shareAccessSuite)
+}
+
+func (s *SmbShareSuite) TestShareEvents() {
+	s.Require().NoError(s.waitForPodReady())
+	// TODO: use the involved object's uuid for filtering.
+	// for now this is ok(ish), because we only create one SmbShare
+	// with a given name for each test.
+	l, err := s.tc.Clientset().CoreV1().Events(testNamespace).List(
+		context.TODO(),
+		metav1.ListOptions{
+			FieldSelector: fmt.Sprintf("involvedObject.kind=SmbShare,involvedObject.name=%s", s.smbShareResourceName),
+		})
+	s.Require().NoError(err)
+	s.Require().GreaterOrEqual(len(l.Items), 1)
+	numCreatedPVC := 0
+	numCreatedDeployment := 0
+	for _, event := range l.Items {
+		if event.Reason == "CreatedPersistentVolumeClaim" {
+			numCreatedPVC++
+		}
+		if event.Reason == "CreatedDeployment" {
+			numCreatedDeployment++
+		}
+	}
+	s.Require().Equal(1, numCreatedPVC)
+	s.Require().Equal(1, numCreatedDeployment)
 }
 
 func allSmbShareSuites() map[string]suite.TestingSuite {
