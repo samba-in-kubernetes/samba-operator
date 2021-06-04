@@ -26,6 +26,7 @@ const (
 	userSecretVolName = "users-config"
 	wbSocketsVolName  = "samba-wb-sockets-dir"
 	stateVolName      = "samba-state-dir"
+	osRunVolName      = "run"
 	joinJsonVolName   = "join-data"
 )
 
@@ -139,6 +140,10 @@ func buildUserPodSpec(planner *sharePlanner, cfg *conf.OperatorConfig, pvcName s
 	volumes = append(volumes, configVol)
 	mounts = append(mounts, configMount)
 
+	osRunVol, osRunMount := osRunVolumeAndMount(planner)
+	volumes = append(volumes, osRunVol)
+	mounts = append(mounts, osRunMount)
+
 	if planner.securityMode() == userMode && planner.userSecuritySource().Configured {
 		v, m := userConfigVolumeAndMount(planner)
 		volumes = append(volumes, v)
@@ -248,6 +253,25 @@ func sambaStateVolumeAndMount(planner *sharePlanner) (
 	mount := corev1.VolumeMount{
 		MountPath: planner.sambaStateDir(),
 		Name:      stateVolName,
+	}
+	return volume, mount
+}
+
+func osRunVolumeAndMount(planner *sharePlanner) (
+	corev1.Volume, corev1.VolumeMount) {
+	// volume
+	volume := corev1.Volume{
+		Name: osRunVolName,
+		VolumeSource: corev1.VolumeSource{
+			EmptyDir: &corev1.EmptyDirVolumeSource{
+				Medium: corev1.StorageMediumMemory,
+			},
+		},
+	}
+	// mount
+	mount := corev1.VolumeMount{
+		MountPath: planner.osRunDir(),
+		Name:      osRunVolName,
 	}
 	return volume, mount
 }
