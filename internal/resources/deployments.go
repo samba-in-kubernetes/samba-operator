@@ -45,7 +45,8 @@ func buildDeployment(cfg *conf.OperatorConfig,
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
+					Labels:      labels,
+					Annotations: annotationsForSmbPod(cfg.SmbdContainerName),
 				},
 				Spec: buildPodSpec(planner, cfg, pvcName),
 			},
@@ -78,4 +79,11 @@ func labelValue(s ...string) string {
 		out = out[:63]
 	}
 	return out
+}
+
+func annotationsForSmbPod(name string) map[string]string {
+	return map[string]string{
+		"kubectl.kubernetes.io/default-logs-container": name,
+		"kubectl.kubernetes.io/default-container":      name,
+	}
 }
