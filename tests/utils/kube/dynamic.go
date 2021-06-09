@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/discovery"
@@ -184,19 +185,12 @@ func (tc *TestClient) dynCreate(
 	ctx context.Context, ns string, u *unstructured.Unstructured) (
 	*unstructured.Unstructured, error) {
 	// ---
-	dyn, mapper, err := tc.dynClient()
+	dr, mapping, err := tc.dynamicClientsetMapping(u)
 	if err != nil {
 		return nil, err
 	}
-
-	gvk := u.GroupVersionKind()
-	mapping, err := mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
-	if err != nil {
-		return nil, err
-	}
-
-	dr := dynamicResource(dyn, mapping, chooseNamespace(ns, u.GetNamespace()))
-	newu, err := dr.Create(
+	ri := useNamespace(dr, mapping, chooseNamespace(ns, u.GetNamespace()))
+	newu, err := ri.Create(
 		ctx,
 		u,
 		metav1.CreateOptions{FieldManager: "samba-operator-tests"},
@@ -207,24 +201,44 @@ func (tc *TestClient) dynCreate(
 func (tc *TestClient) dynDelete(
 	ctx context.Context, ns string, u *unstructured.Unstructured) error {
 	// ---
-	dyn, mapper, err := tc.dynClient()
+	dr, mapping, err := tc.dynamicClientsetMapping(u)
 	if err != nil {
 		return err
 	}
-
-	gvk := u.GroupVersionKind()
-	mapping, err := mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
-	if err != nil {
-		return err
-	}
-
-	dr := dynamicResource(dyn, mapping, chooseNamespace(ns, u.GetNamespace()))
-	err = dr.Delete(
+	ri := useNamespace(dr, mapping, chooseNamespace(ns, u.GetNamespace()))
+	err = ri.Delete(
 		ctx,
 		u.GetName(),
 		metav1.DeleteOptions{},
 	)
 	return err
+}
+
+func (tc *TestClient) dynamicClientsetMapping(objkind schema.ObjectKind) (
+	dynamic.NamespaceableResourceInterface, *meta.RESTMapping, error) {
+	// ---
+	dyn, mapper, err := tc.dynClient()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	gvk := objkind.GroupVersionKind()
+	mapping, err := mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return dyn.Resource(mapping.Resource), mapping, nil
+}
+
+// DynamicClientset returns a clientset for the unstructured type of whatever
+// object kind you provide. It mainly just hides some of the complexity of
+// setting up the dynamic client.
+func (tc *TestClient) DynamicClientset(objkind schema.ObjectKind) (
+	dynamic.NamespaceableResourceInterface, error) {
+	// ---
+	c, _, err := tc.dynamicClientsetMapping(objkind)
+	return c, err
 }
 
 func chooseNamespace(ns ...string) string {
@@ -240,10 +254,9 @@ func chooseNamespace(ns ...string) string {
 	return n
 }
 
-func dynamicResource(dyn dynamic.Interface, mapping *meta.RESTMapping, namespace string) dynamic.ResourceInterface {
-	dr := dyn.Resource(mapping.Resource)
+func useNamespace(nri dynamic.NamespaceableResourceInterface, mapping *meta.RESTMapping, namespace string) dynamic.ResourceInterface {
 	if mapping.Scope.Name() == meta.RESTScopeNameNamespace {
-		return dr.Namespace(namespace)
+		return nri.Namespace(namespace)
 	}
-	return dr
+	return nri
 }
