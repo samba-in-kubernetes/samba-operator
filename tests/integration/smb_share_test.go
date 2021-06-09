@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/suite"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/samba-in-kubernetes/samba-operator/tests/utils/kube"
@@ -121,13 +122,25 @@ func (s *SmbShareSuite) TestShareAccessByServiceName() {
 
 func (s *SmbShareSuite) TestShareEvents() {
 	s.Require().NoError(s.waitForPodReady())
-	// TODO: use the involved object's uuid for filtering.
-	// for now this is ok(ish), because we only create one SmbShare
-	// with a given name for each test.
-	l, err := s.tc.Clientset().CoreV1().Events(testNamespace).List(
+
+	// this unstructured stuff is just to get a UID for the SmbShare for event
+	// filtering. Since the tests don't currently have a way to use a typed
+	// interface for API access to SmbShare we take the lazy way out
+	u := &unstructured.Unstructured{}
+	u.SetAPIVersion("samba-operator.samba.org/v1alpha1")
+	u.SetKind("SmbShare")
+	dc, err := s.tc.DynamicClientset(u)
+	s.Require().NoError(err)
+	u, err = dc.Namespace(s.smbShareResource.Namespace).Get(
+		context.TODO(),
+		s.smbShareResource.Name,
+		metav1.GetOptions{})
+	s.Require().NoError(err)
+
+	l, err := s.tc.Clientset().CoreV1().Events(s.smbShareResource.Namespace).List(
 		context.TODO(),
 		metav1.ListOptions{
-			FieldSelector: fmt.Sprintf("involvedObject.kind=SmbShare,involvedObject.name=%s", s.smbShareResourceName),
+			FieldSelector: fmt.Sprintf("involvedObject.kind=SmbShare,involvedObject.name=%s,involvedObject.uid=%s", s.smbShareResource.Name, u.GetUID()),
 		})
 	s.Require().NoError(err)
 	s.Require().GreaterOrEqual(len(l.Items), 1)
