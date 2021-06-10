@@ -36,6 +36,20 @@ spec:
           spec:
             description: SmbSecurityConfigSpec defines the desired state of SmbSecurityConfig
             properties:
+              dns:
+                description: DNS is used to configure properties related to the DNS
+                  services of the domain.
+                properties:
+                  register:
+                    description: 'Register a specified member server''s address with
+                      the domain''s DNS or disabled when set to "never". NOTE: cluster-ip
+                      is not generally supported, it is only for testing.'
+                    enum:
+                    - never
+                    - external-ip
+                    - cluster-ip
+                    type: string
+                type: object
               domains:
                 description: Domains holds a list of primary & trusted domain configurations.
                   If left empty a simple default that automatically works with trusted
