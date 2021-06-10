@@ -31,6 +31,14 @@ const (
 	adMode   = securityMode("active-directory")
 )
 
+type dnsRegister string
+
+const (
+	dnsRegisterNever      = dnsRegister("never")
+	dnsRegisterExternalIP = dnsRegister("external-ip")
+	dnsRegisterClusterIP  = dnsRegister("cluster-ip")
+)
+
 type userSecuritySource struct {
 	Configured bool
 	Namespace  string
@@ -279,4 +287,19 @@ func (sp *sharePlanner) prune() (changed bool, err error) {
 		changed = true
 	}
 	return
+}
+
+func (sp *sharePlanner) dnsRegister() dnsRegister {
+	reg := dnsRegisterNever
+	if sp.securityMode() == adMode && sp.SecurityConfig.Spec.DNS != nil {
+		reg = dnsRegister(sp.SecurityConfig.Spec.DNS.Register)
+	}
+	switch reg {
+	// allowed values
+	case dnsRegisterExternalIP, dnsRegisterClusterIP:
+	// anything else is reverted to "never"
+	default:
+		reg = dnsRegisterNever
+	}
+	return reg
 }
