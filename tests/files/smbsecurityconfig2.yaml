@@ -12,3 +12,5 @@ spec:
   - userJoin:
       secret: join1
       key: join2.json
+  dns:
+    register: cluster-ip
