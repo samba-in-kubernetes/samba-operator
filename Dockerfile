@@ -1,5 +1,7 @@
 # Build the manager binary
 FROM golang:1.16 as builder
+ARG GIT_VERSION="(unset)"
+ARG COMMIT_ID="(unset)"
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
@@ -16,8 +18,10 @@ COPY controllers/ controllers/
 COPY internal/ internal/
 
 # Build
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager main.go
-
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on \
+    go build -a \
+    -ldflags "-X main.Version=${GIT_VERSION} -X main.CommitID=${COMMIT_ID}" \
+    -o manager main.go
 
 FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
 

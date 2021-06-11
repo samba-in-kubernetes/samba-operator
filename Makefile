@@ -11,6 +11,10 @@ BUNDLE_DEFAULT_CHANNEL := --default-channel=$(DEFAULT_CHANNEL)
 endif
 BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 
+COMMIT_ID = $(shell git describe --abbrev=40 --always --dirty=+ 2>/dev/null)
+GIT_VERSION = $(shell git describe --match='v[0-9]*.[0-9].[0-9]' 2>/dev/null || echo "(unset)")
+
+
 # Image URL to use all building/pushing image targets
 TAG ?= latest
 IMG ?= quay.io/samba.org/samba-operator:$(TAG)
@@ -46,7 +50,7 @@ test: generate vet manifests
 manager: generate vet build
 
 build:
-	go build -o bin/manager main.go
+	go build -o bin/manager -ldflags "-X main.Version=$(GIT_VERSION) -X main.CommitID=$(COMMIT_ID)"  main.go
 .PHONY: build
 
 build-integration-tests:
@@ -95,7 +99,10 @@ generate: controller-gen
 # Build the container image
 docker-build: image-build
 image-build:
-	$(CONTAINER_CMD) build $(CONTAINER_BUILD_OPTS) . -t ${IMG}
+	$(CONTAINER_CMD) build \
+		--build-arg=GIT_VERSION="$(GIT_VERSION)" \
+		--build-arg=COMMIT_ID="$(COMMIT_ID)" \
+		$(CONTAINER_BUILD_OPTS) $(CONTAINER_BUILD_OPTS) . -t ${IMG}
 
 .PHONY: image-build-buildah
 image-build-buildah: build
