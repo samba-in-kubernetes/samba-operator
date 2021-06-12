@@ -303,3 +303,24 @@ func (sp *sharePlanner) dnsRegister() dnsRegister {
 	}
 	return reg
 }
+
+func (*sharePlanner) serviceWatchStateDir() string {
+	return "/var/lib/svcwatch"
+}
+
+func (sp *sharePlanner) serviceWatchJSONPath() string {
+	return path.Join(sp.serviceWatchStateDir(), "status.json")
+}
+
+func (sp *sharePlanner) dnsRegisterArgs() []string {
+	args := []string{
+		"dns-register",
+		"--watch",
+	}
+	if sp.dnsRegister() == dnsRegisterClusterIP {
+		args = append(args, "--target=internal")
+	}
+	args = append(args, sp.serviceWatchJSONPath())
+	return args
+
+}

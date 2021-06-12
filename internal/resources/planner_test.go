@@ -97,3 +97,42 @@ func TestPlannerDNSRegister(t *testing.T) {
 	d = planner.dnsRegister()
 	assert.Equal(t, dnsRegisterNever, d)
 }
+
+func TestPlannerDNSRegisterArgs(t *testing.T) {
+	var (
+		v       []string
+		planner *sharePlanner
+	)
+
+	// external-ip
+	planner = newSharePlanner(
+		&sambaoperatorv1alpha1.SmbShare{},
+		&sambaoperatorv1alpha1.SmbSecurityConfig{
+			Spec: sambaoperatorv1alpha1.SmbSecurityConfigSpec{
+				Mode: "active-directory",
+				DNS: &sambaoperatorv1alpha1.SmbSecurityDNSSpec{
+					Register: "external-ip",
+				},
+			}},
+		&smbcc.SambaContainerConfig{})
+	v = planner.dnsRegisterArgs()
+	assert.Equal(t,
+		[]string{"dns-register", "--watch", "/var/lib/svcwatch/status.json"},
+		v)
+
+	// cluster-ip
+	planner = newSharePlanner(
+		&sambaoperatorv1alpha1.SmbShare{},
+		&sambaoperatorv1alpha1.SmbSecurityConfig{
+			Spec: sambaoperatorv1alpha1.SmbSecurityConfigSpec{
+				Mode: "active-directory",
+				DNS: &sambaoperatorv1alpha1.SmbSecurityDNSSpec{
+					Register: "cluster-ip",
+				},
+			}},
+		&smbcc.SambaContainerConfig{})
+	v = planner.dnsRegisterArgs()
+	assert.Equal(t,
+		[]string{"dns-register", "--watch", "--target=internal", "/var/lib/svcwatch/status.json"},
+		v)
+}
