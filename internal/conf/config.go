@@ -14,6 +14,9 @@ import (
 type OperatorConfig struct {
 	// SmbdContainerImage can be used to select alternate container sources.
 	SmbdContainerImage string `mapstructure:"smbd-container-image"`
+	// SvcWatchContainerImage can be used to select alternate container image
+	// for the service watch utility.
+	SvcWatchContainerImage string `mapstructure:"svc-watch-container-image"`
 	// SmbdContainerName can be used to set the name of the primary container,
 	// the one running smbd, in the pod.
 	SmbdContainerName string `mapstructure:"smbd-container-name"`
@@ -46,6 +49,7 @@ func NewSource() *Source {
 	v.SetDefault("smbd-container-image", "quay.io/samba.org/samba-server:latest")
 	v.SetDefault("smbd-container-name", "samba")
 	v.SetDefault("working-namespace", "")
+	v.SetDefault("svc-watch-container-image", "quay.io/samba.org/svcwatch:latest")
 	return &Source{v: v}
 }
 
