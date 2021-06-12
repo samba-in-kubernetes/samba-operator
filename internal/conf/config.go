@@ -12,9 +12,14 @@ import (
 // Most of the operator code that needs to reference configuration
 // should do so via this type.
 type OperatorConfig struct {
+	// SmbdContainerImage can be used to select alternate container sources.
 	SmbdContainerImage string `mapstructure:"smbd-container-image"`
-	SmbdContainerName  string `mapstructure:"smbd-container-name"`
-	WorkingNamespace   string `mapstructure:"working-namespace"`
+	// SmbdContainerName can be used to set the name of the primary container,
+	// the one running smbd, in the pod.
+	SmbdContainerName string `mapstructure:"smbd-container-name"`
+	// WorkingNamespace defines the namespace the operator will (generally)
+	// make changes in.
+	WorkingNamespace string `mapstructure:"working-namespace"`
 }
 
 // Validate the OperatorConfig returning an error if the config is not
