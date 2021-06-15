@@ -14,6 +14,7 @@ spec:
       labels:
         app: samba-ad
     spec:
+      hostname: dc1
       containers:
       - name: samba
         image: quay.io/samba.org/samba-ad-server:latest
