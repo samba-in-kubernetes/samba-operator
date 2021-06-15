@@ -65,6 +65,8 @@ func (s *ShareAccessSuite) SetupSuite() {
 // TestLogin verifies that users can log into the share.
 func (s *ShareAccessSuite) TestLogin() {
 	smbclient := smbclient.MustPodClient(testNamespace, s.clientPod)
+	err := smbclient.CacheFlush(context.TODO())
+	s.Require().NoError(err)
 	for _, auth := range s.auths {
 		err := smbclient.Command(
 			context.TODO(),
@@ -77,8 +79,10 @@ func (s *ShareAccessSuite) TestLogin() {
 
 func (s *ShareAccessSuite) TestPutFile() {
 	smbclient := smbclient.MustPodClient(testNamespace, s.clientPod)
+	err := smbclient.CacheFlush(context.TODO())
+	s.Require().NoError(err)
 	auth := s.auths[0]
-	err := smbclient.Command(
+	err = smbclient.Command(
 		context.TODO(),
 		s.share,
 		auth,
