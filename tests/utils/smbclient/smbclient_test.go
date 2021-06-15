@@ -55,7 +55,7 @@ func TestCmd(t *testing.T) {
 		prefix:     []string{"echo"},
 	}
 	share := Share{Host("localhost"), "Stuff"}
-	cmd := c.cmd(
+	cmd := c.smbclientCmd(
 		ctx,
 		Auth{"bob", "passw0rd"},
 		[]string{share.String(), "-c", "ls"})
