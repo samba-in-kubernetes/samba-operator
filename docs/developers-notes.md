@@ -65,19 +65,22 @@ We will set the environment variables using kustomize rules in the file
 patches:
 - patch: |-
     - op: add
-      path: /spec/template/spec/containers/0/env
+      path: /spec/template/spec/containers/0/env/-
       value:
-      - name: "SAMBA_OP_SMBD_CONTAINER_IMAGE"
+        name: "SAMBA_OP_SMBD_CONTAINER_IMAGE"
         value: "registry.example.com/myuser/samba-server:experiment"
   target:
     kind: Deployment
 ```
 
-This assumes that you are using a basic kustomization.yaml. This can be
-combined with other patches and other rules. See the [kustomize
-docs](https://kubectl.docs.kubernetes.io/references/kustomize/) for more
-information on using kustomize. You can also set other environment variables
-in a similar manner.
+For multiple values, more than the "op" in the embedded yaml patch can be
+specified. Using "add" with "/spec/template/spec/containers/0/env/-" means to
+append the value to the end of the list at "env".
+
+You can also add your own "kustomize' patches and other rules.  See the
+[kustomize docs](https://kubectl.docs.kubernetes.io/references/kustomize/) for
+more information on using kustomize. You can also set other environment
+variables in a similar manner.
 
 
 Please do not check changes made by kustomize to kustomization.yaml files
