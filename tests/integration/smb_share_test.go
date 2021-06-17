@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/suite"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
@@ -200,6 +201,30 @@ func (s *SmbShareWithDNSSuite) TestPodForDNSContainers() {
 	s.Require().Contains(names, "svc-watch")
 }
 
+type SmbShareWithExternalNetSuite struct {
+	SmbShareSuite
+}
+
+func (s *SmbShareWithExternalNetSuite) TestServiceIsLoadBalancer() {
+	lbl := fmt.Sprintf("samba-operator.samba.org/service=%s", s.smbShareResource.Name)
+	l, err := s.tc.Clientset().CoreV1().Services(testNamespace).List(
+		context.TODO(),
+		metav1.ListOptions{
+			LabelSelector: lbl,
+		},
+	)
+	s.Require().NoError(err)
+	s.Require().Len(l.Items, 1)
+	// our test environment does not require the k8s cluster to actually
+	// support an external load balancer. All this test can do is check
+	// IF LoadBalanacer was set.
+	svc := l.Items[0]
+	s.Require().Equal(
+		corev1.ServiceTypeLoadBalancer,
+		svc.Spec.Type,
+	)
+}
+
 func allSmbShareSuites() map[string]suite.TestingSuite {
 	m := map[string]suite.TestingSuite{}
 	m["users1"] = &SmbShareSuite{
@@ -273,6 +298,33 @@ func allSmbShareSuites() map[string]suite.TestingSuite {
 			Password: "1nsecurely",
 		}},
 	}
+
+	m["smbSharesExternal"] = &SmbShareWithExternalNetSuite{SmbShareSuite{
+		fileSources: []kube.FileSource{
+			{
+				Path:      path.Join(testFilesDir, "userssecret1.yaml"),
+				Namespace: testNamespace,
+			},
+			{
+				Path:      path.Join(testFilesDir, "commonconfig1.yaml"),
+				Namespace: testNamespace,
+			},
+			{
+				Path:      path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
+				Namespace: testNamespace,
+			},
+			{
+				Path:      path.Join(testFilesDir, "smbshare4.yaml"),
+				Namespace: testNamespace,
+			},
+		},
+		smbShareResource: types.NamespacedName{testNamespace, "tshare4"},
+		shareName:        "Since When",
+		testAuths: []smbclient.Auth{{
+			Username: "sambauser",
+			Password: "1nsecurely",
+		}},
+	}}
 
 	return m
 }
