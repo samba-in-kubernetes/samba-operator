@@ -49,7 +49,7 @@ type userSecuritySource struct {
 type sharePlanner struct {
 	SmbShare       *sambaoperatorv1alpha1.SmbShare
 	SecurityConfig *sambaoperatorv1alpha1.SmbSecurityConfig
-	Config         *smbcc.SambaContainerConfig
+	ConfigState    *smbcc.SambaContainerConfig
 }
 
 func newSharePlanner(
@@ -60,7 +60,7 @@ func newSharePlanner(
 	return &sharePlanner{
 		SmbShare:       share,
 		SecurityConfig: security,
-		Config:         config,
+		ConfigState:    config,
 	}
 }
 
@@ -218,14 +218,14 @@ func (sp *sharePlanner) idmapOptions() smbcc.SmbOptions {
 }
 
 func (sp *sharePlanner) update() (changed bool, err error) {
-	noprinting, found := sp.Config.Globals[smbcc.NoPrintingKey]
+	noprinting, found := sp.ConfigState.Globals[smbcc.NoPrintingKey]
 	if !found {
 		noprinting = smbcc.NewNoPrintingGlobals()
-		sp.Config.Globals[smbcc.NoPrintingKey] = noprinting
+		sp.ConfigState.Globals[smbcc.NoPrintingKey] = noprinting
 		changed = true
 	}
 	shareKey := smbcc.Key(sp.shareName())
-	share, found := sp.Config.Shares[shareKey]
+	share, found := sp.ConfigState.Shares[shareKey]
 	if !found {
 		share = smbcc.NewSimpleShare(sp.sharePath())
 		if !sp.SmbShare.Spec.Browseable {
@@ -234,11 +234,11 @@ func (sp *sharePlanner) update() (changed bool, err error) {
 		if sp.SmbShare.Spec.ReadOnly {
 			share.Options[smbcc.ReadOnlyParam] = smbcc.Yes
 		}
-		sp.Config.Shares[shareKey] = share
+		sp.ConfigState.Shares[shareKey] = share
 		changed = true
 	}
 	cfgKey := sp.instanceID()
-	cfg, found := sp.Config.Configs[cfgKey]
+	cfg, found := sp.ConfigState.Configs[cfgKey]
 	if !found || cfg.Shares[0] != shareKey {
 		cfg = smbcc.ConfigSection{
 			Shares:       []smbcc.Key{shareKey},
@@ -249,16 +249,16 @@ func (sp *sharePlanner) update() (changed bool, err error) {
 			realmKey := smbcc.Key(sp.realm())
 			cfg.Globals = append(cfg.Globals, realmKey)
 		}
-		sp.Config.Configs[cfgKey] = cfg
+		sp.ConfigState.Configs[cfgKey] = cfg
 		changed = true
 	}
-	if len(sp.Config.Users) == 0 {
-		sp.Config.Users = smbcc.NewDefaultUsers()
+	if len(sp.ConfigState.Users) == 0 {
+		sp.ConfigState.Users = smbcc.NewDefaultUsers()
 		changed = true
 	}
 	if sp.securityMode() == adMode {
 		realmKey := smbcc.Key(sp.realm())
-		_, found := sp.Config.Globals[realmKey]
+		_, found := sp.ConfigState.Globals[realmKey]
 		if !found {
 			opts := sp.idmapOptions()
 			// security mode
@@ -266,7 +266,7 @@ func (sp *sharePlanner) update() (changed bool, err error) {
 			// workgroup and realm
 			opts["workgroup"] = sp.workgroup()
 			opts["realm"] = sp.realm()
-			sp.Config.Globals[realmKey] = smbcc.GlobalConfig{
+			sp.ConfigState.Globals[realmKey] = smbcc.GlobalConfig{
 				Options: opts,
 			}
 			changed = true
@@ -277,13 +277,13 @@ func (sp *sharePlanner) update() (changed bool, err error) {
 
 func (sp *sharePlanner) prune() (changed bool, err error) {
 	cfgKey := sp.instanceID()
-	if _, found := sp.Config.Configs[cfgKey]; found {
-		delete(sp.Config.Configs, cfgKey)
+	if _, found := sp.ConfigState.Configs[cfgKey]; found {
+		delete(sp.ConfigState.Configs, cfgKey)
 		changed = true
 	}
 	shareKey := smbcc.Key(sp.shareName())
-	if _, found := sp.Config.Shares[shareKey]; found {
-		delete(sp.Config.Shares, shareKey)
+	if _, found := sp.ConfigState.Shares[shareKey]; found {
+		delete(sp.ConfigState.Shares, shareKey)
 		changed = true
 	}
 	return
