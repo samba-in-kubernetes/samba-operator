@@ -55,6 +55,13 @@ type SmbShareSpec struct {
 	// +kubebuilder:validation:MinLength:=1
 	// +optional
 	SecurityConfig string `json:"securityConfig,omitempty"`
+
+	// CommonConfig specifies which SmbCommonConfig CR is to be used
+	// for this share. If left blank, the operator's default will be
+	// used.
+	// +kubebuilder:validation:MinLength:=1
+	// +optional
+	CommonConfig string `json:"commonConfig,omitempty"`
 }
 
 // SmbShareStorageSpec defines how storage is associated with a share.
