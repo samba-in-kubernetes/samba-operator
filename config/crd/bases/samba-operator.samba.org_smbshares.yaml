@@ -41,6 +41,12 @@ spec:
                 description: Browseable controls if the share will be browseable.
                   A browseable share is visible in listings.
                 type: boolean
+              commonConfig:
+                description: CommonConfig specifies which SmbCommonConfig CR is to
+                  be used for this share. If left blank, the operator's default will
+                  be used.
+                minLength: 1
+                type: string
               readOnly:
                 default: false
                 description: ReadOnly controls if this share is to be read-only or
