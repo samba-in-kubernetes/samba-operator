@@ -1,0 +1,24 @@
+# permissions for end users to edit smbcommonconfigs.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: smbcommonconfig-editor-role
+rules:
+- apiGroups:
+  - samba-operator.samba.org
+  resources:
+  - smbcommonconfigs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - samba-operator.samba.org
+  resources:
+  - smbcommonconfigs/status
+  verbs:
+  - get
