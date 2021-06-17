@@ -1,0 +1,19 @@
+---
+apiVersion: samba-operator.samba.org/v1alpha1
+kind: SmbShare
+metadata:
+  name: tshare4
+spec:
+  shareName: "Since When"
+  readOnly: false
+  browseable: false
+  securityConfig: sharesec1
+  commonConfig: commonext1
+  storage:
+    pvc:
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
