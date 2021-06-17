@@ -37,6 +37,7 @@ func TestPlannerDNSRegister(t *testing.T) {
 			Spec: sambaoperatorv1alpha1.SmbSecurityConfigSpec{
 				Mode: "active-directory",
 			}},
+		&sambaoperatorv1alpha1.SmbCommonConfig{},
 		&smbcc.SambaContainerConfig{})
 	d = planner.dnsRegister()
 	assert.Equal(t, dnsRegisterNever, d)
@@ -51,6 +52,7 @@ func TestPlannerDNSRegister(t *testing.T) {
 					Register: "external-ip",
 				},
 			}},
+		&sambaoperatorv1alpha1.SmbCommonConfig{},
 		&smbcc.SambaContainerConfig{})
 	d = planner.dnsRegister()
 	assert.Equal(t, dnsRegisterExternalIP, d)
@@ -65,6 +67,7 @@ func TestPlannerDNSRegister(t *testing.T) {
 					Register: "cluster-ip",
 				},
 			}},
+		&sambaoperatorv1alpha1.SmbCommonConfig{},
 		&smbcc.SambaContainerConfig{})
 	d = planner.dnsRegister()
 	assert.Equal(t, dnsRegisterClusterIP, d)
@@ -79,6 +82,7 @@ func TestPlannerDNSRegister(t *testing.T) {
 					Register: "junk",
 				},
 			}},
+		&sambaoperatorv1alpha1.SmbCommonConfig{},
 		&smbcc.SambaContainerConfig{})
 	d = planner.dnsRegister()
 	assert.Equal(t, dnsRegisterNever, d)
@@ -93,6 +97,7 @@ func TestPlannerDNSRegister(t *testing.T) {
 					Register: "cluster-ip",
 				},
 			}},
+		&sambaoperatorv1alpha1.SmbCommonConfig{},
 		&smbcc.SambaContainerConfig{})
 	d = planner.dnsRegister()
 	assert.Equal(t, dnsRegisterNever, d)
@@ -114,6 +119,7 @@ func TestPlannerDNSRegisterArgs(t *testing.T) {
 					Register: "external-ip",
 				},
 			}},
+		&sambaoperatorv1alpha1.SmbCommonConfig{},
 		&smbcc.SambaContainerConfig{})
 	v = planner.dnsRegisterArgs()
 	assert.Equal(t,
@@ -130,6 +136,7 @@ func TestPlannerDNSRegisterArgs(t *testing.T) {
 					Register: "cluster-ip",
 				},
 			}},
+		&sambaoperatorv1alpha1.SmbCommonConfig{},
 		&smbcc.SambaContainerConfig{})
 	v = planner.dnsRegisterArgs()
 	assert.Equal(t,

@@ -350,8 +350,9 @@ func (m *SmbShareManager) updateConfiguration(
 			return nil, false, err
 		}
 	}
+	var common *sambaoperatorv1alpha1.SmbCommonConfig
 	// extract config from map
-	planner := newSharePlanner(s, security, cc)
+	planner := newSharePlanner(s, security, common, cc)
 	var changed bool
 	if isDeleting {
 		changed, err = planner.prune()
