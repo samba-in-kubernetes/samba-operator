@@ -100,6 +100,14 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "SmbSecurityConfig")
 		os.Exit(1)
 	}
+	if err = (&controllers.SmbCommonConfigReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("SmbCommonConfig"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "SmbCommonConfig")
+		os.Exit(1)
+	}
 	// +kubebuilder:scaffold:builder
 
 	setupLog.Info("starting manager",
