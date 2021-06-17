@@ -163,6 +163,15 @@ type SmbShareWithDNSSuite struct {
 }
 
 func (s *SmbShareWithDNSSuite) TestShareAccessByDomainName() {
+	// HACK: sleep for a short bit before running the smbclient command.  This
+	// test works often but is flaky, and that appears due to the dns name not
+	// always resolving. This hack adds a small delay to try and reduce the
+	// test flakes. Obviously, a sleep is poor way to improve a test case. In
+	// the future we should poll-with-a-timeout for the dns name, but that
+	// needs to be done in-cluster/in-the-pod and that's a bunch of yak shaving
+	// - so for now: a hack.
+	time.Sleep(400 * time.Millisecond)
+
 	dnsname := fmt.Sprintf("%s-cluster.domain1.sink.test",
 		s.smbShareResource.Name)
 	shareAccessSuite := &ShareAccessSuite{
