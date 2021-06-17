@@ -350,7 +350,20 @@ func (m *SmbShareManager) updateConfiguration(
 			return nil, false, err
 		}
 	}
-	var common *sambaoperatorv1alpha1.SmbCommonConfig
+	common, err := m.getCommonConfig(ctx, s)
+	if err != nil {
+		if isDeleting && errors.IsNotFound(err) {
+			// same logic for common config as security config
+			m.logger.Info(
+				"failed to get SmbCommonConfig while deleting SmbShare",
+				"error", err)
+			common = nil
+		} else {
+			m.logger.Error(err, "failed to get SmbCommonConfig")
+			return nil, false, err
+		}
+	}
+
 	// extract config from map
 	planner := newSharePlanner(s, security, common, cc)
 	var changed bool
