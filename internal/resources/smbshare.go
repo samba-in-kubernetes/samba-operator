@@ -365,7 +365,7 @@ func (m *SmbShareManager) updateConfiguration(
 	if !changed {
 		return planner, false, nil
 	}
-	err = setContainerConfig(cm, planner.Config)
+	err = setContainerConfig(cm, planner.ConfigState)
 	if err != nil {
 		m.logger.Error(err, "unable to set container config in config map")
 		return nil, false, err
