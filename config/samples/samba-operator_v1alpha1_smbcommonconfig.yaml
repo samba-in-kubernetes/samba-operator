@@ -1,0 +1,7 @@
+apiVersion: samba-operator.samba.org/v1alpha1
+kind: SmbCommonConfig
+metadata:
+  name: smbcommonconfig-sample
+spec:
+  # Add fields here
+  foo: bar
