@@ -406,6 +406,26 @@ func (m *SmbShareManager) getSecurityConfig(
 	return security, nil
 }
 
+func (m *SmbShareManager) getCommonConfig(
+	ctx context.Context, s *sambaoperatorv1alpha1.SmbShare) (
+	*sambaoperatorv1alpha1.SmbCommonConfig, error) {
+	// check if the share specifies a common config
+	if s.Spec.CommonConfig == "" {
+		return nil, nil
+	}
+
+	nsname := types.NamespacedName{
+		Name:      s.Spec.CommonConfig,
+		Namespace: s.Namespace,
+	}
+	cconfig := &sambaoperatorv1alpha1.SmbCommonConfig{}
+	err := m.client.Get(ctx, nsname, cconfig)
+	if err != nil {
+		return nil, err
+	}
+	return cconfig, nil
+}
+
 func (m *SmbShareManager) setServerGroup(
 	ctx context.Context, s *sambaoperatorv1alpha1.SmbShare) (bool, error) {
 	// check to see if there's already a group for this
