@@ -49,17 +49,20 @@ type userSecuritySource struct {
 type sharePlanner struct {
 	SmbShare       *sambaoperatorv1alpha1.SmbShare
 	SecurityConfig *sambaoperatorv1alpha1.SmbSecurityConfig
+	CommonConfig   *sambaoperatorv1alpha1.SmbCommonConfig
 	ConfigState    *smbcc.SambaContainerConfig
 }
 
 func newSharePlanner(
 	share *sambaoperatorv1alpha1.SmbShare,
 	security *sambaoperatorv1alpha1.SmbSecurityConfig,
+	common *sambaoperatorv1alpha1.SmbCommonConfig,
 	config *smbcc.SambaContainerConfig) *sharePlanner {
 	// return a new sharePlanner
 	return &sharePlanner{
 		SmbShare:       share,
 		SecurityConfig: security,
+		CommonConfig:   common,
 		ConfigState:    config,
 	}
 }
