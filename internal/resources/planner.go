@@ -325,5 +325,11 @@ func (sp *sharePlanner) dnsRegisterArgs() []string {
 	}
 	args = append(args, sp.serviceWatchJSONPath())
 	return args
+}
 
+func (sp *sharePlanner) serviceType() string {
+	if sp.CommonConfig != nil && sp.CommonConfig.Spec.Network.Publish == "external" {
+		return "LoadBalancer"
+	}
+	return "ClusterIP"
 }

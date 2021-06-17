@@ -32,7 +32,7 @@ func newServiceForSmb(planner *sharePlanner, ns string) *corev1.Service {
 			Labels:    labels,
 		},
 		Spec: corev1.ServiceSpec{
-			Type: "ClusterIP",
+			Type: toServiceType(planner.serviceType()),
 			Ports: []corev1.ServicePort{{
 				Name:     "smb",
 				Protocol: corev1.ProtocolTCP,
@@ -43,4 +43,16 @@ func newServiceForSmb(planner *sharePlanner, ns string) *corev1.Service {
 			},
 		},
 	}
+}
+
+func toServiceType(s string) corev1.ServiceType {
+	svcType := corev1.ServiceType(s)
+	switch svcType {
+	case corev1.ServiceTypeClusterIP:
+	case corev1.ServiceTypeNodePort:
+	case corev1.ServiceTypeLoadBalancer:
+	default:
+		panic("invalid value for service type")
+	}
+	return svcType
 }
