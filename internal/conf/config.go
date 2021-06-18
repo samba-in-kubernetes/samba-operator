@@ -23,6 +23,9 @@ type OperatorConfig struct {
 	// WorkingNamespace defines the namespace the operator will (generally)
 	// make changes in.
 	WorkingNamespace string `mapstructure:"working-namespace"`
+	// SambaDebugLevel can be used to set debugging level for samba
+	// components in deployed containers.
+	SambaDebugLevel string `mapstructure:"samba-debug-level"`
 }
 
 // Validate the OperatorConfig returning an error if the config is not
@@ -50,6 +53,7 @@ func NewSource() *Source {
 	v.SetDefault("smbd-container-name", "samba")
 	v.SetDefault("working-namespace", "")
 	v.SetDefault("svc-watch-container-image", "quay.io/samba.org/svcwatch:latest")
+	v.SetDefault("samba-debug-level", "")
 	return &Source{v: v}
 }
 
