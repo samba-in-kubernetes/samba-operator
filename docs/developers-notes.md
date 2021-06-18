@@ -85,3 +85,26 @@ variables in a similar manner.
 
 Please do not check changes made by kustomize to kustomization.yaml files
 in to git history.
+
+
+## Debugging the samba containers
+
+Similar to using a custom container image the operator accepts a configuration
+value for samba debugging that will be passed on to the containers the
+operator creates. This parameter is `samba-debug-level` in configuration
+files and `SAMBA_OP_SAMBA_DEBUG_LEVEL` in the evnironment. The value should
+be a numeral 0 through 10 specified as a *string*.
+
+Example setting the variable via the `./config/manager/kustomization.yaml` file:
+
+```
+patches:
+- patch: |-
+    - op: add
+      path: /spec/template/spec/containers/0/env/-
+      value:
+        name: "SAMBA_OP_SAMBA_DEBUG_LEVEL"
+        value: "8"
+  target:
+    kind: Deployment
+```
