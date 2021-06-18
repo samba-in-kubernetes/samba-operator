@@ -32,72 +32,77 @@ func TestPlannerDNSRegister(t *testing.T) {
 
 	// no dns register specified
 	planner = newSharePlanner(
-		&sambaoperatorv1alpha1.SmbShare{},
-		&sambaoperatorv1alpha1.SmbSecurityConfig{
-			Spec: sambaoperatorv1alpha1.SmbSecurityConfigSpec{
-				Mode: "active-directory",
-			}},
-		&sambaoperatorv1alpha1.SmbCommonConfig{},
+		InstanceConfiguration{
+			SecurityConfig: &sambaoperatorv1alpha1.SmbSecurityConfig{
+				Spec: sambaoperatorv1alpha1.SmbSecurityConfigSpec{
+					Mode: "active-directory",
+				},
+			},
+		},
 		&smbcc.SambaContainerConfig{})
 	d = planner.dnsRegister()
 	assert.Equal(t, dnsRegisterNever, d)
 
 	// external-ip
 	planner = newSharePlanner(
-		&sambaoperatorv1alpha1.SmbShare{},
-		&sambaoperatorv1alpha1.SmbSecurityConfig{
-			Spec: sambaoperatorv1alpha1.SmbSecurityConfigSpec{
-				Mode: "active-directory",
-				DNS: &sambaoperatorv1alpha1.SmbSecurityDNSSpec{
-					Register: "external-ip",
+		InstanceConfiguration{
+			SecurityConfig: &sambaoperatorv1alpha1.SmbSecurityConfig{
+				Spec: sambaoperatorv1alpha1.SmbSecurityConfigSpec{
+					Mode: "active-directory",
+					DNS: &sambaoperatorv1alpha1.SmbSecurityDNSSpec{
+						Register: "external-ip",
+					},
 				},
-			}},
-		&sambaoperatorv1alpha1.SmbCommonConfig{},
+			},
+		},
 		&smbcc.SambaContainerConfig{})
 	d = planner.dnsRegister()
 	assert.Equal(t, dnsRegisterExternalIP, d)
 
 	// cluster-ip
 	planner = newSharePlanner(
-		&sambaoperatorv1alpha1.SmbShare{},
-		&sambaoperatorv1alpha1.SmbSecurityConfig{
-			Spec: sambaoperatorv1alpha1.SmbSecurityConfigSpec{
-				Mode: "active-directory",
-				DNS: &sambaoperatorv1alpha1.SmbSecurityDNSSpec{
-					Register: "cluster-ip",
+		InstanceConfiguration{
+			SecurityConfig: &sambaoperatorv1alpha1.SmbSecurityConfig{
+				Spec: sambaoperatorv1alpha1.SmbSecurityConfigSpec{
+					Mode: "active-directory",
+					DNS: &sambaoperatorv1alpha1.SmbSecurityDNSSpec{
+						Register: "cluster-ip",
+					},
 				},
-			}},
-		&sambaoperatorv1alpha1.SmbCommonConfig{},
+			},
+		},
 		&smbcc.SambaContainerConfig{})
 	d = planner.dnsRegister()
 	assert.Equal(t, dnsRegisterClusterIP, d)
 
 	// invalid string for register
 	planner = newSharePlanner(
-		&sambaoperatorv1alpha1.SmbShare{},
-		&sambaoperatorv1alpha1.SmbSecurityConfig{
-			Spec: sambaoperatorv1alpha1.SmbSecurityConfigSpec{
-				Mode: "active-directory",
-				DNS: &sambaoperatorv1alpha1.SmbSecurityDNSSpec{
-					Register: "junk",
+		InstanceConfiguration{
+			SecurityConfig: &sambaoperatorv1alpha1.SmbSecurityConfig{
+				Spec: sambaoperatorv1alpha1.SmbSecurityConfigSpec{
+					Mode: "active-directory",
+					DNS: &sambaoperatorv1alpha1.SmbSecurityDNSSpec{
+						Register: "junk",
+					},
 				},
-			}},
-		&sambaoperatorv1alpha1.SmbCommonConfig{},
+			},
+		},
 		&smbcc.SambaContainerConfig{})
 	d = planner.dnsRegister()
 	assert.Equal(t, dnsRegisterNever, d)
 
 	// not AD. ignore specified value
 	planner = newSharePlanner(
-		&sambaoperatorv1alpha1.SmbShare{},
-		&sambaoperatorv1alpha1.SmbSecurityConfig{
-			Spec: sambaoperatorv1alpha1.SmbSecurityConfigSpec{
-				Mode: "user",
-				DNS: &sambaoperatorv1alpha1.SmbSecurityDNSSpec{
-					Register: "cluster-ip",
+		InstanceConfiguration{
+			SecurityConfig: &sambaoperatorv1alpha1.SmbSecurityConfig{
+				Spec: sambaoperatorv1alpha1.SmbSecurityConfigSpec{
+					Mode: "user",
+					DNS: &sambaoperatorv1alpha1.SmbSecurityDNSSpec{
+						Register: "cluster-ip",
+					},
 				},
-			}},
-		&sambaoperatorv1alpha1.SmbCommonConfig{},
+			},
+		},
 		&smbcc.SambaContainerConfig{})
 	d = planner.dnsRegister()
 	assert.Equal(t, dnsRegisterNever, d)
@@ -111,15 +116,16 @@ func TestPlannerDNSRegisterArgs(t *testing.T) {
 
 	// external-ip
 	planner = newSharePlanner(
-		&sambaoperatorv1alpha1.SmbShare{},
-		&sambaoperatorv1alpha1.SmbSecurityConfig{
-			Spec: sambaoperatorv1alpha1.SmbSecurityConfigSpec{
-				Mode: "active-directory",
-				DNS: &sambaoperatorv1alpha1.SmbSecurityDNSSpec{
-					Register: "external-ip",
+		InstanceConfiguration{
+			SecurityConfig: &sambaoperatorv1alpha1.SmbSecurityConfig{
+				Spec: sambaoperatorv1alpha1.SmbSecurityConfigSpec{
+					Mode: "active-directory",
+					DNS: &sambaoperatorv1alpha1.SmbSecurityDNSSpec{
+						Register: "external-ip",
+					},
 				},
-			}},
-		&sambaoperatorv1alpha1.SmbCommonConfig{},
+			},
+		},
 		&smbcc.SambaContainerConfig{})
 	v = planner.dnsRegisterArgs()
 	assert.Equal(t,
@@ -128,15 +134,16 @@ func TestPlannerDNSRegisterArgs(t *testing.T) {
 
 	// cluster-ip
 	planner = newSharePlanner(
-		&sambaoperatorv1alpha1.SmbShare{},
-		&sambaoperatorv1alpha1.SmbSecurityConfig{
-			Spec: sambaoperatorv1alpha1.SmbSecurityConfigSpec{
-				Mode: "active-directory",
-				DNS: &sambaoperatorv1alpha1.SmbSecurityDNSSpec{
-					Register: "cluster-ip",
+		InstanceConfiguration{
+			SecurityConfig: &sambaoperatorv1alpha1.SmbSecurityConfig{
+				Spec: sambaoperatorv1alpha1.SmbSecurityConfigSpec{
+					Mode: "active-directory",
+					DNS: &sambaoperatorv1alpha1.SmbSecurityDNSSpec{
+						Register: "cluster-ip",
+					},
 				},
-			}},
-		&sambaoperatorv1alpha1.SmbCommonConfig{},
+			},
+		},
 		&smbcc.SambaContainerConfig{})
 	v = planner.dnsRegisterArgs()
 	assert.Equal(t,

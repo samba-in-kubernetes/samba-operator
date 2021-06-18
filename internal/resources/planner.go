@@ -47,24 +47,34 @@ type userSecuritySource struct {
 	Key        string
 }
 
-type sharePlanner struct {
+// InstanceConfiguration bundles together the various inputs that define
+// the configuration of a server group instance.
+type InstanceConfiguration struct {
 	SmbShare       *sambaoperatorv1alpha1.SmbShare
 	SecurityConfig *sambaoperatorv1alpha1.SmbSecurityConfig
 	CommonConfig   *sambaoperatorv1alpha1.SmbCommonConfig
-	ConfigState    *smbcc.SambaContainerConfig
+	GlobalConfig   *conf.OperatorConfig
+}
+
+type sharePlanner struct {
+	// InstanceConfiguration is used as the configuration "intent".
+	// The planner treats it as read only.
+	InstanceConfiguration
+
+	// ConfigState covers the shared configuration state that is mapped
+	// into all containers/pods and generally interpreted by sambacc
+	// for managing the behavior of samba containers. The planner treats
+	// it as read/write.
+	ConfigState *smbcc.SambaContainerConfig
 }
 
 func newSharePlanner(
-	share *sambaoperatorv1alpha1.SmbShare,
-	security *sambaoperatorv1alpha1.SmbSecurityConfig,
-	common *sambaoperatorv1alpha1.SmbCommonConfig,
-	config *smbcc.SambaContainerConfig) *sharePlanner {
+	ic InstanceConfiguration,
+	state *smbcc.SambaContainerConfig) *sharePlanner {
 	// return a new sharePlanner
 	return &sharePlanner{
-		SmbShare:       share,
-		SecurityConfig: security,
-		CommonConfig:   common,
-		ConfigState:    config,
+		InstanceConfiguration: ic,
+		ConfigState:           state,
 	}
 }
 
