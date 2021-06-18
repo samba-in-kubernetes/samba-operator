@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	sambaoperatorv1alpha1 "github.com/samba-in-kubernetes/samba-operator/api/v1alpha1"
+	"github.com/samba-in-kubernetes/samba-operator/internal/conf"
 	"github.com/samba-in-kubernetes/samba-operator/internal/smbcc"
 )
 
@@ -332,4 +333,11 @@ func (sp *sharePlanner) serviceType() string {
 		return "LoadBalancer"
 	}
 	return "ClusterIP"
+}
+
+func (*sharePlanner) sambaContainerDebugLevel() string {
+	// TODO: fix this hack. The planner should incorporate all sources of config
+	// at the top level. But for now I'm taking the lazy way out.
+	cfg := conf.Get()
+	return cfg.SambaDebugLevel
 }
