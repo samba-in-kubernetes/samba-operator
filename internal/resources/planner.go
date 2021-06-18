@@ -345,9 +345,6 @@ func (sp *sharePlanner) serviceType() string {
 	return "ClusterIP"
 }
 
-func (*sharePlanner) sambaContainerDebugLevel() string {
-	// TODO: fix this hack. The planner should incorporate all sources of config
-	// at the top level. But for now I'm taking the lazy way out.
-	cfg := conf.Get()
-	return cfg.SambaDebugLevel
+func (sp *sharePlanner) sambaContainerDebugLevel() string {
+	return sp.GlobalConfig.SambaDebugLevel
 }
