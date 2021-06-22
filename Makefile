@@ -43,11 +43,11 @@ endif
 all: manager build-integration-tests
 
 # Run tests
-test: generate vet manifests
+test: generate manifests vet
 	hack/test.sh
 
 # Build manager binary
-manager: generate vet build
+manager: generate build vet
 
 build:
 	go build -o bin/manager -ldflags "-X main.Version=$(GIT_VERSION) -X main.CommitID=$(COMMIT_ID)"  main.go
@@ -170,7 +170,7 @@ bundle-build:
 
 .PHONY: check check-revive check-format
 
-check: check-revive check-format
+check: check-revive check-format vet
 
 check-format:
 	! gofmt $(CHECK_GOFMT_FLAGS) . | sed 's,^,formatting error: ,' | grep 'go$$'

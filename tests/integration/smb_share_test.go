@@ -158,6 +158,48 @@ func (s *SmbShareSuite) TestShareEvents() {
 	s.Require().Equal(1, numCreatedDeployment)
 }
 
+type SmbShareWithDNSSuite struct {
+	SmbShareSuite
+}
+
+func (s *SmbShareWithDNSSuite) TestShareAccessByDomainName() {
+	// HACK: sleep for a short bit before running the smbclient command.  This
+	// test works often but is flaky, and that appears due to the dns name not
+	// always resolving. This hack adds a small delay to try and reduce the
+	// test flakes. Obviously, a sleep is poor way to improve a test case. In
+	// the future we should poll-with-a-timeout for the dns name, but that
+	// needs to be done in-cluster/in-the-pod and that's a bunch of yak shaving
+	// - so for now: a hack.
+	time.Sleep(400 * time.Millisecond)
+
+	dnsname := fmt.Sprintf("%s-cluster.domain1.sink.test",
+		s.smbShareResource.Name)
+	shareAccessSuite := &ShareAccessSuite{
+		share: smbclient.Share{
+			Host: smbclient.Host(dnsname),
+			Name: s.shareName,
+		},
+		auths: s.testAuths,
+	}
+	suite.Run(s.T(), shareAccessSuite)
+}
+
+func (s *SmbShareWithDNSSuite) TestPodForDNSContainers() {
+	pod, err := s.tc.GetPodByLabel(
+		context.TODO(),
+		fmt.Sprintf("samba-operator.samba.org/service=%s", s.smbShareResource.Name),
+		testNamespace)
+	s.Require().NoError(err)
+	s.Require().Equal(4, len(pod.Spec.Containers))
+	names := []string{}
+	for _, cstatus := range pod.Status.ContainerStatuses {
+		names = append(names, cstatus.Name)
+		s.Require().True(cstatus.Ready)
+	}
+	s.Require().Contains(names, "dns-register")
+	s.Require().Contains(names, "svc-watch")
+}
+
 func allSmbShareSuites() map[string]suite.TestingSuite {
 	m := map[string]suite.TestingSuite{}
 	m["users1"] = &SmbShareSuite{
@@ -183,7 +225,7 @@ func allSmbShareSuites() map[string]suite.TestingSuite {
 		}},
 	}
 
-	m["domainMember1"] = &SmbShareSuite{
+	m["domainMember1"] = &SmbShareWithDNSSuite{SmbShareSuite{
 		fileSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "joinsecret1.yaml"),
@@ -204,7 +246,7 @@ func allSmbShareSuites() map[string]suite.TestingSuite {
 			Username: "DOMAIN1\\bwayne",
 			Password: "1115Rose.",
 		}},
-	}
+	}}
 
 	// Test that the operator functions when the SmbShare resources are created
 	// in a different ns (for example, "default").

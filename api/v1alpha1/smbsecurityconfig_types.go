@@ -45,6 +45,11 @@ type SmbSecurityConfigSpec struct {
 	// trusted domains will be used.
 	// +optional
 	Domains []SmbSecurityDomainSpec `json:"domains,omitempty"`
+
+	// DNS is used to configure properties related to the DNS services
+	// of the domain.
+	// +optional
+	DNS *SmbSecurityDNSSpec `json:"dns,omitempty"`
 }
 
 // SmbSecurityUsersSpec configures user level security.
@@ -95,6 +100,16 @@ type SmbSecurityDomainSpec struct {
 	Backend string `json:"backend,omitempty"`
 
 	// TODO: add support for id mapping ranges, etc.
+}
+
+// SmbSecurityDNSSpec configures the relationship between systems managed
+// vi this SmbSecurityConfig and the domain. Ignored by user mode.
+type SmbSecurityDNSSpec struct {
+	// Register a specified member server's address with the domain's DNS or
+	// disabled when set to "never".
+	// NOTE: cluster-ip is not generally supported, it is only for testing.
+	// +kubebuilder:validation:Enum:=never;external-ip;cluster-ip
+	Register string `json:"register,omitempty"`
 }
 
 // SmbSecurityConfigStatus defines the observed state of SmbSecurityConfig

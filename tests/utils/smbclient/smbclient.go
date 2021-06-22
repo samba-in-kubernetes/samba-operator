@@ -40,6 +40,7 @@ type SmbClient interface {
 	List(ctx context.Context, host Host, auth Auth) (Listing, error)
 	Command(ctx context.Context, share Share, auth Auth, cmd []string) error
 	CommandOutput(ctx context.Context, share Share, auth Auth, cmd []string) ([]byte, error)
+	CacheFlush(ctx context.Context) error
 }
 
 type kubectlSmbClientCli struct {
@@ -49,7 +50,7 @@ type kubectlSmbClientCli struct {
 	prefix     []string
 }
 
-func (ksc *kubectlSmbClientCli) baseArgs(auth Auth) []string {
+func (ksc *kubectlSmbClientCli) kubectlExecArgs() []string {
 	cmd := []string{
 		"kubectl",
 		fmt.Sprintf("--kubeconfig=%s", ksc.kubeconfig),
@@ -59,8 +60,13 @@ func (ksc *kubectlSmbClientCli) baseArgs(auth Auth) []string {
 		"-it",
 		ksc.pod,
 		"--",
-		"smbclient",
 	}
+	return cmd
+}
+
+func (ksc *kubectlSmbClientCli) baseArgs(auth Auth) []string {
+	cmd := ksc.kubectlExecArgs()
+	cmd = append(cmd, "smbclient")
 	if auth.Username != "" && auth.Password != "" {
 		cmd = append(cmd, fmt.Sprintf("-U%s%%%s", auth.Username, auth.Password))
 	} else if auth.Username != "" {
@@ -69,7 +75,7 @@ func (ksc *kubectlSmbClientCli) baseArgs(auth Auth) []string {
 	return cmd
 }
 
-func (ksc *kubectlSmbClientCli) cmd(
+func (ksc *kubectlSmbClientCli) smbclientCmd(
 	ctx context.Context, auth Auth, args []string) *exec.Cmd {
 	// ---
 	argv := append(ksc.prefix, ksc.baseArgs(auth)...)
@@ -83,7 +89,7 @@ func (ksc *kubectlSmbClientCli) Command(
 	ctx context.Context, share Share, auth Auth, shareCmd []string) error {
 	// ---
 	cstring := strings.Join(shareCmd, "; ")
-	cmd := ksc.cmd(
+	cmd := ksc.smbclientCmd(
 		ctx, auth, []string{share.String(), "-c", cstring})
 	oe, err := cmd.CombinedOutput()
 	if err != nil {
@@ -97,7 +103,7 @@ func (ksc *kubectlSmbClientCli) CommandOutput(
 	ctx context.Context, share Share, auth Auth, shareCmd []string) ([]byte, error) {
 	// ---
 	cstring := strings.Join(shareCmd, "; ")
-	cmd := ksc.cmd(
+	cmd := ksc.smbclientCmd(
 		ctx, auth, []string{share.String(), "-c", cstring})
 	o, err := cmd.Output()
 	if err != nil {
@@ -110,7 +116,7 @@ func (ksc *kubectlSmbClientCli) CommandOutput(
 func (ksc *kubectlSmbClientCli) List(
 	ctx context.Context, host Host, auth Auth) (Listing, error) {
 	// ---
-	cmd := ksc.cmd(
+	cmd := ksc.smbclientCmd(
 		ctx, auth, []string{"--list", host.String()})
 	err := cmd.Run()
 	if err != nil {
@@ -119,6 +125,17 @@ func (ksc *kubectlSmbClientCli) List(
 	}
 	lst := Listing{} // TODO: put the actual data here
 	return lst, nil
+}
+
+// CacheFlush removes any persistent caches used by smbclient.
+func (ksc *kubectlSmbClientCli) CacheFlush(ctx context.Context) error {
+	argv := append(ksc.prefix, ksc.kubectlExecArgs()...)
+	//argv = append(argv, "net", "cache", "flush")
+	argv = append(argv, "rm", "-f", "/var/lib/samba/lock/gencache.tdb")
+	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
+	cmd.Stdin = nil // avoid blocking on any input
+	err := cmd.Run()
+	return err
 }
 
 // MustPodClient returns an SmbClient based on the given pod name and the
