@@ -103,7 +103,7 @@ type SmbSecurityDomainSpec struct {
 }
 
 // SmbSecurityDNSSpec configures the relationship between systems managed
-// vi this SmbSecurityConfig and the domain. Ignored by user mode.
+// via this SmbSecurityConfig and the domain. Ignored by user mode.
 type SmbSecurityDNSSpec struct {
 	// Register a specified member server's address with the domain's DNS or
 	// disabled when set to "never".
