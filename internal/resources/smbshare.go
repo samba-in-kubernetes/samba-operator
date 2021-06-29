@@ -365,7 +365,14 @@ func (m *SmbShareManager) updateConfiguration(
 	}
 
 	// extract config from map
-	planner := newSharePlanner(s, security, common, cc)
+	planner := newSharePlanner(
+		InstanceConfiguration{
+			SmbShare:       s,
+			SecurityConfig: security,
+			CommonConfig:   common,
+			GlobalConfig:   m.cfg,
+		},
+		cc)
 	var changed bool
 	if isDeleting {
 		changed, err = planner.prune()

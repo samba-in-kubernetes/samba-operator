@@ -388,7 +388,7 @@ func svcWatchVolumeAndMount(dir string) (
 }
 
 func defaultPodEnv(planner *sharePlanner) []corev1.EnvVar {
-	return []corev1.EnvVar{
+	env := []corev1.EnvVar{
 		{
 			Name:  "SAMBA_CONTAINER_ID",
 			Value: string(planner.instanceID()),
@@ -398,6 +398,16 @@ func defaultPodEnv(planner *sharePlanner) []corev1.EnvVar {
 			Value: planner.containerConfigPath(),
 		},
 	}
+	// In the future we may want per-container debug levels. The
+	// infrastructure could support that. For the moment we simply have one
+	// debug level for all samba containers in the pod.
+	if lvl := planner.sambaContainerDebugLevel(); lvl != "" {
+		env = append(env, corev1.EnvVar{
+			Name:  "SAMBA_DEBUG_LEVEL",
+			Value: lvl,
+		})
+	}
+	return env
 }
 
 type joinSources struct {
