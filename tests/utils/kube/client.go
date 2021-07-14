@@ -3,7 +3,6 @@ package kube
 import (
 	"context"
 	"errors"
-	"os"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -56,14 +55,17 @@ func (tc *TestClient) GetPodByLabel(
 
 // NewTestClient return a new kube util test client.
 func NewTestClient(kubeconfig string) *TestClient {
+	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
+	if kubeconfig != "" {
+		loadingRules.ExplicitPath = kubeconfig
+	}
+	kcc := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		loadingRules, &clientcmd.ConfigOverrides{})
 	// TODO: add (or just verify) ability to also run _inside_ k8s
 	// rather than on some external node
 	tc := &TestClient{}
-	if kubeconfig == "" {
-		kubeconfig = os.Getenv("KUBECONFIG")
-	}
 	var err error
-	tc.cfg, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
+	tc.cfg, err = kcc.ClientConfig()
 	if err != nil {
 		panic(err)
 	}
