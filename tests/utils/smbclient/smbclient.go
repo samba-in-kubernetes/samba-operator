@@ -51,16 +51,18 @@ type kubectlSmbClientCli struct {
 }
 
 func (ksc *kubectlSmbClientCli) kubectlExecArgs() []string {
-	cmd := []string{
-		"kubectl",
-		fmt.Sprintf("--kubeconfig=%s", ksc.kubeconfig),
+	cmd := []string{"kubectl"}
+	if ksc.kubeconfig != "" {
+		cmd = append(cmd, fmt.Sprintf("--kubeconfig=%s", ksc.kubeconfig))
+	}
+	cmd = append(cmd,
 		"exec",
 		"--namespace",
 		ksc.namespace,
 		"-it",
 		ksc.pod,
 		"--",
-	}
+	)
 	return cmd
 }
 
@@ -145,10 +147,7 @@ func MustPodClient(namespace, pod string) SmbClient {
 	// very minute I'd rather do this than build a lot more comprehensive
 	// configuration for the test utilities.
 	kc := os.Getenv("KUBECONFIG")
-	if kc == "" {
-		panic(fmt.Errorf("KUBECONFIG not specified"))
-	}
-	if kc == "" {
+	if pod == "" {
 		panic(fmt.Errorf("pod is unset"))
 	}
 	return &kubectlSmbClientCli{
