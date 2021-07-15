@@ -128,7 +128,7 @@ jobs:
     - name: configure kustomize
       run: make set-image
     - name: run tests
-      run: KUBECONFIG=~/.kube/config ./tests/test.sh
+      run: ./tests/test.sh
 
   # push the container to quay.io - only for pushes, not PRs
   push:
