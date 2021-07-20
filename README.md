@@ -126,3 +126,9 @@ as found on [quay.io](https://quay.io/repository/samba.org/samba-server).
 
 The container from this codebase is published on
 [quay.io](https://quay.io/repository/samba.org/samba-operator) too.
+
+
+## Additional Resources
+
+* [Presentations](./docs/presentations/README.md) about the Samba Operator
+* [Developer's Guide](./docs/developers-notes.md) - an incomplete set of tips for working on the operator
