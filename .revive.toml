@@ -17,8 +17,8 @@ warningCode = 0
 [rule.exported]
 [rule.if-return]
 [rule.increment-decrement]
-# TODO: make this rule live once code is fixed up (other PR)
-#[rule.var-naming]
+[rule.var-naming]
+  arguments = [["UID", "GID"]]
 [rule.var-declaration]
 [rule.package-comments]
 [rule.range]
