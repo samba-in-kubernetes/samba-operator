@@ -25,7 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	rtclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	sambaoperatorv1alpha1 "github.com/samba-in-kubernetes/samba-operator/api/v1alpha1"
@@ -36,7 +36,7 @@ const shareFinalizer = "samba-operator.samba.org/shareFinalizer"
 
 // SmbShareManager is used to manage SmbShare resources.
 type SmbShareManager struct {
-	client   client.Client
+	client   rtclient.Client
 	scheme   *runtime.Scheme
 	recorder record.EventRecorder
 	logger   Logger
@@ -45,7 +45,7 @@ type SmbShareManager struct {
 
 // NewSmbShareManager creates a SmbShareManager.
 func NewSmbShareManager(
-	client client.Client, scheme *runtime.Scheme,
+	client rtclient.Client, scheme *runtime.Scheme,
 	recorder record.EventRecorder, logger Logger) *SmbShareManager {
 	return &SmbShareManager{
 		client:   client,

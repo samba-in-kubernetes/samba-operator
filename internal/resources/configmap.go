@@ -23,7 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	rtclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/samba-in-kubernetes/samba-operator/internal/smbcc"
 )
@@ -36,7 +36,7 @@ const (
 )
 
 func getConfigMap(
-	ctx context.Context, client client.Client, ns string) (
+	ctx context.Context, client rtclient.Client, ns string) (
 	*corev1.ConfigMap, error) {
 	// fetch the existing config, if available
 	cm := &corev1.ConfigMap{}
@@ -51,7 +51,7 @@ func getConfigMap(
 }
 
 func getOrCreateConfigMap(
-	ctx context.Context, client client.Client, ns string) (
+	ctx context.Context, client rtclient.Client, ns string) (
 	*corev1.ConfigMap, bool, error) {
 	// fetch the existing config, if available
 	cm, err := getConfigMap(ctx, client, ns)
