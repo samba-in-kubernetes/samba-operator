@@ -232,7 +232,21 @@ func (m *SmbShareManager) getOrCreateDeployment(
 
 	if errors.IsNotFound(err) {
 		// not found - define a new deployment
-		dep := m.deploymentForSmbShare(planner, ns)
+		// labels - do I need them?
+		dep := buildDeployment(
+			m.cfg, planner, planner.SmbShare.Spec.Storage.Pvc.Name, ns)
+		// set the smbshare instance as the owner and controller
+		err = controllerutil.SetControllerReference(
+			planner.SmbShare, dep, m.scheme)
+		if err != nil {
+			m.logger.Error(
+				err,
+				"Failed to set controller reference",
+				"SmbShare.Namespace", planner.SmbShare.Namespace,
+				"SmbShare.Name", planner.SmbShare.Name,
+				"Deployment.Namespace", dep.Namespace,
+				"Deployment.Name", dep.Name)
+		}
 		m.logger.Info(
 			"Creating a new Deployment",
 			"Deployment.Namespace", dep.Namespace,
@@ -272,13 +286,35 @@ func (m *SmbShareManager) getOrCreatePvc(
 
 	if errors.IsNotFound(err) {
 		// not found - define a new pvc
-		pvc = m.pvcForSmbShare(smbShare, ns)
+		pvc = &corev1.PersistentVolumeClaim{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      pvcName(smbShare),
+				Namespace: ns,
+			},
+			Spec: *smbShare.Spec.Storage.Pvc.Spec,
+		}
+		// set the smb share instance as the owner and controller
+		err = controllerutil.SetControllerReference(
+			smbShare, pvc, m.scheme)
+		if err != nil {
+			m.logger.Error(
+				err,
+				"Failed to set controller reference",
+				"SmbShare.Namespace", smbShare.Namespace,
+				"SmbShare.Name", smbShare.Name,
+				"PersistentVolumeClaim.Namespace", pvc.Namespace,
+				"PersistentVolumeClaim.Name", pvc.Name)
+			return pvc, false, err
+		}
 		m.logger.Info("Creating a new PVC",
 			"pvc.Namespace", pvc.Namespace, "pvc.Name", pvc.Name)
 		err = m.client.Create(ctx, pvc)
 		if err != nil {
-			m.logger.Error(err, "Failed to create new PVC",
-				"pvc.Namespace", pvc.Namespace, "pvc.Name", pvc.Name)
+			m.logger.Error(
+				err,
+				"Failed to create new PVC",
+				"PersistentVolumeClaim.Namespace", pvc.Namespace,
+				"PersistentVolumeClaim.Name", pvc.Name)
 			return pvc, false, err
 		}
 		// Pvc created successfully
@@ -309,35 +345,6 @@ func (m *SmbShareManager) updateDeploymentSize(
 	}
 
 	return false, nil
-}
-
-// deploymentForSmbShare returns a smbshare deployment object
-func (m *SmbShareManager) deploymentForSmbShare(
-	planner *sharePlanner, ns string) *appsv1.Deployment {
-	// labels - do I need them?
-	dep := buildDeployment(
-		m.cfg, planner, planner.SmbShare.Spec.Storage.Pvc.Name, ns)
-	// set the smbshare instance as the owner and controller
-	controllerutil.SetControllerReference(planner.SmbShare, dep, m.scheme)
-	return dep
-}
-
-func (m *SmbShareManager) pvcForSmbShare(
-	s *sambaoperatorv1alpha1.SmbShare,
-	ns string) *corev1.PersistentVolumeClaim {
-	// build a new pvc
-	pvc := &corev1.PersistentVolumeClaim{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      pvcName(s),
-			Namespace: ns,
-		},
-		Spec: *s.Spec.Storage.Pvc.Spec,
-	}
-
-	// set the smb share instance as the owner and controller
-	controllerutil.SetControllerReference(s, pvc, m.scheme)
-
-	return pvc
 }
 
 func pvcName(s *sambaoperatorv1alpha1.SmbShare) string {
@@ -512,13 +519,26 @@ func (m *SmbShareManager) getOrCreateService(
 		// not found - define a new deployment
 		svc := newServiceForSmb(planner, ns)
 		// set the smbshare instance as the owner and controller
-		controllerutil.SetControllerReference(planner.SmbShare, svc, m.scheme)
+		err = controllerutil.SetControllerReference(
+			planner.SmbShare, svc, m.scheme)
+		if err != nil {
+			m.logger.Error(
+				err,
+				"Failed to set controller reference",
+				"SmbShare.Namespace", planner.SmbShare.Namespace,
+				"SmbShare.Name", planner.SmbShare.Name,
+				"Service.Namespace", svc.Namespace,
+				"Service.Name", svc.Name)
+			return svc, false, err
+		}
 		m.logger.Info("Creating a new Service",
 			"Service.Namespace", svc.Namespace,
 			"Service.Name", svc.Name)
 		err = m.client.Create(ctx, svc)
 		if err != nil {
-			m.logger.Error(err, "Failed to create new Service",
+			m.logger.Error(
+				err,
+				"Failed to create new Service",
 				"Service.Namespace", svc.Namespace,
 				"Service.Name", svc.Name)
 			return svc, false, err
