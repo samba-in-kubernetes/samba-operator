@@ -29,7 +29,7 @@ const (
 	wbSocketsVolName  = "samba-wb-sockets-dir"
 	stateVolName      = "samba-state-dir"
 	osRunVolName      = "run"
-	joinJsonVolName   = "join-data"
+	joinJSONVolName   = "join-data"
 )
 
 func buildPodSpec(planner *sharePlanner, cfg *conf.OperatorConfig, pvcName string) corev1.PodSpec {
@@ -342,10 +342,10 @@ func wbSocketsVolumeAndMount(planner *sharePlanner) (
 	return volume, mount
 }
 
-func joinJsonFileVolumeAndMount(planner *sharePlanner, index int) (
+func joinJSONFileVolumeAndMount(planner *sharePlanner, index int) (
 	corev1.Volume, corev1.VolumeMount) {
 	// volume
-	vname := joinJsonVolName + planner.joinJsonSuffix(index)
+	vname := joinJSONVolName + planner.joinJSONSuffix(index)
 	j := planner.SecurityConfig.Spec.JoinSources[index]
 	volume := corev1.Volume{
 		Name: vname,
@@ -354,14 +354,14 @@ func joinJsonFileVolumeAndMount(planner *sharePlanner, index int) (
 				SecretName: j.UserJoin.Secret,
 				Items: []corev1.KeyToPath{{
 					Key:  j.UserJoin.Key,
-					Path: planner.joinJsonFileName(),
+					Path: planner.joinJSONFileName(),
 				}},
 			},
 		},
 	}
 	// mount
 	mount := corev1.VolumeMount{
-		MountPath: planner.joinJsonSourceDir(index),
+		MountPath: planner.joinJSONSourceDir(index),
 		Name:      vname,
 	}
 	return volume, mount
@@ -424,10 +424,10 @@ func getJoinSources(planner *sharePlanner) joinSources {
 	}
 	for i, js := range planner.SecurityConfig.Spec.JoinSources {
 		if js.UserJoin != nil {
-			v, m := joinJsonFileVolumeAndMount(planner, i)
+			v, m := joinJSONFileVolumeAndMount(planner, i)
 			src.volumes = append(src.volumes, v)
 			src.mounts = append(src.mounts, m)
-			src.paths = append(src.paths, planner.joinJsonSourcePath(i))
+			src.paths = append(src.paths, planner.joinJSONSourcePath(i))
 		}
 	}
 	return src

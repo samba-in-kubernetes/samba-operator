@@ -158,20 +158,20 @@ func (sp *sharePlanner) workgroup() string {
 	return parts[0]
 }
 
-func (*sharePlanner) joinJsonSuffix(index int) string {
+func (*sharePlanner) joinJSONSuffix(index int) string {
 	return fmt.Sprintf("-%d", index)
 }
 
-func (*sharePlanner) joinJsonSourceDir(index int) string {
+func (*sharePlanner) joinJSONSourceDir(index int) string {
 	return fmt.Sprintf("/var/tmp/join/%d", index)
 }
 
-func (*sharePlanner) joinJsonFileName() string {
+func (*sharePlanner) joinJSONFileName() string {
 	return "join.json"
 }
 
-func (sp *sharePlanner) joinJsonSourcePath(index int) string {
-	return path.Join(sp.joinJsonSourceDir(index), sp.joinJsonFileName())
+func (sp *sharePlanner) joinJSONSourcePath(index int) string {
+	return path.Join(sp.joinJSONSourceDir(index), sp.joinJSONFileName())
 }
 
 func (*sharePlanner) joinEnvPaths(p []string) string {
