@@ -34,8 +34,12 @@ type SmbSecurityConfigReconciler struct {
 	Scheme *runtime.Scheme
 }
 
+//revive:disable kubebuilder directives
+
 // +kubebuilder:rbac:groups=samba-operator.samba.org,resources=smbsecurityconfigs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=samba-operator.samba.org,resources=smbsecurityconfigs/status,verbs=get;update;patch
+
+//revive:enable
 
 // Reconcile the SmbSecurityConfig resource.
 func (r *SmbSecurityConfigReconciler) Reconcile(req ctrl.Request) (
