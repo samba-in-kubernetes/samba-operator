@@ -38,7 +38,9 @@ type SmbSecurityConfigReconciler struct {
 // +kubebuilder:rbac:groups=samba-operator.samba.org,resources=smbsecurityconfigs/status,verbs=get;update;patch
 
 // Reconcile the SmbSecurityConfig resource.
-func (r *SmbSecurityConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+func (r *SmbSecurityConfigReconciler) Reconcile(req ctrl.Request) (
+	ctrl.Result, error) {
+	// ---
 	_ = context.Background()
 	_ = r.Log.WithValues("smbsecurityconfig", req.NamespacedName)
 
