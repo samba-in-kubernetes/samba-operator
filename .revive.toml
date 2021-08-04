@@ -38,6 +38,17 @@ warningCode = 0
 [rule.constant-logical-expr]
 [rule.unnecessary-stmt]
 [rule.unused-receiver]
+[rule.get-return]
+[rule.flag-parameter]
+[rule.confusing-results]
+[rule.confusing-naming]
+[rule.modifies-parameter]
+[rule.modifies-value-receiver]
+[rule.import-shadowing]
+[rule.range-val-in-closure]
+[rule.waitgroup-by-value]
+[rule.call-to-gc]
+[rule.duplicated-imports]
 
 [rule.argument-limit]
   arguments = [7]
@@ -47,3 +58,13 @@ warningCode = 0
 [rule.unhandled-error]
   # functions to ignore unhandled errors on
   arguments = ["fmt.Printf", "fmt.Println"]
+
+# kubebuilder's (apparently bogus!) use of ,inline all over the place
+# breaks this rule. So while ideally nice to have I'd rather err on the
+# side of k8s tooling. Even if it is a cargo cult :-P
+#[rule.struct-tag]
+
+[rule.line-length-limit]
+  # I'd ideally prefer 80 but some go idoms make lines a bit longer and
+  # not everyone probably loves to line break as much as me :-)
+  arguments =[98]
