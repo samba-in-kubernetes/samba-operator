@@ -134,7 +134,9 @@ func (tc *TestClient) DeleteResourceMatchingFile(
 	return nil
 }
 
-func getUnstructuredObjects(src InputSource) (objects []*unstructured.Unstructured, err error) {
+func getUnstructuredObjects(src InputSource) (
+	objects []*unstructured.Unstructured, err error) {
+	// ---
 	r, err := src.Open()
 	if err != nil {
 		return nil, err
@@ -254,7 +256,10 @@ func chooseNamespace(ns ...string) string {
 	return n
 }
 
-func useNamespace(nri dynamic.NamespaceableResourceInterface, mapping *meta.RESTMapping, namespace string) dynamic.ResourceInterface {
+func useNamespace(
+	nri dynamic.NamespaceableResourceInterface, mapping *meta.RESTMapping,
+	namespace string) dynamic.ResourceInterface {
+	// ---
 	if mapping.Scope.Name() == meta.RESTScopeNameNamespace {
 		return nri.Namespace(namespace)
 	}

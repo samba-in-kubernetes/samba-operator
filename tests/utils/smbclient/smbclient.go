@@ -95,14 +95,16 @@ func (ksc *kubectlSmbClientCli) Command(
 		ctx, auth, []string{share.String(), "-c", cstring})
 	oe, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("failed to execute smbclient command: %v: %w [stdio: %s]",
+		return fmt.Errorf(
+			"failed to execute smbclient command: %v: %w [stdio: %s]",
 			cmd.Args, err, string(oe))
 	}
 	return nil
 }
 
 func (ksc *kubectlSmbClientCli) CommandOutput(
-	ctx context.Context, share Share, auth Auth, shareCmd []string) ([]byte, error) {
+	ctx context.Context, share Share, auth Auth, shareCmd []string) (
+	[]byte, error) {
 	// ---
 	cstring := strings.Join(shareCmd, "; ")
 	cmd := ksc.smbclientCmd(
