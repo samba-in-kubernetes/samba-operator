@@ -34,8 +34,12 @@ type SmbCommonConfigReconciler struct {
 	Scheme *runtime.Scheme
 }
 
+//revive:disable kubebuilder directives
+
 // +kubebuilder:rbac:groups=samba-operator.samba.org,resources=smbcommonconfigs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=samba-operator.samba.org,resources=smbcommonconfigs/status,verbs=get;update;patch
+
+//revive:enable
 
 // Reconcile SmbCommonConfig resources.
 func (r *SmbCommonConfigReconciler) Reconcile(req ctrl.Request) (

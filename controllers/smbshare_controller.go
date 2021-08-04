@@ -39,6 +39,8 @@ type SmbShareReconciler struct {
 	recorder record.EventRecorder
 }
 
+//revive:disable kubebuilder directives
+
 // +kubebuilder:rbac:groups=samba-operator.samba.org,resources=smbshares,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=samba-operator.samba.org,resources=smbshares/finalizers,verbs=get;update;patch
 // +kubebuilder:rbac:groups=samba-operator.samba.org,resources=smbshares/status,verbs=get;update;patch
@@ -48,6 +50,8 @@ type SmbShareReconciler struct {
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=events,verbs=create
+
+//revive:enable
 
 // Reconcile SmbShare resources.
 func (r *SmbShareReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
