@@ -45,8 +45,11 @@ type SmbShareManager struct {
 
 // NewSmbShareManager creates a SmbShareManager.
 func NewSmbShareManager(
-	client rtclient.Client, scheme *runtime.Scheme,
-	recorder record.EventRecorder, logger Logger) *SmbShareManager {
+	client rtclient.Client,
+	scheme *runtime.Scheme,
+	recorder record.EventRecorder,
+	logger Logger) *SmbShareManager {
+	// ---
 	return &SmbShareManager{
 		client:   client,
 		scheme:   scheme,
@@ -57,7 +60,9 @@ func NewSmbShareManager(
 }
 
 // Process is called by the controller on any type of reconciliation.
-func (m *SmbShareManager) Process(ctx context.Context, nsname types.NamespacedName) Result {
+func (m *SmbShareManager) Process(
+	ctx context.Context,
+	nsname types.NamespacedName) Result {
 	// fetch our resource to determine what to do next
 	instance := &sambaoperatorv1alpha1.SmbShare{}
 	err := m.client.Get(ctx, nsname, instance)
@@ -86,7 +91,10 @@ func (m *SmbShareManager) Process(ctx context.Context, nsname types.NamespacedNa
 }
 
 // Update should be called when a SmbShare resource changes.
-func (m *SmbShareManager) Update(ctx context.Context, instance *sambaoperatorv1alpha1.SmbShare) Result {
+func (m *SmbShareManager) Update(
+	ctx context.Context,
+	instance *sambaoperatorv1alpha1.SmbShare) Result {
+	// ---
 	m.logger.Info("Updating state for SmbShare",
 		"name", instance.Name,
 		"UID", instance.UID)
@@ -179,8 +187,10 @@ func (m *SmbShareManager) Update(ctx context.Context, instance *sambaoperatorv1a
 
 // Finalize should be called when there's a finalizer on the resource
 // and we need to do some cleanup.
-func (m *SmbShareManager) Finalize(ctx context.Context, instance *sambaoperatorv1alpha1.SmbShare) Result {
-
+func (m *SmbShareManager) Finalize(
+	ctx context.Context,
+	instance *sambaoperatorv1alpha1.SmbShare) Result {
+	// ---
 	cm, err := getConfigMap(ctx, m.client, m.cfg.WorkingNamespace)
 	if err == nil {
 		_, changed, err := m.updateConfiguration(ctx, cm, instance)
@@ -203,9 +213,10 @@ func (m *SmbShareManager) Finalize(ctx context.Context, instance *sambaoperatorv
 	return Done
 }
 
-func (m *SmbShareManager) getOrCreateDeployment(ctx context.Context,
-	planner *sharePlanner, ns string) (
-	*appsv1.Deployment, bool, error) {
+func (m *SmbShareManager) getOrCreateDeployment(
+	ctx context.Context,
+	planner *sharePlanner,
+	ns string) (*appsv1.Deployment, bool, error) {
 	// Check if the deployment already exists, if not create a new one
 	found := &appsv1.Deployment{}
 	err := m.client.Get(
@@ -222,10 +233,17 @@ func (m *SmbShareManager) getOrCreateDeployment(ctx context.Context,
 	if errors.IsNotFound(err) {
 		// not found - define a new deployment
 		dep := m.deploymentForSmbShare(planner, ns)
-		m.logger.Info("Creating a new Deployment", "Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
+		m.logger.Info(
+			"Creating a new Deployment",
+			"Deployment.Namespace", dep.Namespace,
+			"Deployment.Name", dep.Name)
 		err = m.client.Create(ctx, dep)
 		if err != nil {
-			m.logger.Error(err, "Failed to create new Deployment", "Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
+			m.logger.Error(
+				err,
+				"Failed to create new Deployment",
+				"Deployment.Namespace", dep.Namespace,
+				"Deployment.Name", dep.Name)
 			return dep, false, err
 		}
 		// Deployment created successfully
@@ -235,9 +253,10 @@ func (m *SmbShareManager) getOrCreateDeployment(ctx context.Context,
 	return nil, false, err
 }
 
-func (m *SmbShareManager) getOrCreatePvc(ctx context.Context,
-	smbShare *sambaoperatorv1alpha1.SmbShare, ns string) (
-	*corev1.PersistentVolumeClaim, bool, error) {
+func (m *SmbShareManager) getOrCreatePvc(
+	ctx context.Context,
+	smbShare *sambaoperatorv1alpha1.SmbShare,
+	ns string) (*corev1.PersistentVolumeClaim, bool, error) {
 	// Check if the pvc already exists, if not create it
 	pvc := &corev1.PersistentVolumeClaim{}
 	err := m.client.Get(
@@ -269,7 +288,8 @@ func (m *SmbShareManager) getOrCreatePvc(ctx context.Context,
 	return nil, false, err
 }
 
-func (m *SmbShareManager) updateDeploymentSize(ctx context.Context,
+func (m *SmbShareManager) updateDeploymentSize(
+	ctx context.Context,
 	deployment *appsv1.Deployment) (bool, error) {
 	// Ensure the deployment size is the same as the spec
 	var size int32 = 1
@@ -277,7 +297,11 @@ func (m *SmbShareManager) updateDeploymentSize(ctx context.Context,
 		deployment.Spec.Replicas = &size
 		err := m.client.Update(ctx, deployment)
 		if err != nil {
-			m.logger.Error(err, "Failed to update Deployment", "Deployment.Namespace", deployment.Namespace, "Deployment.Name", deployment.Name)
+			m.logger.Error(
+				err,
+				"Failed to update Deployment",
+				"Deployment.Namespace", deployment.Namespace,
+				"Deployment.Name", deployment.Name)
 			return false, err
 		}
 		// Spec updated
@@ -288,16 +312,19 @@ func (m *SmbShareManager) updateDeploymentSize(ctx context.Context,
 }
 
 // deploymentForSmbShare returns a smbshare deployment object
-func (m *SmbShareManager) deploymentForSmbShare(planner *sharePlanner, ns string) *appsv1.Deployment {
+func (m *SmbShareManager) deploymentForSmbShare(
+	planner *sharePlanner, ns string) *appsv1.Deployment {
 	// labels - do I need them?
-	dep := buildDeployment(m.cfg, planner, planner.SmbShare.Spec.Storage.Pvc.Name, ns)
+	dep := buildDeployment(
+		m.cfg, planner, planner.SmbShare.Spec.Storage.Pvc.Name, ns)
 	// set the smbshare instance as the owner and controller
 	controllerutil.SetControllerReference(planner.SmbShare, dep, m.scheme)
 	return dep
 }
 
 func (m *SmbShareManager) pvcForSmbShare(
-	s *sambaoperatorv1alpha1.SmbShare, ns string) *corev1.PersistentVolumeClaim {
+	s *sambaoperatorv1alpha1.SmbShare,
+	ns string) *corev1.PersistentVolumeClaim {
 	// build a new pvc
 	pvc := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
@@ -326,7 +353,8 @@ func shareNeedsPvc(s *sambaoperatorv1alpha1.SmbShare) bool {
 
 func (m *SmbShareManager) updateConfiguration(
 	ctx context.Context,
-	cm *corev1.ConfigMap, s *sambaoperatorv1alpha1.SmbShare) (*sharePlanner, bool, error) {
+	cm *corev1.ConfigMap,
+	s *sambaoperatorv1alpha1.SmbShare) (*sharePlanner, bool, error) {
 	// extract config from map
 	cc, err := getContainerConfig(cm)
 	if err != nil {
@@ -399,7 +427,9 @@ func (m *SmbShareManager) updateConfiguration(
 	return planner, true, nil
 }
 
-func (m *SmbShareManager) addFinalizer(ctx context.Context, s *sambaoperatorv1alpha1.SmbShare) (bool, error) {
+func (m *SmbShareManager) addFinalizer(
+	ctx context.Context, s *sambaoperatorv1alpha1.SmbShare) (bool, error) {
+	// ---
 	if controllerutil.ContainsFinalizer(s, shareFinalizer) {
 		return false, nil
 	}
