@@ -54,10 +54,18 @@ func main() {
 	confSource := conf.NewSource()
 	var metricsAddr string
 	var enableLeaderElection bool
-	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
-	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
+	flag.StringVar(
+		&metricsAddr,
+		"metrics-addr",
+		":8080",
+		"The address the metric endpoint binds to.")
+	flag.BoolVar(
+		&enableLeaderElection,
+		"enable-leader-election",
+		false,
 		"Enable leader election for controller manager. "+
-			"Enabling this will ensure there is only one active controller manager.")
+			"Enabling this will ensure there is only one active "+
+			"controller manager.")
 	flag.CommandLine.AddFlagSet(confSource.Flags())
 	flag.Parse()
 
@@ -89,7 +97,10 @@ func main() {
 		Log:    ctrl.Log.WithName("controllers").WithName("SmbShare"),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "SmbShare")
+		setupLog.Error(
+			err,
+			"unable to create controller",
+			"controller", "SmbShare")
 		os.Exit(1)
 	}
 	if err = (&controllers.SmbSecurityConfigReconciler{
@@ -97,7 +108,10 @@ func main() {
 		Log:    ctrl.Log.WithName("controllers").WithName("SmbSecurityConfig"),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "SmbSecurityConfig")
+		setupLog.Error(
+			err,
+			"unable to create controller",
+			"controller", "SmbSecurityConfig")
 		os.Exit(1)
 	}
 	if err = (&controllers.SmbCommonConfigReconciler{
@@ -105,7 +119,10 @@ func main() {
 		Log:    ctrl.Log.WithName("controllers").WithName("SmbCommonConfig"),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "SmbCommonConfig")
+		setupLog.Error(
+			err,
+			"unable to create controller",
+			"controller", "SmbCommonConfig")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder
