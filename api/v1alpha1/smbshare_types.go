@@ -23,7 +23,8 @@ import (
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // Important: Run "make" to regenerate code after modifying this file
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+// NOTE: json tags are required.  Any new fields you add must have json tags
+// for the fields to be serialized.
 
 // SmbShareSpec defines the desired state of SmbShare
 type SmbShareSpec struct {
