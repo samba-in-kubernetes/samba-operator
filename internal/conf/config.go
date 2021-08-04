@@ -35,7 +35,8 @@ func (oc *OperatorConfig) Validate() error {
 	// Ensure that WorkingNamespace is set. We don't default it to anything.
 	// It must be passed in, typically by the operator's own pod spec.
 	if oc.WorkingNamespace == "" {
-		return fmt.Errorf("WorkingNamespace value [%s] invalid", oc.WorkingNamespace)
+		return fmt.Errorf(
+			"WorkingNamespace value [%s] invalid", oc.WorkingNamespace)
 	}
 	return nil
 }
@@ -49,10 +50,14 @@ type Source struct {
 // NewSource creates a new Source based on default configuration values.
 func NewSource() *Source {
 	v := viper.New()
-	v.SetDefault("smbd-container-image", "quay.io/samba.org/samba-server:latest")
+	v.SetDefault(
+		"smbd-container-image",
+		"quay.io/samba.org/samba-server:latest")
 	v.SetDefault("smbd-container-name", "samba")
 	v.SetDefault("working-namespace", "")
-	v.SetDefault("svc-watch-container-image", "quay.io/samba.org/svcwatch:latest")
+	v.SetDefault(
+		"svc-watch-container-image",
+		"quay.io/samba.org/svcwatch:latest")
 	v.SetDefault("samba-debug-level", "")
 	return &Source{v: v}
 }
