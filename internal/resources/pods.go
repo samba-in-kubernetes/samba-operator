@@ -32,14 +32,22 @@ const (
 	joinJSONVolName   = "join-data"
 )
 
-func buildPodSpec(planner *sharePlanner, cfg *conf.OperatorConfig, pvcName string) corev1.PodSpec {
+func buildPodSpec(
+	planner *sharePlanner,
+	cfg *conf.OperatorConfig,
+	pvcName string) corev1.PodSpec {
+	// ---
 	if planner.securityMode() == adMode {
 		return buildADPodSpec(planner, cfg, pvcName)
 	}
 	return buildUserPodSpec(planner, cfg, pvcName)
 }
 
-func buildADPodSpec(planner *sharePlanner, cfg *conf.OperatorConfig, pvcName string) corev1.PodSpec {
+func buildADPodSpec(
+	planner *sharePlanner,
+	cfg *conf.OperatorConfig,
+	pvcName string) corev1.PodSpec {
+	// ---
 	volumes := []corev1.Volume{}
 	mounts := []corev1.VolumeMount{}
 
@@ -175,7 +183,11 @@ func buildADPodSpec(planner *sharePlanner, cfg *conf.OperatorConfig, pvcName str
 	return podSpec
 }
 
-func buildUserPodSpec(planner *sharePlanner, cfg *conf.OperatorConfig, pvcName string) corev1.PodSpec {
+func buildUserPodSpec(
+	planner *sharePlanner,
+	cfg *conf.OperatorConfig,
+	pvcName string) corev1.PodSpec {
+	// ---
 	volumes := []corev1.Volume{}
 	mounts := []corev1.VolumeMount{}
 

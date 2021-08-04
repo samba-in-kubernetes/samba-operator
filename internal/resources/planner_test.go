@@ -147,6 +147,11 @@ func TestPlannerDNSRegisterArgs(t *testing.T) {
 		&smbcc.SambaContainerConfig{})
 	v = planner.dnsRegisterArgs()
 	assert.Equal(t,
-		[]string{"dns-register", "--watch", "--target=internal", "/var/lib/svcwatch/status.json"},
+		[]string{
+			"dns-register",
+			"--watch",
+			"--target=internal",
+			"/var/lib/svcwatch/status.json",
+		},
 		v)
 }
