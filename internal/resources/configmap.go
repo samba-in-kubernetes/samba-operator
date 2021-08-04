@@ -92,7 +92,9 @@ func newDefaultConfigMap(name, ns string) (*corev1.ConfigMap, error) {
 	return cm, nil
 }
 
-func getContainerConfig(cm *corev1.ConfigMap) (*smbcc.SambaContainerConfig, error) {
+func getContainerConfig(
+	cm *corev1.ConfigMap) (*smbcc.SambaContainerConfig, error) {
+	// ---
 	cc := smbcc.New()
 	jstr, found := cm.Data[ConfigJSONKey]
 	if !found {
@@ -104,7 +106,9 @@ func getContainerConfig(cm *corev1.ConfigMap) (*smbcc.SambaContainerConfig, erro
 	return cc, nil
 }
 
-func setContainerConfig(cm *corev1.ConfigMap, cc *smbcc.SambaContainerConfig) error {
+func setContainerConfig(
+	cm *corev1.ConfigMap, cc *smbcc.SambaContainerConfig) error {
+	// ---
 	jb, err := json.MarshalIndent(cc, "", "  ")
 	if err != nil {
 		return err
