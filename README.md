@@ -5,18 +5,28 @@ An operator for Samba as a service on PVCs in kubernetes.
 ## Description
 
 This project implements the samba-operator. It it responsible for the
-the `SmbShare` custom resource:
+the `SmbShare`, `SmbSecurityConfig`, and `SmbCommonConfig` custom resources:
 
 * [`SmbShare`](./config/crd/bases/samba-operator.samba.org_smbshares.yaml)
 describes an SMB Share that will be used to share data with clients.
+* [`SmbSecurityConfig`](./config/crd/bases/samba-operator.samba.org_smbsecurityconfigs.yaml)
+describes domain and/or user based security properties for one or more shares
+* [`SmbCommonConfig`](./config/crd/bases/samba-operator.samba.org_smbcommonconfigs.yaml)
+describes general configuration properties for smb shares
 
-## Trying it out
+## Trying it out (Quick Start)
 
-### Prerequisite
+### Prerequisites
 
 You need to have a kubernetes cluster running. For example,
 [minikube](https://kubernetes.io/docs/setup/learning-environment/minikube/)
 is sufficient.
+
+If you wish to use Active Directory domain based security you need one or more
+domain controllers that are visible to Pods within the Kubernetes cluster.
+
+If you wish to access shares from outside the Kubernetes cluster your cluster
+must support Services with type `LoadBalancer`.
 
 ### Start the operator
 
@@ -47,7 +57,7 @@ managed by the operator.
 Assuming you have a PVC named `mypvc`, you can create a new SmbShare using
 the example YAML below:
 
-```
+```yaml
 apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbShare
 metadata:
@@ -66,7 +76,7 @@ will automatically manage the PVC along with the share. This example assumes
 you have a default storage class enabled.
 
 For example:
-```
+```yaml
 apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbShare
 metadata:
@@ -116,6 +126,14 @@ smb: \>
 
 Above we forward the normal SMB port to an unprivileged local port, assuming
 you'll be running this as a normal user.
+
+
+## Documentation
+
+For additional details on how to set up shares that can authenticate via Active
+Directory, or use a load balancer, etc please refer to the
+[Samba Operator Documentation](./docs/README.md).
+
 
 
 ## Containers on quay.io
