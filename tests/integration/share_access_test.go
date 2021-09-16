@@ -64,7 +64,8 @@ func (s *ShareAccessSuite) SetupSuite() {
 
 // TestLogin verifies that users can log into the share.
 func (s *ShareAccessSuite) TestLogin() {
-	smbclient := smbclient.MustPodClient(testNamespace, s.clientPod)
+	tc := kube.NewTestClient("")
+	smbclient := smbclient.MustPodExec(tc, testNamespace, s.clientPod, "")
 	err := smbclient.CacheFlush(context.TODO())
 	s.Require().NoError(err)
 	for _, auth := range s.auths {
@@ -78,7 +79,8 @@ func (s *ShareAccessSuite) TestLogin() {
 }
 
 func (s *ShareAccessSuite) TestPutFile() {
-	smbclient := smbclient.MustPodClient(testNamespace, s.clientPod)
+	tc := kube.NewTestClient("")
+	smbclient := smbclient.MustPodExec(tc, testNamespace, s.clientPod, "")
 	err := smbclient.CacheFlush(context.TODO())
 	s.Require().NoError(err)
 	auth := s.auths[0]

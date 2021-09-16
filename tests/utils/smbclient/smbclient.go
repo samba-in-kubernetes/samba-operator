@@ -3,9 +3,9 @@ package smbclient
 import (
 	"context"
 	"fmt"
-	"os"
-	"os/exec"
 	"strings"
+
+	"github.com/samba-in-kubernetes/samba-operator/tests/utils/kube"
 )
 
 // Listing of services from smbclient.
@@ -43,32 +43,44 @@ type SmbClient interface {
 	CacheFlush(ctx context.Context) error
 }
 
-type kubectlSmbClientCli struct {
-	kubeconfig string
-	pod        string
-	namespace  string
-	prefix     []string
+// CommandError represents a failed command.
+type CommandError struct {
+	Desc       string
+	Command    []string
+	Err        error
+	Output     string
+	ErrOutput  string
+	ExitStatus int
 }
 
-func (ksc *kubectlSmbClientCli) kubectlExecArgs() []string {
-	cmd := []string{"kubectl"}
-	if ksc.kubeconfig != "" {
-		cmd = append(cmd, fmt.Sprintf("--kubeconfig=%s", ksc.kubeconfig))
+func (ce CommandError) Error() string {
+	var qcmd string
+	// NOTE: this is not "safely" quoted. This is quoted only for the
+	// convenience of a human reader.
+	if len(ce.Command) > 0 {
+		qs := make([]string, len(ce.Command))
+		for i := range ce.Command {
+			qs[i] = "'" + ce.Command[i] + "'"
+		}
+		qcmd = fmt.Sprintf("[%s]: ", strings.Join(qs, " "))
 	}
-	cmd = append(cmd,
-		"exec",
-		"--namespace",
-		ksc.namespace,
-		"-it",
-		ksc.pod,
-		"--",
+	return fmt.Sprintf("%s: %s%s [exit: %d; stdout: %s; stderr: %s]",
+		ce.Desc,
+		qcmd,
+		ce.Err,
+		ce.ExitStatus,
+		ce.Output,
+		ce.ErrOutput,
 	)
-	return cmd
 }
 
-func (ksc *kubectlSmbClientCli) baseArgs(auth Auth) []string {
-	cmd := ksc.kubectlExecArgs()
-	cmd = append(cmd, "smbclient")
+// Unwrap returns the error that generated the CommandError.
+func (ce CommandError) Unwrap() error {
+	return ce.Err
+}
+
+func smbclientWithAuth(auth Auth) []string {
+	cmd := []string{"smbclient"}
 	if auth.Username != "" && auth.Password != "" {
 		cmd = append(cmd, fmt.Sprintf("-U%s%%%s", auth.Username, auth.Password))
 	} else if auth.Username != "" {
@@ -77,84 +89,119 @@ func (ksc *kubectlSmbClientCli) baseArgs(auth Auth) []string {
 	return cmd
 }
 
-func (ksc *kubectlSmbClientCli) smbclientCmd(
-	ctx context.Context, auth Auth, args []string) *exec.Cmd {
-	// ---
-	argv := append(ksc.prefix, ksc.baseArgs(auth)...)
-	argv = append(argv, args...)
-	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
-	cmd.Stdin = nil // avoid blocking on any input
-	return cmd
+func addSmbClientShare(currCmd []string, share Share) []string {
+	return append(currCmd, share.String())
 }
 
-func (ksc *kubectlSmbClientCli) Command(
-	ctx context.Context, share Share, auth Auth, shareCmd []string) error {
-	// ---
+func addSmbClientShareCommands(currCmd, shareCmd []string) []string {
 	cstring := strings.Join(shareCmd, "; ")
-	cmd := ksc.smbclientCmd(
-		ctx, auth, []string{share.String(), "-c", cstring})
-	oe, err := cmd.CombinedOutput()
+	return append(currCmd, "-c", cstring)
+}
+
+type execer interface {
+	Call(kube.PodCommand, kube.CommandHandler) error
+}
+
+// MustPodExec returns an SmbClient set up to execute commands on the given pod
+// and container, using the given kube client.
+func MustPodExec(
+	tclient *kube.TestClient, namespace, pod, container string) SmbClient {
+	// ---
+	return &podExecSmbClientCli{
+		texec:     kube.NewTestExec(tclient),
+		namespace: namespace,
+		pod:       pod,
+		container: container,
+	}
+}
+
+type podExecSmbClientCli struct {
+	texec     execer
+	namespace string
+	pod       string
+	container string
+}
+
+func (c *podExecSmbClientCli) cmdOnPod(
+	cmd []string) (*kube.BufferedCommandHandler, error) {
+	// ---
+	req := kube.PodCommand{
+		Command:       cmd,
+		Namespace:     c.namespace,
+		PodName:       c.pod,
+		ContainerName: c.container,
+	}
+	handler := kube.NewBufferedCommandHandler()
+	return handler, c.texec.Call(req, handler)
+}
+
+func (*podExecSmbClientCli) List(
+	_ context.Context, host Host, auth Auth) (Listing, error) {
+	// ---
+	cmd := append(smbclientWithAuth(auth), "--list", host.String())
+	return nil, fmt.Errorf("not implemented: %v", cmd)
+}
+
+func (c *podExecSmbClientCli) Command(
+	_ context.Context, share Share, auth Auth, cmd []string) error {
+	// ---
+	scmd := smbclientWithAuth(auth)
+	scmd = addSmbClientShare(scmd, share)
+	scmd = addSmbClientShareCommands(scmd, cmd)
+
+	handler, err := c.cmdOnPod(scmd)
 	if err != nil {
-		return fmt.Errorf(
-			"failed to execute smbclient command: %v: %w [stdio: %s]",
-			cmd.Args, err, string(oe))
+		exitStatus, _ := kube.ExitCode(err)
+		return CommandError{
+			Desc:       "failed to execute smbclient command",
+			Err:        err,
+			Command:    scmd,
+			ExitStatus: exitStatus,
+			Output:     string(handler.GetStdout()),
+			ErrOutput:  string(handler.GetStderr()),
+		}
 	}
 	return nil
 }
 
-func (ksc *kubectlSmbClientCli) CommandOutput(
-	ctx context.Context, share Share, auth Auth, shareCmd []string) (
-	[]byte, error) {
+func (c *podExecSmbClientCli) CommandOutput(
+	_ context.Context, share Share, auth Auth, cmd []string) ([]byte, error) {
 	// ---
-	cstring := strings.Join(shareCmd, "; ")
-	cmd := ksc.smbclientCmd(
-		ctx, auth, []string{share.String(), "-c", cstring})
-	o, err := cmd.Output()
-	if err != nil {
-		return o, fmt.Errorf("failed to execute smbclient command: %v: %w",
-			cmd.Args, err)
-	}
-	return o, nil
-}
+	scmd := smbclientWithAuth(auth)
+	scmd = addSmbClientShare(scmd, share)
+	scmd = addSmbClientShareCommands(scmd, cmd)
 
-func (ksc *kubectlSmbClientCli) List(
-	ctx context.Context, host Host, auth Auth) (Listing, error) {
-	// ---
-	cmd := ksc.smbclientCmd(
-		ctx, auth, []string{"--list", host.String()})
-	err := cmd.Run()
+	handler, err := c.cmdOnPod(scmd)
 	if err != nil {
-		return nil, fmt.Errorf("failed to execute smbclient command: %v: %w",
-			cmd.Args, err)
+		exitStatus, _ := kube.ExitCode(err)
+		return nil, CommandError{
+			Desc:       "failed to execute smbclient command",
+			Err:        err,
+			Command:    scmd,
+			ExitStatus: exitStatus,
+			Output:     string(handler.GetStdout()),
+			ErrOutput:  string(handler.GetStderr()),
+		}
 	}
-	lst := Listing{} // TODO: put the actual data here
-	return lst, nil
+	return handler.GetStdout(), nil
 }
 
 // CacheFlush removes any persistent caches used by smbclient.
-func (ksc *kubectlSmbClientCli) CacheFlush(ctx context.Context) error {
-	argv := append(ksc.prefix, ksc.kubectlExecArgs()...)
-	//argv = append(argv, "net", "cache", "flush")
-	argv = append(argv, "rm", "-f", "/var/lib/samba/lock/gencache.tdb")
-	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
-	cmd.Stdin = nil // avoid blocking on any input
-	err := cmd.Run()
-	return err
-}
-
-// MustPodClient returns an SmbClient based on the given pod name and the
-// test environment. It panics if the environment is not set up.
-func MustPodClient(namespace, pod string) SmbClient {
-	// this is a tad hacky, but in an effort not to boil the ocean at this
-	// very minute I'd rather do this than build a lot more comprehensive
-	// configuration for the test utilities.
-	kc := os.Getenv("KUBECONFIG")
-	if pod == "" {
-		panic(fmt.Errorf("pod is unset"))
+func (c *podExecSmbClientCli) CacheFlush(
+	_ context.Context) error {
+	// ---
+	cmd := []string{"rm", "-f", "/var/lib/samba/lock/gencache.tdb"}
+	handler, err := c.cmdOnPod(cmd)
+	if err != nil {
+		exitStatus, _ := kube.ExitCode(err)
+		return CommandError{
+			Desc:       "failed to flush cache",
+			Command:    cmd,
+			Err:        err,
+			ExitStatus: exitStatus,
+			Output:     string(handler.GetStdout()),
+			ErrOutput:  string(handler.GetStderr()),
+		}
 	}
-	return &kubectlSmbClientCli{
-		kubeconfig: kc,
-		pod:        pod,
-		namespace:  namespace,
-	}
+	return nil
 }
