@@ -42,10 +42,9 @@ type SmbCommonConfigReconciler struct {
 //revive:enable
 
 // Reconcile SmbCommonConfig resources.
-func (r *SmbCommonConfigReconciler) Reconcile(req ctrl.Request) (
-	ctrl.Result, error) {
+func (r *SmbCommonConfigReconciler) Reconcile(
+	_ context.Context, req ctrl.Request) (ctrl.Result, error) {
 	// ---
-	_ = context.Background()
 	_ = r.Log.WithValues("smbcommonconfig", req.NamespacedName)
 
 	// your logic here

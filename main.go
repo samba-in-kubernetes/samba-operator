@@ -95,7 +95,6 @@ func main() {
 	if err = (&controllers.SmbShareReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("SmbShare"),
-		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(
 			err,
@@ -106,7 +105,6 @@ func main() {
 	if err = (&controllers.SmbSecurityConfigReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("SmbSecurityConfig"),
-		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(
 			err,
@@ -117,7 +115,6 @@ func main() {
 	if err = (&controllers.SmbCommonConfigReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("SmbCommonConfig"),
-		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(
 			err,
