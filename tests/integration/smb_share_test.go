@@ -284,7 +284,7 @@ func allSmbShareSuites() map[string]suite.TestingSuite {
 		fileSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "userssecret1.yaml"),
-				Namespace: testNamespace,
+				Namespace: "default",
 			},
 			{
 				Path:      path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
@@ -296,6 +296,7 @@ func allSmbShareSuites() map[string]suite.TestingSuite {
 			},
 		},
 		smbShareResource: types.NamespacedName{"default", "tshare3"},
+		destNamespace:    "default",
 		shareName:        "My Other Share",
 		testAuths: []smbclient.Auth{{
 			Username: "sambauser",
