@@ -10,6 +10,15 @@ on:
     branches: [ master ]
 
 jobs:
+  test-kubernetes-minikube:
+    name: testing minikube action
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Start minikube
+        uses: medyagh/setup-minikube@master
+      - name: Test the cluster
+        run: kubectl get pods -A
   # Do a build/compile smoke test
   build:
     runs-on: ubuntu-latest

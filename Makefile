@@ -115,7 +115,7 @@ image-build-buildah: build
 # Push the container image
 docker-push: container-push
 container-push:
-	$(CONTAINER_CMD) push ${IMG}
+	$(CONTAINER_CMD) push --tls-verify=false ${IMG}
 
 # find or download controller-gen
 # download controller-gen if necessary
