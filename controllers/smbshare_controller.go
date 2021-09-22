@@ -22,7 +22,6 @@ import (
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -35,7 +34,6 @@ import (
 type SmbShareReconciler struct {
 	client.Client
 	Log      logr.Logger
-	Scheme   *runtime.Scheme
 	recorder record.EventRecorder
 }
 
@@ -54,13 +52,14 @@ type SmbShareReconciler struct {
 //revive:enable
 
 // Reconcile SmbShare resources.
-func (r *SmbShareReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	ctx := context.Background()
+func (r *SmbShareReconciler) Reconcile(
+	ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	// ---
 	reqLogger := r.Log.WithValues("smbshare", req.NamespacedName)
 	reqLogger.Info("Reconciling SmbShare")
 
 	smbShareManager := resources.NewSmbShareManager(
-		r, r.Scheme, r.recorder, reqLogger)
+		r, r.Scheme(), r.recorder, reqLogger)
 	res := smbShareManager.Process(ctx, req.NamespacedName)
 	err := res.Err()
 	if res.Requeue() {
