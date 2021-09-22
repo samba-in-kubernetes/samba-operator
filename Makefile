@@ -130,7 +130,7 @@ ifeq (, $(shell command -v $(GOBIN)/controller-gen ;))
 	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
 	cd $$CONTROLLER_GEN_TMP_DIR ;\
 	$(GO_CMD) mod init tmp ;\
-	$(GO_CMD) get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.3.0 ;\
+	$(GO_CMD) get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.6.2 ;\
 	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
 	}
 endif
@@ -148,7 +148,7 @@ ifeq (, $(shell command -v $(GOBIN)/kustomize ;))
 	KUSTOMIZE_GEN_TMP_DIR=$$(mktemp -d) ;\
 	cd $$KUSTOMIZE_GEN_TMP_DIR ;\
 	$(GO_CMD) mod init tmp ;\
-	$(GO_CMD) get sigs.k8s.io/kustomize/kustomize/v3@v3.5.4 ;\
+	$(GO_CMD) get sigs.k8s.io/kustomize/kustomize/v4@v4.3.0 ;\
 	rm -rf $$KUSTOMIZE_GEN_TMP_DIR ;\
 	}
 endif
