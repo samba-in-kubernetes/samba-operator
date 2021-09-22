@@ -117,7 +117,7 @@ func (m *SmbShareManager) Update(
 		return Requeue
 	}
 
-	destNamespace := m.cfg.WorkingNamespace
+	destNamespace := instance.Namespace
 	cm, created, err := getOrCreateConfigMap(ctx, m.client, destNamespace)
 	if err != nil {
 		return Result{err: err}
@@ -191,7 +191,8 @@ func (m *SmbShareManager) Finalize(
 	ctx context.Context,
 	instance *sambaoperatorv1alpha1.SmbShare) Result {
 	// ---
-	cm, err := getConfigMap(ctx, m.client, m.cfg.WorkingNamespace)
+	destNamespace := instance.Namespace
+	cm, err := getConfigMap(ctx, m.client, destNamespace)
 	if err == nil {
 		_, changed, err := m.updateConfiguration(ctx, cm, instance)
 		if err != nil {
