@@ -14,6 +14,8 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 COMMIT_ID = $(shell git describe --abbrev=40 --always --dirty=+ 2>/dev/null)
 GIT_VERSION = $(shell git describe --match='v[0-9]*.[0-9].[0-9]' 2>/dev/null || echo "(unset)")
 
+GO_CMD:=go
+GOFMT_CMD:=gofmt
 
 # Image URL to use all building/pushing image targets
 TAG ?= latest
@@ -25,10 +27,10 @@ CRD_OPTIONS ?= "crd:trivialVersions=true,crdVersions=v1"
 CHECK_GOFMT_FLAGS ?= -e -s -l
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
-ifeq (,$(shell go env GOBIN))
-GOBIN=$(shell go env GOPATH)/bin
+ifeq (,$(shell $(GO_CMD) env GOBIN))
+GOBIN=$(shell $(GO_CMD) env GOPATH)/bin
 else
-GOBIN=$(shell go env GOBIN)
+GOBIN=$(shell $(GO_CMD) env GOBIN)
 endif
 
 CONTAINER_BUILD_OPTS ?=
@@ -50,16 +52,16 @@ test: generate manifests vet
 manager: generate build vet
 
 build:
-	CGO_ENABLED=0 go build -o bin/manager -ldflags "-X main.Version=$(GIT_VERSION) -X main.CommitID=$(COMMIT_ID)"  main.go
+	CGO_ENABLED=0 $(GO_CMD) build -o bin/manager -ldflags "-X main.Version=$(GIT_VERSION) -X main.CommitID=$(COMMIT_ID)"  main.go
 .PHONY: build
 
 build-integration-tests:
-	go test -c -o bin/integration-tests -tags integration ./tests/integration
+	$(GO_CMD) test -c -o bin/integration-tests -tags integration ./tests/integration
 .PHONY: build-integration-tests
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate vet manifests
-	go run ./main.go
+	$(GO_CMD) run ./main.go
 
 # Install CRDs into a cluster
 install: manifests kustomize
@@ -86,11 +88,11 @@ manifests: controller-gen
 
 # Run go fmt to reformat code
 reformat:
-	go fmt ./...
+	$(GO_CMD) fmt ./...
 
 # Run go vet against code
 vet:
-	go vet ./...
+	$(GO_CMD) vet ./...
 
 # Generate code
 generate: controller-gen
@@ -127,8 +129,8 @@ ifeq (, $(shell command -v $(GOBIN)/controller-gen ;))
 	set -e ;\
 	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
 	cd $$CONTROLLER_GEN_TMP_DIR ;\
-	go mod init tmp ;\
-	go get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.3.0 ;\
+	$(GO_CMD) mod init tmp ;\
+	$(GO_CMD) get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.3.0 ;\
 	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
 	}
 endif
@@ -145,8 +147,8 @@ ifeq (, $(shell command -v $(GOBIN)/kustomize ;))
 	set -e ;\
 	KUSTOMIZE_GEN_TMP_DIR=$$(mktemp -d) ;\
 	cd $$KUSTOMIZE_GEN_TMP_DIR ;\
-	go mod init tmp ;\
-	go get sigs.k8s.io/kustomize/kustomize/v3@v3.5.4 ;\
+	$(GO_CMD) mod init tmp ;\
+	$(GO_CMD) get sigs.k8s.io/kustomize/kustomize/v3@v3.5.4 ;\
 	rm -rf $$KUSTOMIZE_GEN_TMP_DIR ;\
 	}
 endif
@@ -173,12 +175,12 @@ bundle-build:
 check: check-revive check-format vet
 
 check-format:
-	! gofmt $(CHECK_GOFMT_FLAGS) . | sed 's,^,formatting error: ,' | grep 'go$$'
+	! $(GOFMT_CMD) $(CHECK_GOFMT_FLAGS) . | sed 's,^,formatting error: ,' | grep 'go$$'
 
 check-revive: revive
 	# revive's checks are configured using .revive.toml
 	# See: https://github.com/mgechev/revive
-	$(REVIVE) -config .revive.toml $$(go list ./... | grep -v /vendor/)
+	$(REVIVE) -config .revive.toml $$($(GO_CMD) list ./... | grep -v /vendor/)
 
 .PHONY: revive
 revive:
@@ -190,8 +192,8 @@ ifeq (, $(shell command -v $(GOBIN)/revive ;))
 	echo "revive not found in GOBIN, getting revive..." ;\
 	REVIVE_TMP_DIR=$$(mktemp -d) ;\
 	cd $$REVIVE_TMP_DIR ;\
-	go mod init tmp ;\
-	go get  github.com/mgechev/revive  ;\
+	$(GO_CMD) mod init tmp ;\
+	$(GO_CMD) get  github.com/mgechev/revive  ;\
 	rm -rf $$REVIVE_TMP_DIR ;\
 	}
 	@echo "revive installed in GOBIN"
