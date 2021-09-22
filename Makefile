@@ -50,7 +50,7 @@ test: generate manifests vet
 manager: generate build vet
 
 build:
-	go build -o bin/manager -ldflags "-X main.Version=$(GIT_VERSION) -X main.CommitID=$(COMMIT_ID)"  main.go
+	CGO_ENABLED=0 go build -o bin/manager -ldflags "-X main.Version=$(GIT_VERSION) -X main.CommitID=$(COMMIT_ID)"  main.go
 .PHONY: build
 
 build-integration-tests:
