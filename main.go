@@ -18,6 +18,7 @@ package main
 
 import (
 	"os"
+	goruntime "runtime"
 
 	flag "github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -126,7 +127,9 @@ func main() {
 
 	setupLog.Info("starting manager",
 		"Version", Version,
-		"CommitID", CommitID)
+		"CommitID", CommitID,
+		"GoVersion", goruntime.Version(),
+	)
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
