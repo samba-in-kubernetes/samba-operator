@@ -172,8 +172,8 @@ jobs:
       run: ./tests/test-deploy-ad-server.sh
     - name: build image
       run: make image-build
-    - name: push image to minikube registry
-      run: make container-push
+    - name: push image to minikube
+      run: minikube cache add "${IMG}" && minikube cache reload
     - name: configure kustomize
       run: make set-image
     - name: run tests
