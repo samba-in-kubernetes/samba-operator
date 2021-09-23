@@ -146,7 +146,7 @@ jobs:
 #        curl -L --silent --fail -o "$HOME/bin/minikube" "https://github.com/kubernetes/minikube/releases/download/${mkversion}/minikube-linux-amd64"
 #        chmod ugo+x "$HOME/bin/minikube"
     - name: Start minikube
-      run: minikube start --wait=all --addons=registry
+      run: minikube start --wait=all --insecure-registry="192.168.0.0/16" --addons=registry
     - name: Set environment vars
       run: |
         tag="latest-scratch"
