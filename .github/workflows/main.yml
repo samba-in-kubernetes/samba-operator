@@ -139,12 +139,12 @@ jobs:
       PR_NUM: ${{ github.event.pull_request.number }}
     steps:
     - uses: actions/checkout@v2
-    - name: Install minikube
-      run: |
-        mkversion="v1.23.2"
-        mkdir -p "$HOME/bin"
-        curl -L --silent --fail -o "$HOME/bin/minikube" "https://github.com/kubernetes/minikube/releases/download/${mkversion}/minikube-linux-amd64"
-        chmod ugo+x "$HOME/bin/minikube"
+#    - name: Install minikube
+#      run: |
+#        mkversion="v1.23.2"
+#        mkdir -p "$HOME/bin"
+#        curl -L --silent --fail -o "$HOME/bin/minikube" "https://github.com/kubernetes/minikube/releases/download/${mkversion}/minikube-linux-amd64"
+#        chmod ugo+x "$HOME/bin/minikube"
     - name: Start minikube
       run: minikube start --wait=all --addons=registry
     - name: Set environment vars
@@ -153,7 +153,7 @@ jobs:
         if [ "${PR_NUM}" ] ; then tag="pr-${PR_NUM}" ; fi
         reg_base="$(minikube ip)"
         reg_port="5000"
-        reg="{reg_base}:${reg_port}"
+        reg="${reg_base}:${reg_port}"
         img="${reg}/samba.org/samba-operator:${tag}"
         {
           # registry params
