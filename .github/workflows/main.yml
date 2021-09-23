@@ -130,6 +130,55 @@ jobs:
     - name: run tests
       run: ./tests/test.sh
 
+  test-kubernetes-minikube:
+    #runs-on: ubuntu-latest
+    # need to explicitly use 20.04 to avoid problems with jq...
+    runs-on: ubuntu-20.04
+    env:
+      CONTAINER_CMD: docker
+      PR_NUM: ${{ github.event.pull_request.number }}
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install minikube
+      run: |
+        mkversion="v1.23.2"
+        mkdir -p "$HOME/bin"
+        curl -L --silent --fail -o "$HOME/bin/minikube" "https://github.com/kubernetes/minikube/releases/download/${mkversion}/minikube-linux-amd64"
+        chmod ugo+x "$HOME/bin/minikube"
+    - name: Start minikube
+      run: minikube start --wait=all --addons=registry
+    - name: Set environment vars
+      run: |
+        tag="latest-scratch"
+        if [ "${PR_NUM}" ] ; then tag="pr-${PR_NUM}" ; fi
+        reg_base="$(minikube ip)"
+        reg_port="5000"
+        reg="{reg_base}:${reg_port}"
+        img="${reg}/samba.org/samba-operator:${tag}"
+        {
+          # registry params
+          echo "REG_BASE=${reg_base}"
+          echo "REG_PORT=${reg_port}"
+          echo "REGISTRY=${reg}"
+          # tag and image name for build+push
+          echo "TAG=${tag}"
+          echo "IMG=${img}"
+          # operator image for verification by test suite
+          echo "SMBOP_TEST_EXPECT_MANAGER_IMG=${img}"
+        } >> $GITHUB_ENV
+    - name: get nodes
+      run: kubectl get nodes
+    - name: deploy ad server
+      run: ./tests/test-deploy-ad-server.sh
+    - name: build image
+      run: make image-build
+    - name: push image to minikube registry
+      run: make container-push
+    - name: configure kustomize
+      run: make set-image
+    - name: run tests
+      run: ./tests/test.sh
+
   # push the container to quay.io - only for pushes, not PRs
   push:
     needs: [build, check]
