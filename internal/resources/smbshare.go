@@ -538,6 +538,73 @@ func (m *SmbShareManager) getOrCreateConfigMap(
 	return cm, true, nil
 }
 
+func (m *SmbShareManager) getOrCreateStatefulSet(
+	ctx context.Context,
+	planner *sharePlanner,
+	ns string) (*appsv1.StatefulSet, bool, error) {
+	// Check if the ss already exists, if not create a new one
+	found := &appsv1.StatefulSet{}
+	ssKey := types.NamespacedName{
+		Name:      planner.instanceName(),
+		Namespace: ns,
+	}
+	err := m.client.Get(ctx, ssKey, found)
+	if err == nil {
+		return found, false, nil
+	}
+
+	if !errors.IsNotFound(err) {
+		// unexpected error
+		m.logger.Error(
+			err,
+			"Failed to get StatefulSet",
+			"SmbShare.Namespace", planner.SmbShare.Namespace,
+			"SmbShare.Name", planner.SmbShare.Name,
+			"SatefulSet.Namespace", ssKey.Namespace,
+			"SatefulSet.Name", ssKey.Name)
+		return nil, false, err
+	}
+
+	// not found - define a new stateful set
+	ss := buildStatefulSet(
+		planner,
+		planner.SmbShare.Spec.Storage.Pvc.Name,
+		sharedStatePVCName(planner),
+		ns)
+	// set the smbshare instance as the owner/controller
+	err = controllerutil.SetControllerReference(
+		planner.SmbShare, ss, m.scheme)
+	if err != nil {
+		m.logger.Error(
+			err,
+			"Failed to set controller reference",
+			"SmbShare.Namespace", planner.SmbShare.Namespace,
+			"SmbShare.Name", planner.SmbShare.Name,
+			"StatefulSet.Namespace", ss.Namespace,
+			"StatefulSet.Name", ss.Name)
+		return ss, false, err
+	}
+	m.logger.Info(
+		"Creating a new StatefulSet",
+		"SmbShare.Namespace", planner.SmbShare.Namespace,
+		"SmbShare.Name", planner.SmbShare.Name,
+		"StatefulSet.Namespace", ss.Namespace,
+		"StatefulSet.Name", ss.Name,
+		"StatefulSet.Replicas", ss.Spec.Replicas)
+	err = m.client.Create(ctx, ss)
+	if err != nil {
+		m.logger.Error(
+			err,
+			"Failed to create new StatefulSet",
+			"SmbShare.Namespace", planner.SmbShare.Namespace,
+			"SmbShare.Name", planner.SmbShare.Name,
+			"StatefulSet.Namespace", ss.Namespace,
+			"StatefulSet.Name", ss.Name)
+		return ss, false, err
+	}
+	return ss, true, err
+}
+
 func (m *SmbShareManager) updateDeploymentSize(
 	ctx context.Context,
 	deployment *appsv1.Deployment) (bool, error) {
