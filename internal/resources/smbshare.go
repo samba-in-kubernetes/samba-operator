@@ -155,26 +155,51 @@ func (m *SmbShareManager) Update(
 		instance.Spec.Storage.Pvc.Name = pvc.Name
 	}
 
-	deployment, created, err := m.getOrCreateDeployment(
-		ctx, planner, destNamespace)
-	if err != nil {
-		return Result{err: err}
-	} else if created {
-		// Deployment created successfully - return and requeue
-		m.logger.Info("Created deployment")
-		m.recorder.Eventf(instance,
-			EventNormal,
-			ReasonCreatedDeployment,
-			"Created deployment %s for SmbShare", deployment.Name)
-		return Requeue
-	}
+	if planner.isClustered() {
+		_, created, err := m.getOrCreateStatePVC(
+			ctx, planner, destNamespace)
+		if err != nil {
+			return Result{err: err}
+		} else if created {
+			m.logger.Info("Created shared state PVC")
+			return Requeue
+		}
 
-	resized, err := m.updateDeploymentSize(ctx, deployment)
-	if err != nil {
-		return Result{err: err}
-	} else if resized {
-		m.logger.Info("Resized deployment")
-		return Requeue
+		statefulSet, created, err := m.getOrCreateStatefulSet(
+			ctx, planner, destNamespace)
+		if err != nil {
+			return Result{err: err}
+		} else if created {
+			// StatefulSet created successfully - return and requeue
+			m.logger.Info("Created StatefulSet")
+			m.recorder.Eventf(instance,
+				EventNormal,
+				ReasonCreatedStatefulSet,
+				"Created stateful set %s for SmbShare", statefulSet.Name)
+			return Requeue
+		}
+	} else {
+		deployment, created, err := m.getOrCreateDeployment(
+			ctx, planner, destNamespace)
+		if err != nil {
+			return Result{err: err}
+		} else if created {
+			// Deployment created successfully - return and requeue
+			m.logger.Info("Created deployment")
+			m.recorder.Eventf(instance,
+				EventNormal,
+				ReasonCreatedDeployment,
+				"Created deployment %s for SmbShare", deployment.Name)
+			return Requeue
+		}
+
+		resized, err := m.updateDeploymentSize(ctx, deployment)
+		if err != nil {
+			return Result{err: err}
+		} else if resized {
+			m.logger.Info("Resized deployment")
+			return Requeue
+		}
 	}
 
 	_, created, err = m.getOrCreateService(
