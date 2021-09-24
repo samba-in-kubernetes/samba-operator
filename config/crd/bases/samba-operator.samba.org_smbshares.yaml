@@ -52,6 +52,22 @@ spec:
                 description: ReadOnly controls if this share is to be read-only or
                   not.
                 type: boolean
+              scaling:
+                description: Scaling specifies parameters relating to how share resources
+                  can and should be scaled.
+                properties:
+                  availabilityMode:
+                    description: AvailbilityMode specifies how the operator is to
+                      scale share resources for (high-)availability purposes.
+                    enum:
+                    - standard
+                    - clustered
+                    type: string
+                  minClusterSize:
+                    description: MinClusterSize specifies the minimum number of smb
+                      server instances to establish when availabilityMode is "clustered".
+                    type: integer
+                type: object
               securityConfig:
                 description: SecurityConfig specifies which SmbSecurityConfig CR is
                   to be used for this share. If left blank, the operator's default
