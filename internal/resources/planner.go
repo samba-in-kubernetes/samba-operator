@@ -351,3 +351,10 @@ func (sp *sharePlanner) serviceType() string {
 func (sp *sharePlanner) sambaContainerDebugLevel() string {
 	return sp.GlobalConfig.SambaDebugLevel
 }
+
+func (sp *sharePlanner) isClustered() bool {
+	if sp.SmbShare.Spec.Scaling == nil {
+		return false
+	}
+	return sp.SmbShare.Spec.Scaling.AvailbilityMode == "clustered"
+}
