@@ -63,6 +63,10 @@ type SmbShareSpec struct {
 	// +kubebuilder:validation:MinLength:=1
 	// +optional
 	CommonConfig string `json:"commonConfig,omitempty"`
+
+	// Scaling specifies parameters relating to how share resources can and
+	// should be scaled.
+	Scaling *SmbShareScalingSpec `json:"scaling,omitempty"`
 }
 
 // SmbShareStorageSpec defines how storage is associated with a share.
@@ -82,6 +86,18 @@ type SmbSharePvcSpec struct {
 	// Behaves similar to the embedded PVC spec for pods.
 	// +optional
 	Spec *corev1.PersistentVolumeClaimSpec `json:"spec,omitempty"`
+}
+
+// SmbShareScalingSpec defines scaling parameters for a share.
+type SmbShareScalingSpec struct {
+	// AvailbilityMode specifies how the operator is to scale share resources
+	// for (high-)availability purposes.
+	// +optional
+	// +kubebuilder:validation:Enum:=standard;clustered
+	AvailbilityMode string `json:"availabilityMode,omitempty"`
+	// MinClusterSize specifies the minimum number of smb server instances
+	// to establish when availabilityMode is "clustered".
+	MinClusterSize int `json:"minClusterSize,omitempty"`
 }
 
 // SmbShareStatus defines the observed state of SmbShare
