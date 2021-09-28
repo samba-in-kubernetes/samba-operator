@@ -223,7 +223,7 @@ func (m *SmbShareManager) getOrCreateDeployment(
 	err := m.client.Get(
 		ctx,
 		types.NamespacedName{
-			Name:      planner.SmbShare.Name,
+			Name:      planner.instanceName(),
 			Namespace: ns,
 		},
 		found)
