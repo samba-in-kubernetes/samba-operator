@@ -326,6 +326,57 @@ func (m *SmbShareManager) getOrCreatePvc(
 	return nil, false, err
 }
 
+func (m *SmbShareManager) getOrCreateService(
+	ctx context.Context, planner *sharePlanner, ns string) (
+	*corev1.Service, bool, error) {
+	// Check if the service already exists, if not create a new one
+	found := &corev1.Service{}
+	err := m.client.Get(
+		ctx,
+		types.NamespacedName{
+			Name:      planner.instanceName(),
+			Namespace: ns,
+		},
+		found)
+	if err == nil {
+		return found, false, nil
+	}
+
+	if errors.IsNotFound(err) {
+		// not found - define a new deployment
+		svc := newServiceForSmb(planner, ns)
+		// set the smbshare instance as the owner and controller
+		err = controllerutil.SetControllerReference(
+			planner.SmbShare, svc, m.scheme)
+		if err != nil {
+			m.logger.Error(
+				err,
+				"Failed to set controller reference",
+				"SmbShare.Namespace", planner.SmbShare.Namespace,
+				"SmbShare.Name", planner.SmbShare.Name,
+				"Service.Namespace", svc.Namespace,
+				"Service.Name", svc.Name)
+			return svc, false, err
+		}
+		m.logger.Info("Creating a new Service",
+			"Service.Namespace", svc.Namespace,
+			"Service.Name", svc.Name)
+		err = m.client.Create(ctx, svc)
+		if err != nil {
+			m.logger.Error(
+				err,
+				"Failed to create new Service",
+				"Service.Namespace", svc.Namespace,
+				"Service.Name", svc.Name)
+			return svc, false, err
+		}
+		// Deployment created successfully
+		return svc, true, nil
+	}
+	m.logger.Error(err, "Failed to get Service")
+	return nil, false, err
+}
+
 func (m *SmbShareManager) updateDeploymentSize(
 	ctx context.Context,
 	deployment *appsv1.Deployment) (bool, error) {
@@ -499,55 +550,4 @@ func (m *SmbShareManager) setServerGroup(
 	// be hosted by one smbd pod.
 	s.Status.ServerGroup = s.ObjectMeta.Name
 	return true, m.client.Status().Update(ctx, s)
-}
-
-func (m *SmbShareManager) getOrCreateService(
-	ctx context.Context, planner *sharePlanner, ns string) (
-	*corev1.Service, bool, error) {
-	// Check if the service already exists, if not create a new one
-	found := &corev1.Service{}
-	err := m.client.Get(
-		ctx,
-		types.NamespacedName{
-			Name:      planner.instanceName(),
-			Namespace: ns,
-		},
-		found)
-	if err == nil {
-		return found, false, nil
-	}
-
-	if errors.IsNotFound(err) {
-		// not found - define a new deployment
-		svc := newServiceForSmb(planner, ns)
-		// set the smbshare instance as the owner and controller
-		err = controllerutil.SetControllerReference(
-			planner.SmbShare, svc, m.scheme)
-		if err != nil {
-			m.logger.Error(
-				err,
-				"Failed to set controller reference",
-				"SmbShare.Namespace", planner.SmbShare.Namespace,
-				"SmbShare.Name", planner.SmbShare.Name,
-				"Service.Namespace", svc.Namespace,
-				"Service.Name", svc.Name)
-			return svc, false, err
-		}
-		m.logger.Info("Creating a new Service",
-			"Service.Namespace", svc.Namespace,
-			"Service.Name", svc.Name)
-		err = m.client.Create(ctx, svc)
-		if err != nil {
-			m.logger.Error(
-				err,
-				"Failed to create new Service",
-				"Service.Namespace", svc.Namespace,
-				"Service.Name", svc.Name)
-			return svc, false, err
-		}
-		// Deployment created successfully
-		return svc, true, nil
-	}
-	m.logger.Error(err, "Failed to get Service")
-	return nil, false, err
 }
