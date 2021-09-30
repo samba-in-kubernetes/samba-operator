@@ -257,9 +257,9 @@ func configVolumeAndMount(planner *sharePlanner) (
 	corev1.Volume, corev1.VolumeMount) {
 	// volume
 	cmSrc := &corev1.ConfigMapVolumeSource{}
-	cmSrc.Name = ConfigMapName
+	cmSrc.Name = planner.instanceName()
 	volume := corev1.Volume{
-		Name: ConfigMapName,
+		Name: configMapName,
 		VolumeSource: corev1.VolumeSource{
 			ConfigMap: cmSrc,
 		},
@@ -267,7 +267,7 @@ func configVolumeAndMount(planner *sharePlanner) (
 	// mount
 	mount := corev1.VolumeMount{
 		MountPath: planner.containerConfigDir(),
-		Name:      ConfigMapName,
+		Name:      configMapName,
 	}
 	return volume, mount
 }
