@@ -125,14 +125,8 @@ controller-gen:
 ifeq (, $(shell command -v controller-gen ;))
 	@echo "controller-gen not found in PATH, checking in GOBIN ($(GOBIN))..."
 ifeq (, $(shell command -v $(GOBIN)/controller-gen ;))
-	@{ \
-	set -e ;\
-	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
-	cd $$CONTROLLER_GEN_TMP_DIR ;\
-	$(GO_CMD) mod init tmp ;\
-	$(GO_CMD) get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.6.2 ;\
-	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
-	}
+	$(GO_CMD) install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.6.2
+	@echo "controller-gen installed in GOBIN"
 endif
 CONTROLLER_GEN=$(GOBIN)/controller-gen
 else
@@ -143,14 +137,8 @@ kustomize:
 ifeq (, $(shell command -v kustomize ;))
 	@echo "kustomize not found in PATH, checking in GOBIN ($(GOBIN))..."
 ifeq (, $(shell command -v $(GOBIN)/kustomize ;))
-	@{ \
-	set -e ;\
-	KUSTOMIZE_GEN_TMP_DIR=$$(mktemp -d) ;\
-	cd $$KUSTOMIZE_GEN_TMP_DIR ;\
-	$(GO_CMD) mod init tmp ;\
-	$(GO_CMD) get sigs.k8s.io/kustomize/kustomize/v4@v4.3.0 ;\
-	rm -rf $$KUSTOMIZE_GEN_TMP_DIR ;\
-	}
+	$(GO_CMD) install sigs.k8s.io/kustomize/kustomize/v4@v4.3.0
+	@echo "kustomize installed in GOBIN"
 endif
 KUSTOMIZE=$(GOBIN)/kustomize
 else
@@ -187,15 +175,7 @@ revive:
 ifeq (, $(shell command -v revive ;))
 	@echo "revive not found in PATH, checking in GOBIN ($(GOBIN))..."
 ifeq (, $(shell command -v $(GOBIN)/revive ;))
-	@{ \
-	set -e ;\
-	echo "revive not found in GOBIN, getting revive..." ;\
-	REVIVE_TMP_DIR=$$(mktemp -d) ;\
-	cd $$REVIVE_TMP_DIR ;\
-	$(GO_CMD) mod init tmp ;\
-	$(GO_CMD) get  github.com/mgechev/revive  ;\
-	rm -rf $$REVIVE_TMP_DIR ;\
-	}
+	$(GO_CMD) install github.com/mgechev/revive@latest
 	@echo "revive installed in GOBIN"
 else
 	@echo "revive found in GOBIN"
