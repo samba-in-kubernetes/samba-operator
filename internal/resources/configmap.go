@@ -16,13 +16,10 @@ limitations under the License.
 package resources
 
 import (
-	"context"
 	"encoding/json"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-	rtclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/samba-in-kubernetes/samba-operator/internal/smbcc"
 )
@@ -34,21 +31,6 @@ const (
 	// ConfigJSONKey is the name of the key our json is under.
 	ConfigJSONKey = "config.json"
 )
-
-func getConfigMap(
-	ctx context.Context, client rtclient.Client, ns string) (
-	*corev1.ConfigMap, error) {
-	// fetch the existing config, if available
-	cm := &corev1.ConfigMap{}
-	err := client.Get(
-		ctx,
-		types.NamespacedName{
-			Name:      ConfigMapName,
-			Namespace: ns,
-		},
-		cm)
-	return cm, err
-}
 
 func newDefaultConfigMap(name, ns string) (*corev1.ConfigMap, error) {
 	// we use marshal indent so that the json is semi-human-readable
