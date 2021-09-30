@@ -227,64 +227,64 @@ func (m *SmbShareManager) getOrCreateDeployment(
 	planner *sharePlanner,
 	ns string) (*appsv1.Deployment, bool, error) {
 	// Check if the deployment already exists, if not create a new one
+	depKey := types.NamespacedName{
+		Name:      planner.instanceName(),
+		Namespace: ns,
+	}
 	found := &appsv1.Deployment{}
-	err := m.client.Get(
-		ctx,
-		types.NamespacedName{
-			Name:      planner.instanceName(),
-			Namespace: ns,
-		},
-		found)
+	err := m.client.Get(ctx, depKey, found)
 	if err == nil {
 		return found, false, nil
 	}
 
-	if errors.IsNotFound(err) {
-		// not found - define a new deployment
-		// labels - do I need them?
-		dep := buildDeployment(
-			m.cfg, planner, planner.SmbShare.Spec.Storage.Pvc.Name, ns)
-		// set the smbshare instance as the owner and controller
-		err = controllerutil.SetControllerReference(
-			planner.SmbShare, dep, m.scheme)
-		if err != nil {
-			m.logger.Error(
-				err,
-				"Failed to set controller reference",
-				"SmbShare.Namespace", planner.SmbShare.Namespace,
-				"SmbShare.Name", planner.SmbShare.Name,
-				"Deployment.Namespace", dep.Namespace,
-				"Deployment.Name", dep.Name)
-			return dep, false, err
-		}
-		m.logger.Info(
-			"Creating a new Deployment",
+	if !errors.IsNotFound(err) {
+		// unexpected error!
+		m.logger.Error(
+			err,
+			"Failed to get Deployment",
+			"SmbShare.Namespace", planner.SmbShare.Namespace,
+			"SmbShare.Name", planner.SmbShare.Name,
+			"Deployment.Namespace", depKey.Namespace,
+			"Deployment.Name", depKey.Name)
+		return nil, false, err
+	}
+
+	// not found - define a new deployment
+	// labels - do I need them?
+	dep := buildDeployment(
+		m.cfg, planner, planner.SmbShare.Spec.Storage.Pvc.Name, ns)
+	// set the smbshare instance as the owner and controller
+	err = controllerutil.SetControllerReference(
+		planner.SmbShare, dep, m.scheme)
+	if err != nil {
+		m.logger.Error(
+			err,
+			"Failed to set controller reference",
 			"SmbShare.Namespace", planner.SmbShare.Namespace,
 			"SmbShare.Name", planner.SmbShare.Name,
 			"Deployment.Namespace", dep.Namespace,
 			"Deployment.Name", dep.Name)
-		err = m.client.Create(ctx, dep)
-		if err != nil {
-			m.logger.Error(
-				err,
-				"Failed to create new Deployment",
-				"SmbShare.Namespace", planner.SmbShare.Namespace,
-				"SmbShare.Name", planner.SmbShare.Name,
-				"Deployment.Namespace", dep.Namespace,
-				"Deployment.Name", dep.Name)
-			return dep, false, err
-		}
-		// Deployment created successfully
-		return dep, true, nil
+		return dep, false, err
 	}
-	m.logger.Error(
-		err,
-		"Failed to get Deployment",
+	m.logger.Info(
+		"Creating a new Deployment",
 		"SmbShare.Namespace", planner.SmbShare.Namespace,
 		"SmbShare.Name", planner.SmbShare.Name,
 		"Deployment.Namespace", dep.Namespace,
 		"Deployment.Name", dep.Name)
-	return nil, false, err
+	err = m.client.Create(ctx, dep)
+	if err != nil {
+		m.logger.Error(
+			err,
+			"Failed to create new Deployment",
+			"SmbShare.Namespace", planner.SmbShare.Namespace,
+			"SmbShare.Name", planner.SmbShare.Name,
+			"Deployment.Namespace", dep.Namespace,
+			"Deployment.Name", dep.Name)
+		return dep, false, err
+	}
+	// Deployment created successfully
+	return dep, true, nil
 }
 
 func (m *SmbShareManager) getOrCreatePvc(
@@ -293,67 +293,67 @@ func (m *SmbShareManager) getOrCreatePvc(
 	ns string) (*corev1.PersistentVolumeClaim, bool, error) {
 	// Check if the pvc already exists, if not create it
 	pvc := &corev1.PersistentVolumeClaim{}
-	err := m.client.Get(
-		ctx,
-		types.NamespacedName{
-			Name:      pvcName(smbShare),
-			Namespace: ns,
-		},
-		pvc)
+	pvcKey := types.NamespacedName{
+		Name:      pvcName(smbShare),
+		Namespace: ns,
+	}
+	err := m.client.Get(ctx, pvcKey, pvc)
 	if err == nil {
 		return pvc, false, nil
 	}
 
-	if errors.IsNotFound(err) {
-		// not found - define a new pvc
-		pvc = &corev1.PersistentVolumeClaim{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      pvcName(smbShare),
-				Namespace: ns,
-			},
-			Spec: *smbShare.Spec.Storage.Pvc.Spec,
-		}
-		// set the smb share instance as the owner and controller
-		err = controllerutil.SetControllerReference(
-			smbShare, pvc, m.scheme)
-		if err != nil {
-			m.logger.Error(
-				err,
-				"Failed to set controller reference",
-				"SmbShare.Namespace", smbShare.Namespace,
-				"SmbShare.Name", smbShare.Name,
-				"PersistentVolumeClaim.Namespace", pvc.Namespace,
-				"PersistentVolumeClaim.Name", pvc.Name)
-			return pvc, false, err
-		}
-		m.logger.Info(
-			"Creating a new PVC",
+	if !errors.IsNotFound(err) {
+		// unexpected error!
+		m.logger.Error(
+			err,
+			"Failed to get PVC",
+			"SmbShare.Namespace", smbShare.Namespace,
+			"SmbShare.Name", smbShare.Name,
+			"PersistentVolumeClaim.Namespace", pvcKey.Namespace,
+			"PersistentVolumeClaim.Name", pvcKey.Name)
+		return nil, false, err
+	}
+
+	// not found - define a new pvc
+	pvc = &corev1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      pvcName(smbShare),
+			Namespace: ns,
+		},
+		Spec: *smbShare.Spec.Storage.Pvc.Spec,
+	}
+	// set the smb share instance as the owner and controller
+	err = controllerutil.SetControllerReference(
+		smbShare, pvc, m.scheme)
+	if err != nil {
+		m.logger.Error(
+			err,
+			"Failed to set controller reference",
 			"SmbShare.Namespace", smbShare.Namespace,
 			"SmbShare.Name", smbShare.Name,
 			"PersistentVolumeClaim.Namespace", pvc.Namespace,
 			"PersistentVolumeClaim.Name", pvc.Name)
-		err = m.client.Create(ctx, pvc)
-		if err != nil {
-			m.logger.Error(
-				err,
-				"Failed to create new PVC",
-				"SmbShare.Namespace", smbShare.Namespace,
-				"SmbShare.Name", smbShare.Name,
-				"PersistentVolumeClaim.Namespace", pvc.Namespace,
-				"PersistentVolumeClaim.Name", pvc.Name)
-			return pvc, false, err
-		}
-		// Pvc created successfully
-		return pvc, true, nil
+		return pvc, false, err
 	}
-	m.logger.Error(
-		err,
-		"Failed to get PVC",
+	m.logger.Info(
+		"Creating a new PVC",
 		"SmbShare.Namespace", smbShare.Namespace,
 		"SmbShare.Name", smbShare.Name,
 		"PersistentVolumeClaim.Namespace", pvc.Namespace,
 		"PersistentVolumeClaim.Name", pvc.Name)
-	return nil, false, err
+	err = m.client.Create(ctx, pvc)
+	if err != nil {
+		m.logger.Error(
+			err,
+			"Failed to create new PVC",
+			"SmbShare.Namespace", smbShare.Namespace,
+			"SmbShare.Name", smbShare.Name,
+			"PersistentVolumeClaim.Namespace", pvc.Namespace,
+			"PersistentVolumeClaim.Name", pvc.Name)
+		return pvc, false, err
+	}
+	// Pvc created successfully
+	return pvc, true, nil
 }
 
 func (m *SmbShareManager) getOrCreateService(
@@ -361,60 +361,60 @@ func (m *SmbShareManager) getOrCreateService(
 	*corev1.Service, bool, error) {
 	// Check if the service already exists, if not create a new one
 	found := &corev1.Service{}
-	err := m.client.Get(
-		ctx,
-		types.NamespacedName{
-			Name:      planner.instanceName(),
-			Namespace: ns,
-		},
-		found)
+	svcKey := types.NamespacedName{
+		Name:      planner.instanceName(),
+		Namespace: ns,
+	}
+	err := m.client.Get(ctx, svcKey, found)
 	if err == nil {
 		return found, false, nil
 	}
 
-	if errors.IsNotFound(err) {
-		// not found - define a new deployment
-		svc := newServiceForSmb(planner, ns)
-		// set the smbshare instance as the owner and controller
-		err = controllerutil.SetControllerReference(
-			planner.SmbShare, svc, m.scheme)
-		if err != nil {
-			m.logger.Error(
-				err,
-				"Failed to set controller reference",
-				"SmbShare.Namespace", planner.SmbShare.Namespace,
-				"SmbShare.Name", planner.SmbShare.Name,
-				"Service.Namespace", svc.Namespace,
-				"Service.Name", svc.Name)
-			return svc, false, err
-		}
-		m.logger.Info("Creating a new Service",
+	if !errors.IsNotFound(err) {
+		// unexpected error!
+		m.logger.Error(
+			err,
+			"Failed to get Service",
+			"SmbShare.Namespace", planner.SmbShare.Namespace,
+			"SmbShare.Name", planner.SmbShare.Name,
+			"Service.Namespace", svcKey.Namespace,
+			"Service.Name", svcKey.Name)
+		return nil, false, err
+	}
+
+	// not found - define a new deployment
+	svc := newServiceForSmb(planner, ns)
+	// set the smbshare instance as the owner and controller
+	err = controllerutil.SetControllerReference(
+		planner.SmbShare, svc, m.scheme)
+	if err != nil {
+		m.logger.Error(
+			err,
+			"Failed to set controller reference",
 			"SmbShare.Namespace", planner.SmbShare.Namespace,
 			"SmbShare.Name", planner.SmbShare.Name,
 			"Service.Namespace", svc.Namespace,
 			"Service.Name", svc.Name)
-		err = m.client.Create(ctx, svc)
-		if err != nil {
-			m.logger.Error(
-				err,
-				"Failed to create new Service",
-				"SmbShare.Namespace", planner.SmbShare.Namespace,
-				"SmbShare.Name", planner.SmbShare.Name,
-				"Service.Namespace", svc.Namespace,
-				"Service.Name", svc.Name)
-			return svc, false, err
-		}
-		// Deployment created successfully
-		return svc, true, nil
+		return svc, false, err
 	}
-	m.logger.Error(
-		err,
-		"Failed to get Service",
+	m.logger.Info("Creating a new Service",
 		"SmbShare.Namespace", planner.SmbShare.Namespace,
 		"SmbShare.Name", planner.SmbShare.Name,
 		"Service.Namespace", svc.Namespace,
 		"Service.Name", svc.Name)
-	return nil, false, err
+	err = m.client.Create(ctx, svc)
+	if err != nil {
+		m.logger.Error(
+			err,
+			"Failed to create new Service",
+			"SmbShare.Namespace", planner.SmbShare.Namespace,
+			"SmbShare.Name", planner.SmbShare.Name,
+			"Service.Namespace", svc.Namespace,
+			"Service.Name", svc.Name)
+		return svc, false, err
+	}
+	// Deployment created successfully
+	return svc, true, nil
 }
 
 func (m *SmbShareManager) getOrCreateConfigMap(
