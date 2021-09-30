@@ -71,9 +71,11 @@ func (m *SmbShareManager) Process(
 			// Request object not found. Not a fatal error.
 			return Done
 		}
-		m.logger.Error(err, "get failed for SmbShare",
-			"ns", nsname.Namespace,
-			"name", nsname.Name)
+		m.logger.Error(
+			err,
+			"Failed to get SmbShare",
+			"SmbShare.Namespace", nsname.Namespace,
+			"SmbShare.Name", nsname.Name)
 		return Result{err: err}
 	}
 
@@ -95,9 +97,11 @@ func (m *SmbShareManager) Update(
 	ctx context.Context,
 	instance *sambaoperatorv1alpha1.SmbShare) Result {
 	// ---
-	m.logger.Info("Updating state for SmbShare",
-		"name", instance.Name,
-		"UID", instance.UID)
+	m.logger.Info(
+		"Updating state for SmbShare",
+		"SmbShare.Namespace", instance.Namespace,
+		"SmbShare.Name", instance.Name,
+		"SmbShare.UID", instance.UID)
 
 	changed, err := m.addFinalizer(ctx, instance)
 	if err != nil {
@@ -255,6 +259,8 @@ func (m *SmbShareManager) getOrCreateDeployment(
 		}
 		m.logger.Info(
 			"Creating a new Deployment",
+			"SmbShare.Namespace", planner.SmbShare.Namespace,
+			"SmbShare.Name", planner.SmbShare.Name,
 			"Deployment.Namespace", dep.Namespace,
 			"Deployment.Name", dep.Name)
 		err = m.client.Create(ctx, dep)
@@ -262,6 +268,8 @@ func (m *SmbShareManager) getOrCreateDeployment(
 			m.logger.Error(
 				err,
 				"Failed to create new Deployment",
+				"SmbShare.Namespace", planner.SmbShare.Namespace,
+				"SmbShare.Name", planner.SmbShare.Name,
 				"Deployment.Namespace", dep.Namespace,
 				"Deployment.Name", dep.Name)
 			return dep, false, err
@@ -269,7 +277,13 @@ func (m *SmbShareManager) getOrCreateDeployment(
 		// Deployment created successfully
 		return dep, true, nil
 	}
-	m.logger.Error(err, "Failed to get Deployment")
+	m.logger.Error(
+		err,
+		"Failed to get Deployment",
+		"SmbShare.Namespace", planner.SmbShare.Namespace,
+		"SmbShare.Name", planner.SmbShare.Name,
+		"Deployment.Namespace", dep.Namespace,
+		"Deployment.Name", dep.Name)
 	return nil, false, err
 }
 
@@ -312,13 +326,19 @@ func (m *SmbShareManager) getOrCreatePvc(
 				"PersistentVolumeClaim.Name", pvc.Name)
 			return pvc, false, err
 		}
-		m.logger.Info("Creating a new PVC",
-			"pvc.Namespace", pvc.Namespace, "pvc.Name", pvc.Name)
+		m.logger.Info(
+			"Creating a new PVC",
+			"SmbShare.Namespace", smbShare.Namespace,
+			"SmbShare.Name", smbShare.Name,
+			"PersistentVolumeClaim.Namespace", pvc.Namespace,
+			"PersistentVolumeClaim.Name", pvc.Name)
 		err = m.client.Create(ctx, pvc)
 		if err != nil {
 			m.logger.Error(
 				err,
 				"Failed to create new PVC",
+				"SmbShare.Namespace", smbShare.Namespace,
+				"SmbShare.Name", smbShare.Name,
 				"PersistentVolumeClaim.Namespace", pvc.Namespace,
 				"PersistentVolumeClaim.Name", pvc.Name)
 			return pvc, false, err
@@ -326,7 +346,13 @@ func (m *SmbShareManager) getOrCreatePvc(
 		// Pvc created successfully
 		return pvc, true, nil
 	}
-	m.logger.Error(err, "Failed to get PVC")
+	m.logger.Error(
+		err,
+		"Failed to get PVC",
+		"SmbShare.Namespace", smbShare.Namespace,
+		"SmbShare.Name", smbShare.Name,
+		"PersistentVolumeClaim.Namespace", pvc.Namespace,
+		"PersistentVolumeClaim.Name", pvc.Name)
 	return nil, false, err
 }
 
@@ -363,6 +389,8 @@ func (m *SmbShareManager) getOrCreateService(
 			return svc, false, err
 		}
 		m.logger.Info("Creating a new Service",
+			"SmbShare.Namespace", planner.SmbShare.Namespace,
+			"SmbShare.Name", planner.SmbShare.Name,
 			"Service.Namespace", svc.Namespace,
 			"Service.Name", svc.Name)
 		err = m.client.Create(ctx, svc)
@@ -370,6 +398,8 @@ func (m *SmbShareManager) getOrCreateService(
 			m.logger.Error(
 				err,
 				"Failed to create new Service",
+				"SmbShare.Namespace", planner.SmbShare.Namespace,
+				"SmbShare.Name", planner.SmbShare.Name,
 				"Service.Namespace", svc.Namespace,
 				"Service.Name", svc.Name)
 			return svc, false, err
@@ -377,7 +407,13 @@ func (m *SmbShareManager) getOrCreateService(
 		// Deployment created successfully
 		return svc, true, nil
 	}
-	m.logger.Error(err, "Failed to get Service")
+	m.logger.Error(
+		err,
+		"Failed to get Service",
+		"SmbShare.Namespace", planner.SmbShare.Namespace,
+		"SmbShare.Name", planner.SmbShare.Name,
+		"Service.Namespace", svc.Namespace,
+		"Service.Name", svc.Name)
 	return nil, false, err
 }
 
