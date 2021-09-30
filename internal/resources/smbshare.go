@@ -194,11 +194,15 @@ func (m *SmbShareManager) Finalize(
 	destNamespace := instance.Namespace
 	cm, err := m.getConfigMap(ctx, instance, destNamespace)
 	if err == nil {
+		// previously, we kept one configmap for many SmbShares but have moved
+		// away from that however, just to be safe, we're retaining the finalizer
+		// and check that the config is OK to remove in the case that we need to
+		// share the config map across other/multiple resources in the future.
 		_, changed, err := m.updateConfiguration(ctx, cm, instance)
 		if err != nil {
 			return Result{err: err}
 		} else if changed {
-			m.logger.Info("Updated config map")
+			m.logger.Info("Updated config map during Finalize")
 			return Requeue
 		}
 	} else if err != nil && !errors.IsNotFound(err) {
@@ -386,8 +390,8 @@ func (m *SmbShareManager) getOrCreateConfigMap(
 	// this is used for the name generating function & consistency
 	planner := newSharePlanner(
 		InstanceConfiguration{
-			SmbShare:       smbShare,
-			GlobalConfig:   m.cfg,
+			SmbShare:     smbShare,
+			GlobalConfig: m.cfg,
 		},
 		nil)
 	// fetch the existing config, if available
@@ -497,37 +501,30 @@ func (m *SmbShareManager) updateConfiguration(
 		return nil, false, err
 	}
 	isDeleting := s.GetDeletionTimestamp() != nil
+	if isDeleting {
+		m.logger.Info(
+			"ConfigMap is being deleted - returning minimal planner")
+		planner := newSharePlanner(
+			InstanceConfiguration{
+				SmbShare:     s,
+				GlobalConfig: m.cfg,
+			},
+			nil)
+		return planner, false, nil
+	}
 	security, err := m.getSecurityConfig(ctx, s)
 	if err != nil {
-		if isDeleting && errors.IsNotFound(err) {
-			// we can't block deleting the share if the security config
-			// is missing. Otherwise, we may just get stuck here forever.
-			// This is easy to do if you typo or give a invalid security
-			// config name and then try to delete your bad Share.
-			m.logger.Info(
-				"failed to get SmbSecurityConfig while deleting SmbShare",
-				"error", err)
-			security = nil
-		} else {
-			m.logger.Error(err, "failed to get SmbSecurityConfig")
-			return nil, false, err
-		}
+		m.logger.Error(err, "failed to get SmbSecurityConfig")
+		return nil, false, err
 	}
 	common, err := m.getCommonConfig(ctx, s)
 	if err != nil {
-		if isDeleting && errors.IsNotFound(err) {
-			// same logic for common config as security config
-			m.logger.Info(
-				"failed to get SmbCommonConfig while deleting SmbShare",
-				"error", err)
-			common = nil
-		} else {
-			m.logger.Error(err, "failed to get SmbCommonConfig")
-			return nil, false, err
-		}
+		m.logger.Error(err, "failed to get SmbCommonConfig")
+		return nil, false, err
 	}
 
 	// extract config from map
+	var changed bool
 	planner := newSharePlanner(
 		InstanceConfiguration{
 			SmbShare:       s,
@@ -536,27 +533,32 @@ func (m *SmbShareManager) updateConfiguration(
 			GlobalConfig:   m.cfg,
 		},
 		cc)
-	var changed bool
-	if isDeleting {
-		changed, err = planner.prune()
-	} else {
-		changed, err = planner.update()
-	}
+	changed, err = planner.update()
 	if err != nil {
 		m.logger.Error(err, "unable to update samba container config")
 		return nil, false, err
 	}
 	if !changed {
+		// nothing changed between the planner and the config stored in the cm
+		// we can just return now as no changes need to be applied to the cm
 		return planner, false, nil
 	}
 	err = setContainerConfig(cm, planner.ConfigState)
 	if err != nil {
-		m.logger.Error(err, "unable to set container config in config map")
+		m.logger.Error(
+			err,
+			"unable to set container config in ConfigMap",
+			"ConfigMap.Namespace", cm.Namespace,
+			"ConfigMap.Name", cm.Name)
 		return nil, false, err
 	}
 	err = m.client.Update(ctx, cm)
 	if err != nil {
-		m.logger.Error(err, "failed to update config map")
+		m.logger.Error(
+			err,
+			"failed to update ConfigMap",
+			"ConfigMap.Namespace", cm.Namespace,
+			"ConfigMap.Name", cm.Name)
 		return nil, false, err
 	}
 	return planner, true, nil
