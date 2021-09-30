@@ -82,7 +82,7 @@ echo >> "${TMPFILE}"
 FIRSTLINE="$(head -1 ./tests/files/coredns-snippet.template)"
 LASTLINE="    }"
 
-sed -i .backup -e "/$FIRSTLINE/,/$LASTLINE/d" ${TMPFILE}
+sed -i.backup -e "/$FIRSTLINE/,/$LASTLINE/d" ${TMPFILE}
 
 cat tests/files/coredns-snippet.template \
 	| sed -e "s/AD_SERVER_IP/${AD_POD_IP}/" \
