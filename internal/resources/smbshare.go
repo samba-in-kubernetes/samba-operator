@@ -118,7 +118,7 @@ func (m *SmbShareManager) Update(
 	}
 
 	destNamespace := instance.Namespace
-	cm, created, err := getOrCreateConfigMap(ctx, m.client, destNamespace)
+	cm, created, err := m.getOrCreateConfigMap(ctx, instance, destNamespace)
 	if err != nil {
 		return Result{err: err}
 	} else if created {
@@ -192,7 +192,7 @@ func (m *SmbShareManager) Finalize(
 	instance *sambaoperatorv1alpha1.SmbShare) Result {
 	// ---
 	destNamespace := instance.Namespace
-	cm, err := getConfigMap(ctx, m.client, destNamespace)
+	cm, err := m.getConfigMap(ctx, instance, destNamespace)
 	if err == nil {
 		_, changed, err := m.updateConfiguration(ctx, cm, instance)
 		if err != nil {
@@ -377,6 +377,81 @@ func (m *SmbShareManager) getOrCreateService(
 	return nil, false, err
 }
 
+func (m *SmbShareManager) getOrCreateConfigMap(
+	ctx context.Context,
+	smbShare *sambaoperatorv1alpha1.SmbShare,
+	ns string) (
+	*corev1.ConfigMap, bool, error) {
+	// create a temporary planner based solely on the SmbShare
+	// this is used for the name generating function & consistency
+	planner := newSharePlanner(
+		InstanceConfiguration{
+			SmbShare:       smbShare,
+			GlobalConfig:   m.cfg,
+		},
+		nil)
+	// fetch the existing config, if available
+	found := &corev1.ConfigMap{}
+	cmKey := types.NamespacedName{
+		Name:      planner.instanceName(),
+		Namespace: ns,
+	}
+	err := m.client.Get(ctx, cmKey, found)
+	if err == nil {
+		return found, false, nil
+	}
+
+	if !errors.IsNotFound(err) {
+		// unexpected errror!
+		m.logger.Error(
+			err,
+			"Failed to get ConfigMap",
+			"SmbShare.Namespace", planner.SmbShare.Namespace,
+			"SmbShare.Name", planner.SmbShare.Name,
+			"ConfigMap.Namespace", cmKey.Namespace,
+			"ConfigMap.Name", cmKey.Name)
+		return nil, false, err
+	}
+
+	cm, err := newDefaultConfigMap(cmKey.Name, cmKey.Namespace)
+	if err != nil {
+		m.logger.Error(
+			err,
+			"Failed to generate default ConfigMap",
+			"SmbShare.Namespace", planner.SmbShare.Namespace,
+			"SmbShare.Name", planner.SmbShare.Name,
+			"ConfigMap.Namespace", cm.Namespace,
+			"ConfigMap.Name", cm.Name)
+		return cm, false, err
+	}
+	// set the smbshare instance as the owner and controller
+	err = controllerutil.SetControllerReference(
+		planner.SmbShare, cm, m.scheme)
+	if err != nil {
+		m.logger.Error(
+			err,
+			"Failed to set controller reference",
+			"SmbShare.Namespace", planner.SmbShare.Namespace,
+			"SmbShare.Name", planner.SmbShare.Name,
+			"ConfigMap.Namespace", cm.Namespace,
+			"ConfigMap.Name", cm.Name)
+		return cm, false, err
+	}
+	err = m.client.Create(ctx, cm)
+	if err != nil {
+		m.logger.Error(
+			err,
+			"Failed to create new ConfigMap",
+			"SmbShare.Namespace", planner.SmbShare.Namespace,
+			"SmbShare.Name", planner.SmbShare.Name,
+			"ConfigMap.Namespace", cm.Namespace,
+			"ConfigMap.Name", cm.Name)
+		return cm, false, err
+	}
+	// Deployment created successfully
+	return cm, true, nil
+}
+
 func (m *SmbShareManager) updateDeploymentSize(
 	ctx context.Context,
 	deployment *appsv1.Deployment) (bool, error) {
@@ -535,6 +610,29 @@ func (m *SmbShareManager) getCommonConfig(
 		return nil, err
 	}
 	return cconfig, nil
+}
+
+func (m *SmbShareManager) getConfigMap(
+	ctx context.Context,
+	smbShare *sambaoperatorv1alpha1.SmbShare,
+	ns string) (
+	*corev1.ConfigMap, error) {
+	// create a temporary planner based solely on the SmbShare
+	// this is used for the name generating function & consistency
+	planner := newSharePlanner(
+		InstanceConfiguration{
+			SmbShare:     smbShare,
+			GlobalConfig: m.cfg,
+		},
+		nil)
+	// fetch the existing config, if available
+	found := &corev1.ConfigMap{}
+	cmKey := types.NamespacedName{
+		Name:      planner.instanceName(),
+		Namespace: ns,
+	}
+	err := m.client.Get(ctx, cmKey, found)
+	return found, err
 }
 
 func (m *SmbShareManager) setServerGroup(

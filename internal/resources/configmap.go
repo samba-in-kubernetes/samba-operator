@@ -29,8 +29,9 @@ import (
 )
 
 const (
-	// ConfigMapName is the name of the configmap we store in.
-	ConfigMapName = "samba-container-config"
+	// ConfigMapName is the name of the configmap volume.
+	configMapName = "samba-container-config"
+
 	// ConfigJSONKey is the name of the key our json is under.
 	ConfigJSONKey = "config.json"
 )
