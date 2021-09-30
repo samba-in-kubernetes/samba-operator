@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	rtclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -49,30 +48,6 @@ func getConfigMap(
 		},
 		cm)
 	return cm, err
-}
-
-func getOrCreateConfigMap(
-	ctx context.Context, client rtclient.Client, ns string) (
-	*corev1.ConfigMap, bool, error) {
-	// fetch the existing config, if available
-	cm, err := getConfigMap(ctx, client, ns)
-	if err == nil {
-		return cm, false, nil
-	}
-
-	if errors.IsNotFound(err) {
-		cm, err = newDefaultConfigMap(ConfigMapName, ns)
-		if err != nil {
-			return cm, false, err
-		}
-		err = client.Create(ctx, cm)
-		if err != nil {
-			return cm, false, err
-		}
-		// Deployment created successfully
-		return cm, true, nil
-	}
-	return nil, false, err
 }
 
 func newDefaultConfigMap(name, ns string) (*corev1.ConfigMap, error) {
