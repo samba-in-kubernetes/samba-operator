@@ -369,6 +369,23 @@ func defaultPodEnv(planner *sharePlanner) []corev1.EnvVar {
 	return env
 }
 
+func ctdbHostnameEnv(_ *sharePlanner) []corev1.EnvVar {
+	return []corev1.EnvVar{
+		{
+			Name: "HOSTNAME",
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					FieldPath: "metadata.name",
+				},
+			},
+		},
+		{
+			Name:  "SAMBACC_CTDB",
+			Value: "ctdb-is-experimental",
+		},
+	}
+}
+
 type joinSources struct {
 	volumes []volMount
 	paths   []string
