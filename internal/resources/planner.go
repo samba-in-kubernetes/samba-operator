@@ -180,6 +180,9 @@ func (*sharePlanner) joinEnvPaths(p []string) string {
 
 func (sp *sharePlanner) userSecuritySource() userSecuritySource {
 	s := userSecuritySource{}
+	if sp.securityMode() != userMode {
+		return s
+	}
 	if sp.SecurityConfig == nil || sp.SecurityConfig.Spec.Users == nil {
 		return s
 	}
