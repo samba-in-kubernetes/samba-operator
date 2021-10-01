@@ -230,7 +230,7 @@ func (s *SmbShareWithDNSSuite) TestPodForDNSContainers() {
 	names := []string{}
 	for _, cstatus := range pods[0].Status.ContainerStatuses {
 		names = append(names, cstatus.Name)
-		s.Require().True(cstatus.Ready)
+		s.Require().True(cstatus.Ready, "container %s not ready", cstatus.Name)
 	}
 	s.Require().Contains(names, "dns-register")
 	s.Require().Contains(names, "svc-watch")
