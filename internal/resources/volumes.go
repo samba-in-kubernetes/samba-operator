@@ -27,11 +27,16 @@ const (
 	joinJSONVolName   = "join-data"
 )
 
-func shareVolumeAndMount(planner *sharePlanner, pvcName string) (
-	corev1.Volume, corev1.VolumeMount) {
+type volMount struct {
+	volume corev1.Volume
+	mount  corev1.VolumeMount
+}
+
+func shareVolumeAndMount(planner *sharePlanner, pvcName string) volMount {
+	var vmnt volMount
 	// volume
 	pvcVolName := pvcName + "-smb"
-	volume := corev1.Volume{
+	vmnt.volume = corev1.Volume{
 		Name: pvcVolName,
 		VolumeSource: corev1.VolumeSource{
 			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
@@ -40,37 +45,37 @@ func shareVolumeAndMount(planner *sharePlanner, pvcName string) (
 		},
 	}
 	// mount
-	mount := corev1.VolumeMount{
+	vmnt.mount = corev1.VolumeMount{
 		MountPath: planner.sharePath(),
 		Name:      pvcVolName,
 	}
-	return volume, mount
+	return vmnt
 }
 
-func configVolumeAndMount(planner *sharePlanner) (
-	corev1.Volume, corev1.VolumeMount) {
+func configVolumeAndMount(planner *sharePlanner) volMount {
+	var vmnt volMount
 	// volume
 	cmSrc := &corev1.ConfigMapVolumeSource{}
 	cmSrc.Name = planner.instanceName()
-	volume := corev1.Volume{
+	vmnt.volume = corev1.Volume{
 		Name: configMapName,
 		VolumeSource: corev1.VolumeSource{
 			ConfigMap: cmSrc,
 		},
 	}
 	// mount
-	mount := corev1.VolumeMount{
+	vmnt.mount = corev1.VolumeMount{
 		MountPath: planner.containerConfigDir(),
 		Name:      configMapName,
 	}
-	return volume, mount
+	return vmnt
 }
 
-func userConfigVolumeAndMount(planner *sharePlanner) (
-	corev1.Volume, corev1.VolumeMount) {
+func userConfigVolumeAndMount(planner *sharePlanner) volMount {
+	var vmnt volMount
 	// volume
 	uss := planner.userSecuritySource()
-	volume := corev1.Volume{
+	vmnt.volume = corev1.Volume{
 		Name: userSecretVolName,
 		VolumeSource: corev1.VolumeSource{
 			Secret: &corev1.SecretVolumeSource{
@@ -83,18 +88,18 @@ func userConfigVolumeAndMount(planner *sharePlanner) (
 		},
 	}
 	// mount
-	mount := corev1.VolumeMount{
+	vmnt.mount = corev1.VolumeMount{
 		MountPath: planner.usersConfigDir(),
 		Name:      userSecretVolName,
 	}
-	return volume, mount
+	return vmnt
 }
 
-func sambaStateVolumeAndMount(planner *sharePlanner) (
-	corev1.Volume, corev1.VolumeMount) {
+func sambaStateVolumeAndMount(planner *sharePlanner) volMount {
+	var vmnt volMount
 	// todo: should this use a persistent volume?
 	// volume
-	volume := corev1.Volume{
+	vmnt.volume = corev1.Volume{
 		Name: stateVolName,
 		VolumeSource: corev1.VolumeSource{
 			EmptyDir: &corev1.EmptyDirVolumeSource{
@@ -103,17 +108,17 @@ func sambaStateVolumeAndMount(planner *sharePlanner) (
 		},
 	}
 	// mount
-	mount := corev1.VolumeMount{
+	vmnt.mount = corev1.VolumeMount{
 		MountPath: planner.sambaStateDir(),
 		Name:      stateVolName,
 	}
-	return volume, mount
+	return vmnt
 }
 
-func osRunVolumeAndMount(planner *sharePlanner) (
-	corev1.Volume, corev1.VolumeMount) {
+func osRunVolumeAndMount(planner *sharePlanner) volMount {
+	var vmnt volMount
 	// volume
-	volume := corev1.Volume{
+	vmnt.volume = corev1.Volume{
 		Name: osRunVolName,
 		VolumeSource: corev1.VolumeSource{
 			EmptyDir: &corev1.EmptyDirVolumeSource{
@@ -122,17 +127,17 @@ func osRunVolumeAndMount(planner *sharePlanner) (
 		},
 	}
 	// mount
-	mount := corev1.VolumeMount{
+	vmnt.mount = corev1.VolumeMount{
 		MountPath: planner.osRunDir(),
 		Name:      osRunVolName,
 	}
-	return volume, mount
+	return vmnt
 }
 
-func wbSocketsVolumeAndMount(planner *sharePlanner) (
-	corev1.Volume, corev1.VolumeMount) {
+func wbSocketsVolumeAndMount(planner *sharePlanner) volMount {
+	var vmnt volMount
 	// volume
-	volume := corev1.Volume{
+	vmnt.volume = corev1.Volume{
 		Name: wbSocketsVolName,
 		VolumeSource: corev1.VolumeSource{
 			EmptyDir: &corev1.EmptyDirVolumeSource{
@@ -141,19 +146,19 @@ func wbSocketsVolumeAndMount(planner *sharePlanner) (
 		},
 	}
 	// mount
-	mount := corev1.VolumeMount{
+	vmnt.mount = corev1.VolumeMount{
 		MountPath: planner.winbindSocketsDir(),
 		Name:      wbSocketsVolName,
 	}
-	return volume, mount
+	return vmnt
 }
 
-func joinJSONFileVolumeAndMount(planner *sharePlanner, index int) (
-	corev1.Volume, corev1.VolumeMount) {
+func joinJSONFileVolumeAndMount(planner *sharePlanner, index int) volMount {
+	var vmnt volMount
 	// volume
 	vname := joinJSONVolName + planner.joinJSONSuffix(index)
 	j := planner.SecurityConfig.Spec.JoinSources[index]
-	volume := corev1.Volume{
+	vmnt.volume = corev1.Volume{
 		Name: vname,
 		VolumeSource: corev1.VolumeSource{
 			Secret: &corev1.SecretVolumeSource{
@@ -166,18 +171,18 @@ func joinJSONFileVolumeAndMount(planner *sharePlanner, index int) (
 		},
 	}
 	// mount
-	mount := corev1.VolumeMount{
+	vmnt.mount = corev1.VolumeMount{
 		MountPath: planner.joinJSONSourceDir(index),
 		Name:      vname,
 	}
-	return volume, mount
+	return vmnt
 }
 
-func svcWatchVolumeAndMount(dir string) (
-	corev1.Volume, corev1.VolumeMount) {
+func svcWatchVolumeAndMount(dir string) volMount {
+	var vmnt volMount
 	// volume
 	name := "svcwatch"
-	volume := corev1.Volume{
+	vmnt.volume = corev1.Volume{
 		Name: name,
 		VolumeSource: corev1.VolumeSource{
 			EmptyDir: &corev1.EmptyDirVolumeSource{
@@ -186,9 +191,9 @@ func svcWatchVolumeAndMount(dir string) (
 		},
 	}
 	// mount
-	mount := corev1.VolumeMount{
+	vmnt.mount = corev1.VolumeMount{
 		MountPath: dir,
 		Name:      name,
 	}
-	return volume, mount
+	return vmnt
 }
