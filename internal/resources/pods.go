@@ -191,6 +191,34 @@ func buildWinbinddCtr(
 	}
 }
 
+func buildCTDBDaemonCtr(
+	planner *sharePlanner,
+	env []corev1.EnvVar,
+	vols []volMount) corev1.Container {
+	// ---
+	return corev1.Container{
+		Image:        planner.GlobalConfig.SmbdContainerImage,
+		Name:         "ctdb",
+		Args:         planner.ctdbDaemonArgs(),
+		Env:          env,
+		VolumeMounts: getMounts(vols),
+	}
+}
+
+func buildCTDBManageNodesCtr(
+	planner *sharePlanner,
+	env []corev1.EnvVar,
+	vols []volMount) corev1.Container {
+	// ---
+	return corev1.Container{
+		Image:        planner.GlobalConfig.SmbdContainerImage,
+		Name:         "ctdb-manage-nodes",
+		Args:         planner.ctdbManageNodesArgs(),
+		Env:          env,
+		VolumeMounts: getMounts(vols),
+	}
+}
+
 func buildDNSRegCtr(
 	planner *sharePlanner,
 	env []corev1.EnvVar,
@@ -241,6 +269,48 @@ func buildMustJoinCtr(
 		Image:        planner.GlobalConfig.SmbdContainerImage,
 		Name:         "must-join",
 		Args:         planner.initializerArgs("must-join"),
+		Env:          env,
+		VolumeMounts: getMounts(vols),
+	}
+}
+
+func buildCTDBMigrateCtr(
+	planner *sharePlanner,
+	env []corev1.EnvVar,
+	vols []volMount) corev1.Container {
+	// ---
+	return corev1.Container{
+		Image:        planner.GlobalConfig.SmbdContainerImage,
+		Name:         "ctdb-migrate",
+		Args:         planner.ctdbMigrateArgs(),
+		Env:          env,
+		VolumeMounts: getMounts(vols),
+	}
+}
+
+func buildCTDBSetNodeCtr(
+	planner *sharePlanner,
+	env []corev1.EnvVar,
+	vols []volMount) corev1.Container {
+	// ---
+	return corev1.Container{
+		Image:        planner.GlobalConfig.SmbdContainerImage,
+		Name:         "ctdb-set-node",
+		Args:         planner.ctdbSetNodeArgs(),
+		Env:          env,
+		VolumeMounts: getMounts(vols),
+	}
+}
+
+func buildCTDBMustHaveNodeCtr(
+	planner *sharePlanner,
+	env []corev1.EnvVar,
+	vols []volMount) corev1.Container {
+	// ---
+	return corev1.Container{
+		Image:        planner.GlobalConfig.SmbdContainerImage,
+		Name:         "ctdb-must-have-node",
+		Args:         planner.ctdbMustHaveNodeArgs(),
 		Env:          env,
 		VolumeMounts: getMounts(vols),
 	}
