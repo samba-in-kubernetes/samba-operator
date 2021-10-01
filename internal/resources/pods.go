@@ -149,7 +149,7 @@ func buildSmbdCtr(
 	return corev1.Container{
 		Image: planner.GlobalConfig.SmbdContainerImage,
 		Name:  planner.GlobalConfig.SmbdContainerName,
-		Args:  []string{"run", "smbd"},
+		Args:  planner.runDaemonArgs("smbd"),
 		Env:   env,
 		Ports: []corev1.ContainerPort{{
 			ContainerPort: 445,
@@ -174,7 +174,7 @@ func buildWinbinddCtr(
 	return corev1.Container{
 		Image:        planner.GlobalConfig.SmbdContainerImage,
 		Name:         planner.GlobalConfig.WinbindContainerName,
-		Args:         []string{"run", "winbindd"},
+		Args:         planner.runDaemonArgs("winbindd"),
 		Env:          env,
 		VolumeMounts: getMounts(vols),
 		LivenessProbe: &corev1.Probe{
@@ -226,7 +226,7 @@ func buildInitCtr(
 	return corev1.Container{
 		Image:        planner.GlobalConfig.SmbdContainerImage,
 		Name:         "init",
-		Args:         []string{"init"},
+		Args:         planner.initializerArgs("init"),
 		Env:          env,
 		VolumeMounts: getMounts(vols),
 	}
@@ -240,7 +240,7 @@ func buildMustJoinCtr(
 	return corev1.Container{
 		Image:        planner.GlobalConfig.SmbdContainerImage,
 		Name:         "must-join",
-		Args:         []string{"must-join"},
+		Args:         planner.initializerArgs("must-join"),
 		Env:          env,
 		VolumeMounts: getMounts(vols),
 	}
