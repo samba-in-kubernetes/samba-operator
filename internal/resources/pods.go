@@ -195,7 +195,7 @@ func buildUserPodSpec(
 	volumes = append(volumes, osRunVol.volume)
 	sharedMounts = append(sharedMounts, osRunVol.mount)
 
-	if planner.securityMode() == userMode && planner.userSecuritySource().Configured {
+	if planner.userSecuritySource().Configured {
 		v := userConfigVolumeAndMount(planner)
 		volumes = append(volumes, v.volume)
 		sharedMounts = append(sharedMounts, v.mount)
