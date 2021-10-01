@@ -32,6 +32,22 @@ type volMount struct {
 	mount  corev1.VolumeMount
 }
 
+func getVolumes(vols []volMount) []corev1.Volume {
+	v := make([]corev1.Volume, len(vols))
+	for i := range vols {
+		v[i] = vols[i].volume
+	}
+	return v
+}
+
+func getMounts(vols []volMount) []corev1.VolumeMount {
+	m := make([]corev1.VolumeMount, len(vols))
+	for i := range vols {
+		m[i] = vols[i].mount
+	}
+	return m
+}
+
 func shareVolumeAndMount(planner *sharePlanner, pvcName string) volMount {
 	var vmnt volMount
 	// volume
