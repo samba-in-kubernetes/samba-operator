@@ -41,15 +41,15 @@ func buildADPodSpec(
 	pvcName string) corev1.PodSpec {
 	// ---
 	volumes := []corev1.Volume{}
-	mounts := []corev1.VolumeMount{}
+	sharedMounts := []corev1.VolumeMount{}
 
 	configVol := configVolumeAndMount(planner)
 	volumes = append(volumes, configVol.volume)
-	mounts = append(mounts, configVol.mount)
+	sharedMounts = append(sharedMounts, configVol.mount)
 
 	stateVol := sambaStateVolumeAndMount(planner)
 	volumes = append(volumes, stateVol.volume)
-	mounts = append(mounts, stateVol.mount)
+	sharedMounts = append(sharedMounts, stateVol.mount)
 
 	// for smbd only
 	shareVol := shareVolumeAndMount(planner, pvcName)
@@ -78,14 +78,14 @@ func buildADPodSpec(
 				Name:         "init",
 				Args:         []string{"init"},
 				Env:          podEnv,
-				VolumeMounts: mounts,
+				VolumeMounts: sharedMounts,
 			},
 			{
 				Image:        cfg.SmbdContainerImage,
 				Name:         "must-join",
 				Args:         []string{"must-join"},
 				Env:          append(podEnv, joinEnv...),
-				VolumeMounts: append(mounts, jsrc.mounts...),
+				VolumeMounts: append(sharedMounts, jsrc.mounts...),
 			},
 		},
 		Containers: []corev1.Container{
@@ -98,7 +98,7 @@ func buildADPodSpec(
 					ContainerPort: 445,
 					Name:          "smb",
 				}},
-				VolumeMounts: append(mounts, wbSockVol.mount, shareVol.mount),
+				VolumeMounts: append(sharedMounts, wbSockVol.mount, shareVol.mount),
 				LivenessProbe: &corev1.Probe{
 					Handler: corev1.Handler{
 						TCPSocket: &corev1.TCPSocketAction{
@@ -112,7 +112,7 @@ func buildADPodSpec(
 				Name:         "wb", //cfg.WinbindContainerName,
 				Args:         []string{"run", "winbindd"},
 				Env:          podEnv,
-				VolumeMounts: append(mounts, wbSockVol.mount),
+				VolumeMounts: append(sharedMounts, wbSockVol.mount),
 				LivenessProbe: &corev1.Probe{
 					Handler: corev1.Handler{
 						Exec: &corev1.ExecAction{
@@ -137,7 +137,7 @@ func buildADPodSpec(
 			Name:         "dns-register",
 			Args:         planner.dnsRegisterArgs(),
 			Env:          podEnv,
-			VolumeMounts: append(mounts, wbSockVol.mount, watchVol.mount),
+			VolumeMounts: append(sharedMounts, wbSockVol.mount, watchVol.mount),
 		})
 		serviceLabelSel := fmt.Sprintf("metadata.labels['%s']", svcSelectorKey)
 		podSpec.Containers = append(podSpec.Containers, corev1.Container{
@@ -181,24 +181,24 @@ func buildUserPodSpec(
 	pvcName string) corev1.PodSpec {
 	// ---
 	volumes := []corev1.Volume{}
-	mounts := []corev1.VolumeMount{}
+	sharedMounts := []corev1.VolumeMount{}
 
 	shareVol := shareVolumeAndMount(planner, pvcName)
 	volumes = append(volumes, shareVol.volume)
-	mounts = append(mounts, shareVol.mount)
+	sharedMounts = append(sharedMounts, shareVol.mount)
 
 	configVol := configVolumeAndMount(planner)
 	volumes = append(volumes, configVol.volume)
-	mounts = append(mounts, configVol.mount)
+	sharedMounts = append(sharedMounts, configVol.mount)
 
 	osRunVol := osRunVolumeAndMount(planner)
 	volumes = append(volumes, osRunVol.volume)
-	mounts = append(mounts, osRunVol.mount)
+	sharedMounts = append(sharedMounts, osRunVol.mount)
 
 	if planner.securityMode() == userMode && planner.userSecuritySource().Configured {
 		v := userConfigVolumeAndMount(planner)
 		volumes = append(volumes, v.volume)
-		mounts = append(mounts, v.mount)
+		sharedMounts = append(sharedMounts, v.mount)
 	}
 	podEnv := defaultPodEnv(planner)
 	podSpec := corev1.PodSpec{
@@ -212,7 +212,7 @@ func buildUserPodSpec(
 				ContainerPort: 445,
 				Name:          "smb",
 			}},
-			VolumeMounts: mounts,
+			VolumeMounts: sharedMounts,
 			LivenessProbe: &corev1.Probe{
 				Handler: corev1.Handler{
 					TCPSocket: &corev1.TCPSocketAction{
