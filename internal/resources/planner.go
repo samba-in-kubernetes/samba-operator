@@ -329,6 +329,18 @@ func (sp *sharePlanner) serviceWatchJSONPath() string {
 	return path.Join(sp.serviceWatchStateDir(), "status.json")
 }
 
+func (sp *sharePlanner) initializerArgs(cmd string) []string {
+	args := []string{}
+	if sp.isClustered() {
+		// if this is a ctdb enabled setup, this "initializer"
+		// container-command will be skipped if certain things have already
+		// been "initialized"
+		args = append(args, "--skip-if-file=/var/lib/ctdb/shared/nodes")
+	}
+	args = append(args, cmd)
+	return args
+}
+
 func (sp *sharePlanner) dnsRegisterArgs() []string {
 	args := []string{
 		"dns-register",
@@ -339,6 +351,60 @@ func (sp *sharePlanner) dnsRegisterArgs() []string {
 	}
 	args = append(args, sp.serviceWatchJSONPath())
 	return args
+}
+
+func (sp *sharePlanner) runDaemonArgs(name string) []string {
+	args := []string{"run", name}
+	if sp.isClustered() {
+		if sp.securityMode() == adMode {
+			args = append(args, "--setup=nsswitch", "--setup=smb_ctdb")
+		} else if name == "smbd" {
+			args = append(args, "--setup=users", "--setup=smb_ctdb")
+		}
+	}
+	return args
+}
+
+func (*sharePlanner) ctdbDaemonArgs() []string {
+	return []string{
+		"run",
+		"ctdbd",
+		"--setup=smb_ctdb",
+		"--setup=ctdb_config",
+		"--setup=ctdb_etc",
+		"--setup=ctdb_nodes",
+	}
+}
+
+func (*sharePlanner) ctdbManageNodesArgs() []string {
+	return []string{
+		"ctdb-manage-nodes",
+		"--hostname=$(HOSTNAME)",
+		"--take-node-number-from-hostname=after-last-dash",
+	}
+}
+
+func (*sharePlanner) ctdbMigrateArgs() []string {
+	return []string{
+		"ctdb-migrate",
+		"--dest-dir=/var/lib/ctdb/persistent",
+	}
+}
+
+func (*sharePlanner) ctdbSetNodeArgs() []string {
+	return []string{
+		"ctdb-set-node",
+		"--hostname=$(HOSTNAME)",
+		"--take-node-number-from-hostname=after-last-dash",
+	}
+}
+
+func (*sharePlanner) ctdbMustHaveNodeArgs() []string {
+	return []string{
+		"ctdb-must-have-node",
+		"--hostname=$(HOSTNAME)",
+		"--take-node-number-from-hostname=after-last-dash",
+	}
 }
 
 func (sp *sharePlanner) serviceType() string {
