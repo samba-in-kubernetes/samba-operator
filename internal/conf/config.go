@@ -20,6 +20,9 @@ type OperatorConfig struct {
 	// SmbdContainerName can be used to set the name of the primary container,
 	// the one running smbd, in the pod.
 	SmbdContainerName string `mapstructure:"smbd-container-name"`
+	// WinbindContainerName can be used to the the name of the container
+	// running winbind.
+	WinbindContainerName string `mapstructure:"winbind-container-name"`
 	// WorkingNamespace defines the namespace the operator will (generally)
 	// make changes in.
 	WorkingNamespace string `mapstructure:"working-namespace"`
@@ -54,6 +57,7 @@ func NewSource() *Source {
 		"smbd-container-image",
 		"quay.io/samba.org/samba-server:latest")
 	v.SetDefault("smbd-container-name", "samba")
+	v.SetDefault("winbind-container-name", "wb")
 	v.SetDefault("working-namespace", "")
 	v.SetDefault(
 		"svc-watch-container-image",

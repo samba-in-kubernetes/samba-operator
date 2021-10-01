@@ -109,7 +109,7 @@ func buildADPodSpec(
 			},
 			{
 				Image:        cfg.SmbdContainerImage,
-				Name:         "wb", //cfg.WinbindContainerName,
+				Name:         cfg.WinbindContainerName,
 				Args:         []string{"run", "winbindd"},
 				Env:          podEnv,
 				VolumeMounts: append(sharedMounts, wbSockVol.mount),
