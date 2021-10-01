@@ -522,6 +522,10 @@ func pvcName(s *sambaoperatorv1alpha1.SmbShare) string {
 	return s.Name + "-pvc"
 }
 
+func sharedStatePVCName(planner *sharePlanner) string {
+	return planner.instanceName() + "-state"
+}
+
 func shareNeedsPvc(s *sambaoperatorv1alpha1.SmbShare) bool {
 	return s.Spec.Storage.Pvc != nil && s.Spec.Storage.Pvc.Spec != nil
 }
