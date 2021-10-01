@@ -213,3 +213,103 @@ func svcWatchVolumeAndMount(dir string) volMount {
 	}
 	return vmnt
 }
+
+func ctdbConfigVolumeAndMount(_ *sharePlanner) volMount {
+	var vmnt volMount
+	name := "ctdb-config"
+	vmnt.volume = corev1.Volume{
+		Name: name,
+		VolumeSource: corev1.VolumeSource{
+			EmptyDir: &corev1.EmptyDirVolumeSource{
+				Medium: corev1.StorageMediumMemory,
+			},
+		},
+	}
+	vmnt.mount = corev1.VolumeMount{
+		MountPath: "/etc/ctdb",
+		Name:      name,
+	}
+	return vmnt
+}
+
+func ctdbPersistentVolumeAndMount(_ *sharePlanner) volMount {
+	var vmnt volMount
+	// this was an empty dir in my hand-rolled example yaml file
+	// but now I'm looking at this and wondering. Keeping it the same
+	// for now, but look here first if something seems askance.
+	name := "ctdb-persistent"
+	vmnt.volume = corev1.Volume{
+		Name: name,
+		VolumeSource: corev1.VolumeSource{
+			EmptyDir: &corev1.EmptyDirVolumeSource{
+				Medium: corev1.StorageMediumMemory,
+			},
+		},
+	}
+	vmnt.mount = corev1.VolumeMount{
+		MountPath: "/var/lib/ctdb/persistent",
+		Name:      name,
+	}
+	return vmnt
+}
+
+func ctdbVolatileVolumeAndMount(_ *sharePlanner) volMount {
+	var vmnt volMount
+	name := "ctdb-volatile"
+	vmnt.volume = corev1.Volume{
+		Name: name,
+		VolumeSource: corev1.VolumeSource{
+			EmptyDir: &corev1.EmptyDirVolumeSource{
+				Medium: corev1.StorageMediumMemory,
+			},
+		},
+	}
+	vmnt.mount = corev1.VolumeMount{
+		MountPath: "/var/lib/ctdb/volatile",
+		Name:      name,
+	}
+	return vmnt
+}
+
+func ctdbSocketsVolumeAndMount(_ *sharePlanner) volMount {
+	var vmnt volMount
+	name := "ctdb-sockets"
+	vmnt.volume = corev1.Volume{
+		Name: name,
+		VolumeSource: corev1.VolumeSource{
+			EmptyDir: &corev1.EmptyDirVolumeSource{
+				Medium: corev1.StorageMediumMemory,
+			},
+		},
+	}
+	// mount
+	vmnt.mount = corev1.VolumeMount{
+		MountPath: "/var/run/ctdb",
+		Name:      name,
+	}
+	return vmnt
+}
+
+func ctdbSharedStateVolumeAndMount(
+	_ *sharePlanner, pvcName string) volMount {
+	// ---
+	var vmnt volMount
+	// we've discussed the possibility of doing without this rwx pvc to
+	// bridge the shared state of the ctdb enabled pods, but for now we
+	// have not tried any alternatives. so here it is.
+	pvcVolName := pvcName + "-ctdb"
+	vmnt.volume = corev1.Volume{
+		Name: pvcVolName,
+		VolumeSource: corev1.VolumeSource{
+			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+				ClaimName: pvcName,
+			},
+		},
+	}
+	// mount
+	vmnt.mount = corev1.VolumeMount{
+		MountPath: "/var/lib/ctdb/shared",
+		Name:      pvcVolName,
+	}
+	return vmnt
+}
