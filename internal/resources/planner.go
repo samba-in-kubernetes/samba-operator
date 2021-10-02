@@ -266,6 +266,9 @@ func (sp *sharePlanner) update() (changed bool, err error) {
 			realmKey := smbcc.Key(sp.realm())
 			cfg.Globals = append(cfg.Globals, realmKey)
 		}
+		if sp.isClustered() {
+			cfg.InstanceFeatures = []smbcc.FeatureFlag{smbcc.CTDB}
+		}
 		sp.ConfigState.Configs[cfgKey] = cfg
 		changed = true
 	}
