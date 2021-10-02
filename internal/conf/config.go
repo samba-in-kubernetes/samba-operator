@@ -29,6 +29,9 @@ type OperatorConfig struct {
 	// SambaDebugLevel can be used to set debugging level for samba
 	// components in deployed containers.
 	SambaDebugLevel string `mapstructure:"samba-debug-level"`
+	// StatePVCSize is a (string) value that indicates how large the operator
+	// should request shared state (not data!) PVCs.
+	StatePVCSize string `mapstructure:"state-pvc-size"`
 }
 
 // Validate the OperatorConfig returning an error if the config is not
@@ -63,6 +66,7 @@ func NewSource() *Source {
 		"svc-watch-container-image",
 		"quay.io/samba.org/svcwatch:latest")
 	v.SetDefault("samba-debug-level", "")
+	v.SetDefault("state-pvc-size", "1Gi")
 	return &Source{v: v}
 }
 
