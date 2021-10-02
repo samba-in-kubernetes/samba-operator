@@ -18,6 +18,15 @@ package smbcc
 // Key values are used to select subsections in the container config.
 type Key string
 
+// FeatureFlag values are used to select top level features that
+// sambacc will apply when setting up a container.
+type FeatureFlag string
+
+const (
+	// CTDB feature flag indicates the system should be configured with CTDB.
+	CTDB FeatureFlag = "ctdb"
+)
+
 // SambaContainerConfig holds one or more configuration for samba
 // containers.
 type SambaContainerConfig struct {
@@ -32,9 +41,10 @@ type SambaContainerConfig struct {
 // ConfigSection identifies the shares, globals, and instance name of
 // a single configuration.
 type ConfigSection struct {
-	Shares       []Key  `json:"shares,omitempty"`
-	Globals      []Key  `json:"globals,omitempty"`
-	InstanceName string `json:"instance_name,omitempty"`
+	Shares           []Key         `json:"shares,omitempty"`
+	Globals          []Key         `json:"globals,omitempty"`
+	InstanceName     string        `json:"instance_name,omitempty"`
+	InstanceFeatures []FeatureFlag `json:"instance_features,omitempty"`
 }
 
 // ShareConfig holds configuration values for one share.
