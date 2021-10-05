@@ -25,6 +25,7 @@ type SmbShareSuite struct {
 	smbShareResource types.NamespacedName
 	shareName        string
 	testAuths        []smbclient.Auth
+	destNamespace    string
 
 	// cached values
 	tc *kube.TestClient
@@ -32,6 +33,9 @@ type SmbShareSuite struct {
 
 func (s *SmbShareSuite) SetupSuite() {
 	// ensure the smbclient test pod exists
+	if s.destNamespace == "" {
+		s.destNamespace = testNamespace
+	}
 	require := s.Require()
 	s.tc = kube.NewTestClient("")
 	for _, fs := range s.fileSources {
@@ -64,7 +68,7 @@ func (s *SmbShareSuite) waitForPodExist() error {
 		ctx,
 		s.tc,
 		fmt.Sprintf("samba-operator.samba.org/service=%s", s.smbShareResource.Name),
-		testNamespace)
+		s.destNamespace)
 }
 
 func (s *SmbShareSuite) waitForPodReady() error {
@@ -76,14 +80,14 @@ func (s *SmbShareSuite) waitForPodReady() error {
 		ctx,
 		s.tc,
 		fmt.Sprintf("samba-operator.samba.org/service=%s", s.smbShareResource.Name),
-		testNamespace)
+		s.destNamespace)
 }
 
 func (s *SmbShareSuite) getPodIP() (string, error) {
 	pod, err := s.tc.GetPodByLabel(
 		context.TODO(),
 		fmt.Sprintf("samba-operator.samba.org/service=%s", s.smbShareResource.Name),
-		testNamespace)
+		s.destNamespace)
 	if err != nil {
 		return "", err
 	}
@@ -110,7 +114,7 @@ func (s *SmbShareSuite) TestShareAccessByIP() {
 func (s *SmbShareSuite) TestShareAccessByServiceName() {
 	svcname := fmt.Sprintf("%s.%s.svc.cluster.local",
 		s.smbShareResource.Name,
-		testNamespace)
+		s.destNamespace)
 	shareAccessSuite := &ShareAccessSuite{
 		share: smbclient.Share{
 			Host: smbclient.Host(svcname),
@@ -189,7 +193,7 @@ func (s *SmbShareWithDNSSuite) TestPodForDNSContainers() {
 	pod, err := s.tc.GetPodByLabel(
 		context.TODO(),
 		fmt.Sprintf("samba-operator.samba.org/service=%s", s.smbShareResource.Name),
-		testNamespace)
+		s.destNamespace)
 	s.Require().NoError(err)
 	s.Require().Equal(4, len(pod.Spec.Containers))
 	names := []string{}
@@ -207,7 +211,7 @@ type SmbShareWithExternalNetSuite struct {
 
 func (s *SmbShareWithExternalNetSuite) TestServiceIsLoadBalancer() {
 	lbl := fmt.Sprintf("samba-operator.samba.org/service=%s", s.smbShareResource.Name)
-	l, err := s.tc.Clientset().CoreV1().Services(testNamespace).List(
+	l, err := s.tc.Clientset().CoreV1().Services(s.destNamespace).List(
 		context.TODO(),
 		metav1.ListOptions{
 			LabelSelector: lbl,
@@ -280,7 +284,7 @@ func allSmbShareSuites() map[string]suite.TestingSuite {
 		fileSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "userssecret1.yaml"),
-				Namespace: testNamespace,
+				Namespace: "default",
 			},
 			{
 				Path:      path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
@@ -292,6 +296,7 @@ func allSmbShareSuites() map[string]suite.TestingSuite {
 			},
 		},
 		smbShareResource: types.NamespacedName{"default", "tshare3"},
+		destNamespace:    "default",
 		shareName:        "My Other Share",
 		testAuths: []smbclient.Auth{{
 			Username: "sambauser",
