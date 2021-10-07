@@ -13,7 +13,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
+	sambaoperatorv1alpha1 "github.com/samba-in-kubernetes/samba-operator/api/v1alpha1"
 	"github.com/samba-in-kubernetes/samba-operator/tests/utils/kube"
 	"github.com/samba-in-kubernetes/samba-operator/tests/utils/smbclient"
 )
@@ -96,6 +98,15 @@ func (s *SmbShareSuite) getPodIP() (string, error) {
 
 func (s *SmbShareSuite) TestPodsReady() {
 	s.Require().NoError(s.waitForPodReady())
+}
+
+func (s *SmbShareSuite) TestSmbShareServerGroup() {
+	smbShare := &sambaoperatorv1alpha1.SmbShare{}
+	err := s.tc.TypedObjectClient().Get(
+		context.TODO(), s.smbShareResource, smbShare)
+	s.Require().NoError(err)
+	s.Require().Equal(s.smbShareResource.Name, smbShare.Name)
+	s.Require().Equal(s.smbShareResource.Name, smbShare.Status.ServerGroup)
 }
 
 func (s *SmbShareSuite) TestShareAccessByIP() {
@@ -332,4 +343,8 @@ func allSmbShareSuites() map[string]suite.TestingSuite {
 	}}
 
 	return m
+}
+
+func init() {
+	utilruntime.Must(sambaoperatorv1alpha1.AddToScheme(kube.TypedClientScheme))
 }
