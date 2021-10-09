@@ -21,6 +21,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	kresource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -287,14 +288,59 @@ func (m *SmbShareManager) getOrCreateDeployment(
 	return dep, true, nil
 }
 
+func (m *SmbShareManager) getOrCreateStatePVC(
+	ctx context.Context,
+	planner *sharePlanner,
+	ns string) (*corev1.PersistentVolumeClaim, bool, error) {
+	// ---
+	name := sharedStatePVCName(planner)
+	squant, err := kresource.ParseQuantity(
+		planner.GlobalConfig.StatePVCSize)
+	if err != nil {
+		return nil, false, err
+	}
+	spec := &corev1.PersistentVolumeClaimSpec{
+		AccessModes: []corev1.PersistentVolumeAccessMode{
+			corev1.ReadWriteMany,
+		},
+		Resources: corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceStorage: squant,
+			},
+		},
+	}
+	pvc, cr, err := m.getOrCreateGenericPVC(
+		ctx, planner.SmbShare, spec, name, ns)
+	if err != nil {
+		m.logger.Error(err, "Error establishing shared state PVC")
+	}
+	return pvc, cr, err
+}
+
 func (m *SmbShareManager) getOrCreatePvc(
 	ctx context.Context,
 	smbShare *sambaoperatorv1alpha1.SmbShare,
 	ns string) (*corev1.PersistentVolumeClaim, bool, error) {
+	// ---
+	name := pvcName(smbShare)
+	spec := smbShare.Spec.Storage.Pvc.Spec
+	pvc, cr, err := m.getOrCreateGenericPVC(
+		ctx, smbShare, spec, name, ns)
+	if err != nil {
+		m.logger.Error(err, "Error establishing data PVC")
+	}
+	return pvc, cr, err
+}
+
+func (m *SmbShareManager) getOrCreateGenericPVC(
+	ctx context.Context,
+	smbShare *sambaoperatorv1alpha1.SmbShare,
+	spec *corev1.PersistentVolumeClaimSpec,
+	name, ns string) (*corev1.PersistentVolumeClaim, bool, error) {
 	// Check if the pvc already exists, if not create it
 	pvc := &corev1.PersistentVolumeClaim{}
 	pvcKey := types.NamespacedName{
-		Name:      pvcName(smbShare),
+		Name:      name,
 		Namespace: ns,
 	}
 	err := m.client.Get(ctx, pvcKey, pvc)
@@ -317,10 +363,10 @@ func (m *SmbShareManager) getOrCreatePvc(
 	// not found - define a new pvc
 	pvc = &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      pvcName(smbShare),
+			Name:      name,
 			Namespace: ns,
 		},
-		Spec: *smbShare.Spec.Storage.Pvc.Spec,
+		Spec: *spec,
 	}
 	// set the smb share instance as the owner and controller
 	err = controllerutil.SetControllerReference(
