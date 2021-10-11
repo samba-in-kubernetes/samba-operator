@@ -20,6 +20,8 @@ import (
 	"github.com/samba-in-kubernetes/samba-operator/tests/utils/smbclient"
 )
 
+var waitForPodsTime = 20 * time.Second
+
 type SmbShareSuite struct {
 	suite.Suite
 
@@ -64,7 +66,7 @@ func (s *SmbShareSuite) TearDownSuite() {
 func (s *SmbShareSuite) waitForPodExist() error {
 	ctx, cancel := context.WithDeadline(
 		context.TODO(),
-		time.Now().Add(10*time.Second))
+		time.Now().Add(waitForPodsTime))
 	defer cancel()
 	l := fmt.Sprintf(
 		"samba-operator.samba.org/service=%s", s.smbShareResource.Name)
