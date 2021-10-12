@@ -73,16 +73,19 @@ func NewTestClient(kubeconfig string) *TestClient {
 	return tc
 }
 
-// PodIsReady returns true if a pod is running and ready.
+// PodIsReady returns true if a pod is running and containers are ready.
 func PodIsReady(pod *corev1.Pod) bool {
+	var podReady, containersReady bool
 	if pod.Status.Phase == corev1.PodRunning {
 		for _, cond := range pod.Status.Conditions {
 			if cond.Type == corev1.PodReady {
-				return true
+				podReady = cond.Status == corev1.ConditionTrue
+			} else if cond.Type == corev1.ContainersReady {
+				containersReady = cond.Status == corev1.ConditionTrue
 			}
 		}
 	}
-	return false
+	return podReady && containersReady
 }
 
 // WaitForPodReadyByLabel will wait for a pod to be ready, up to the deadline
