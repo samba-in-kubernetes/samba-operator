@@ -37,20 +37,48 @@ func (tc *TestClient) Clientset() *kubernetes.Clientset {
 func (tc *TestClient) GetPodByLabel(
 	ctx context.Context, labelSelector string, ns string) (*corev1.Pod, error) {
 	// ---
-	opts := metav1.ListOptions{
+	p, err := tc.FetchPods(ctx, PodFetchOptions{
+		Namespace:     ns,
 		LabelSelector: labelSelector,
-	}
-	l, err := tc.Clientset().CoreV1().Pods(ns).List(ctx, opts)
+	})
 	if err != nil {
 		return nil, err
 	}
-	if len(l.Items) > 1 {
+	return &p[0], nil
+}
+
+// PodFetchOptions controls what set of pods will be fetched.
+type PodFetchOptions struct {
+	Namespace     string
+	LabelSelector string
+	MaxFound      int
+}
+
+func (o PodFetchOptions) max() int {
+	if o.MaxFound == 0 {
+		return 1
+	}
+	return o.MaxFound
+}
+
+// FetchPods returns all available pods matching the PodFetchOptions.
+func (tc *TestClient) FetchPods(
+	ctx context.Context, fo PodFetchOptions) ([]corev1.Pod, error) {
+	// ---
+	opts := metav1.ListOptions{
+		LabelSelector: fo.LabelSelector,
+	}
+	l, err := tc.Clientset().CoreV1().Pods(fo.Namespace).List(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+	if len(l.Items) > fo.max() {
 		return nil, ErrMultipleMatchingPods
 	}
 	if len(l.Items) == 0 {
 		return nil, ErrNoMatchingPods
 	}
-	return &l.Items[0], nil
+	return l.Items, nil
 }
 
 // NewTestClient return a new kube util test client.
