@@ -66,11 +66,16 @@ func (s *SmbShareSuite) waitForPodExist() error {
 		context.TODO(),
 		time.Now().Add(10*time.Second))
 	defer cancel()
-	return kube.WaitForPodExistsByLabel(
+	l := fmt.Sprintf(
+		"samba-operator.samba.org/service=%s", s.smbShareResource.Name)
+	return kube.WaitForAnyPodExists(
 		ctx,
 		s.tc,
-		fmt.Sprintf("samba-operator.samba.org/service=%s", s.smbShareResource.Name),
-		s.destNamespace)
+		kube.PodFetchOptions{
+			Namespace:     s.destNamespace,
+			LabelSelector: l,
+		},
+	)
 }
 
 func (s *SmbShareSuite) waitForPodReady() error {
@@ -78,11 +83,16 @@ func (s *SmbShareSuite) waitForPodReady() error {
 		context.TODO(),
 		time.Now().Add(60*time.Second))
 	defer cancel()
-	return kube.WaitForPodReadyByLabel(
+	l := fmt.Sprintf(
+		"samba-operator.samba.org/service=%s", s.smbShareResource.Name)
+	return kube.WaitForAnyPodReady(
 		ctx,
 		s.tc,
-		fmt.Sprintf("samba-operator.samba.org/service=%s", s.smbShareResource.Name),
-		s.destNamespace)
+		kube.PodFetchOptions{
+			Namespace:     s.destNamespace,
+			LabelSelector: l,
+		},
+	)
 }
 
 func (s *SmbShareSuite) getPodIP() (string, error) {
