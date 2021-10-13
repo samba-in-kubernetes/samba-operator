@@ -46,18 +46,23 @@ func (s *ShareAccessSuite) SetupSuite() {
 		context.TODO(),
 		time.Now().Add(120*time.Second))
 	defer cancel()
-	s.Require().NoError(kube.WaitForPodExistsByLabel(
+	l := "app=samba-operator-test-smbclient"
+	s.Require().NoError(kube.WaitForAnyPodExists(
 		ctx,
 		kube.NewTestClient(""),
-		"app=samba-operator-test-smbclient",
-		testNamespace),
+		kube.PodFetchOptions{
+			Namespace:     testNamespace,
+			LabelSelector: l,
+		}),
 		"smbclient pod does not exist",
 	)
-	s.Require().NoError(kube.WaitForPodReadyByLabel(
+	s.Require().NoError(kube.WaitForAnyPodReady(
 		ctx,
 		kube.NewTestClient(""),
-		"app=samba-operator-test-smbclient",
-		testNamespace),
+		kube.PodFetchOptions{
+			Namespace:     testNamespace,
+			LabelSelector: l,
+		}),
 		"smbclient pod not ready",
 	)
 }
