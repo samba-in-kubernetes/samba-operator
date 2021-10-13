@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${0}")" && pwd)"
 BASE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 DEPLOYMENT_YAML="${BASE_DIR}/tests/files/samba-ad-server-deployment.yml"
 DEPLOYMENT_NAME="samba-ad-server"
+COREDNS_SNIPPET="${BASE_DIR}/tests/files/coredns-snippet.template"
 
 _error() {
 	echo "$@"
@@ -79,14 +80,12 @@ kubectl get cm -n kube-system coredns -o jsonpath='{ .data.Corefile }' \
 echo >> "${TMPFILE}"
 
 # don't repeat an existing block for our domain
-FIRSTLINE="$(head -1 ./tests/files/coredns-snippet.template)"
+FIRSTLINE="$(head -1 "${COREDNS_SNIPPET}")"
 LASTLINE="    }"
 
 sed -i.backup -e "/$FIRSTLINE/,/$LASTLINE/d" ${TMPFILE}
 
-cat tests/files/coredns-snippet.template \
-	| sed -e "s/AD_SERVER_IP/${AD_POD_IP}/" \
-	>> "${TMPFILE}"
+sed -e "s/AD_SERVER_IP/${AD_POD_IP}/" "${COREDNS_SNIPPET}" >> "${TMPFILE}"
 
 echo >> "${TMPFILE}"
 

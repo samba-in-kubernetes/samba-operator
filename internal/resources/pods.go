@@ -24,14 +24,6 @@ import (
 	"github.com/samba-in-kubernetes/samba-operator/internal/conf"
 )
 
-const (
-	userSecretVolName = "users-config"
-	wbSocketsVolName  = "samba-wb-sockets-dir"
-	stateVolName      = "samba-state-dir"
-	osRunVolName      = "run"
-	joinJSONVolName   = "join-data"
-)
-
 func buildPodSpec(
 	planner *sharePlanner,
 	cfg *conf.OperatorConfig,
@@ -49,23 +41,23 @@ func buildADPodSpec(
 	pvcName string) corev1.PodSpec {
 	// ---
 	volumes := []corev1.Volume{}
-	mounts := []corev1.VolumeMount{}
+	sharedMounts := []corev1.VolumeMount{}
 
-	configVol, configMount := configVolumeAndMount(planner)
-	volumes = append(volumes, configVol)
-	mounts = append(mounts, configMount)
+	configVol := configVolumeAndMount(planner)
+	volumes = append(volumes, configVol.volume)
+	sharedMounts = append(sharedMounts, configVol.mount)
 
-	stateVol, stateMount := sambaStateVolumeAndMount(planner)
-	volumes = append(volumes, stateVol)
-	mounts = append(mounts, stateMount)
+	stateVol := sambaStateVolumeAndMount(planner)
+	volumes = append(volumes, stateVol.volume)
+	sharedMounts = append(sharedMounts, stateVol.mount)
 
 	// for smbd only
-	shareVol, shareMount := shareVolumeAndMount(planner, pvcName)
-	volumes = append(volumes, shareVol)
+	shareVol := shareVolumeAndMount(planner, pvcName)
+	volumes = append(volumes, shareVol.volume)
 
 	// for smbd and winbind only (not init containers)
-	wbSockVol, wbSockMount := wbSocketsVolumeAndMount(planner)
-	volumes = append(volumes, wbSockVol)
+	wbSockVol := wbSocketsVolumeAndMount(planner)
+	volumes = append(volumes, wbSockVol.volume)
 
 	jsrc := getJoinSources(planner)
 	joinEnv := []corev1.EnvVar{{
@@ -86,14 +78,14 @@ func buildADPodSpec(
 				Name:         "init",
 				Args:         []string{"init"},
 				Env:          podEnv,
-				VolumeMounts: mounts,
+				VolumeMounts: sharedMounts,
 			},
 			{
 				Image:        cfg.SmbdContainerImage,
 				Name:         "must-join",
 				Args:         []string{"must-join"},
 				Env:          append(podEnv, joinEnv...),
-				VolumeMounts: append(mounts, jsrc.mounts...),
+				VolumeMounts: append(sharedMounts, jsrc.mounts...),
 			},
 		},
 		Containers: []corev1.Container{
@@ -106,7 +98,7 @@ func buildADPodSpec(
 					ContainerPort: 445,
 					Name:          "smb",
 				}},
-				VolumeMounts: append(mounts, wbSockMount, shareMount),
+				VolumeMounts: append(sharedMounts, wbSockVol.mount, shareVol.mount),
 				LivenessProbe: &corev1.Probe{
 					Handler: corev1.Handler{
 						TCPSocket: &corev1.TCPSocketAction{
@@ -120,7 +112,7 @@ func buildADPodSpec(
 				Name:         "wb", //cfg.WinbindContainerName,
 				Args:         []string{"run", "winbindd"},
 				Env:          podEnv,
-				VolumeMounts: append(mounts, wbSockMount),
+				VolumeMounts: append(sharedMounts, wbSockVol.mount),
 				LivenessProbe: &corev1.Probe{
 					Handler: corev1.Handler{
 						Exec: &corev1.ExecAction{
@@ -136,16 +128,16 @@ func buildADPodSpec(
 		},
 	}
 	if planner.dnsRegister() != dnsRegisterNever {
-		watchVol, watchMount := svcWatchVolumeAndMount(
+		watchVol := svcWatchVolumeAndMount(
 			planner.serviceWatchStateDir(),
 		)
-		podSpec.Volumes = append(podSpec.Volumes, watchVol)
+		podSpec.Volumes = append(podSpec.Volumes, watchVol.volume)
 		podSpec.Containers = append(podSpec.Containers, corev1.Container{
 			Image:        cfg.SmbdContainerImage,
 			Name:         "dns-register",
 			Args:         planner.dnsRegisterArgs(),
 			Env:          podEnv,
-			VolumeMounts: append(mounts, wbSockMount, watchMount),
+			VolumeMounts: append(sharedMounts, wbSockVol.mount, watchVol.mount),
 		})
 		serviceLabelSel := fmt.Sprintf("metadata.labels['%s']", svcSelectorKey)
 		podSpec.Containers = append(podSpec.Containers, corev1.Container{
@@ -177,7 +169,7 @@ func buildADPodSpec(
 					},
 				},
 			},
-			VolumeMounts: []corev1.VolumeMount{watchMount},
+			VolumeMounts: []corev1.VolumeMount{watchVol.mount},
 		})
 	}
 	return podSpec
@@ -189,24 +181,24 @@ func buildUserPodSpec(
 	pvcName string) corev1.PodSpec {
 	// ---
 	volumes := []corev1.Volume{}
-	mounts := []corev1.VolumeMount{}
+	sharedMounts := []corev1.VolumeMount{}
 
-	shareVol, shareMount := shareVolumeAndMount(planner, pvcName)
-	volumes = append(volumes, shareVol)
-	mounts = append(mounts, shareMount)
+	shareVol := shareVolumeAndMount(planner, pvcName)
+	volumes = append(volumes, shareVol.volume)
+	sharedMounts = append(sharedMounts, shareVol.mount)
 
-	configVol, configMount := configVolumeAndMount(planner)
-	volumes = append(volumes, configVol)
-	mounts = append(mounts, configMount)
+	configVol := configVolumeAndMount(planner)
+	volumes = append(volumes, configVol.volume)
+	sharedMounts = append(sharedMounts, configVol.mount)
 
-	osRunVol, osRunMount := osRunVolumeAndMount(planner)
-	volumes = append(volumes, osRunVol)
-	mounts = append(mounts, osRunMount)
+	osRunVol := osRunVolumeAndMount(planner)
+	volumes = append(volumes, osRunVol.volume)
+	sharedMounts = append(sharedMounts, osRunVol.mount)
 
-	if planner.securityMode() == userMode && planner.userSecuritySource().Configured {
-		v, m := userConfigVolumeAndMount(planner)
-		volumes = append(volumes, v)
-		mounts = append(mounts, m)
+	if planner.userSecuritySource().Configured {
+		v := userConfigVolumeAndMount(planner)
+		volumes = append(volumes, v.volume)
+		sharedMounts = append(sharedMounts, v.mount)
 	}
 	podEnv := defaultPodEnv(planner)
 	podSpec := corev1.PodSpec{
@@ -220,7 +212,7 @@ func buildUserPodSpec(
 				ContainerPort: 445,
 				Name:          "smb",
 			}},
-			VolumeMounts: mounts,
+			VolumeMounts: sharedMounts,
 			LivenessProbe: &corev1.Probe{
 				Handler: corev1.Handler{
 					TCPSocket: &corev1.TCPSocketAction{
@@ -231,172 +223,6 @@ func buildUserPodSpec(
 		}},
 	}
 	return podSpec
-}
-
-func shareVolumeAndMount(planner *sharePlanner, pvcName string) (
-	corev1.Volume, corev1.VolumeMount) {
-	// volume
-	pvcVolName := pvcName + "-smb"
-	volume := corev1.Volume{
-		Name: pvcVolName,
-		VolumeSource: corev1.VolumeSource{
-			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-				ClaimName: pvcName,
-			},
-		},
-	}
-	// mount
-	mount := corev1.VolumeMount{
-		MountPath: planner.sharePath(),
-		Name:      pvcVolName,
-	}
-	return volume, mount
-}
-
-func configVolumeAndMount(planner *sharePlanner) (
-	corev1.Volume, corev1.VolumeMount) {
-	// volume
-	cmSrc := &corev1.ConfigMapVolumeSource{}
-	cmSrc.Name = planner.instanceName()
-	volume := corev1.Volume{
-		Name: configMapName,
-		VolumeSource: corev1.VolumeSource{
-			ConfigMap: cmSrc,
-		},
-	}
-	// mount
-	mount := corev1.VolumeMount{
-		MountPath: planner.containerConfigDir(),
-		Name:      configMapName,
-	}
-	return volume, mount
-}
-
-func userConfigVolumeAndMount(planner *sharePlanner) (
-	corev1.Volume, corev1.VolumeMount) {
-	// volume
-	uss := planner.userSecuritySource()
-	volume := corev1.Volume{
-		Name: userSecretVolName,
-		VolumeSource: corev1.VolumeSource{
-			Secret: &corev1.SecretVolumeSource{
-				SecretName: uss.Secret,
-				Items: []corev1.KeyToPath{{
-					Key:  uss.Key,
-					Path: planner.usersConfigFileName(),
-				}},
-			},
-		},
-	}
-	// mount
-	mount := corev1.VolumeMount{
-		MountPath: planner.usersConfigDir(),
-		Name:      userSecretVolName,
-	}
-	return volume, mount
-}
-
-func sambaStateVolumeAndMount(planner *sharePlanner) (
-	corev1.Volume, corev1.VolumeMount) {
-	// todo: should this use a persistent volume?
-	// volume
-	volume := corev1.Volume{
-		Name: stateVolName,
-		VolumeSource: corev1.VolumeSource{
-			EmptyDir: &corev1.EmptyDirVolumeSource{
-				Medium: corev1.StorageMediumDefault,
-			},
-		},
-	}
-	// mount
-	mount := corev1.VolumeMount{
-		MountPath: planner.sambaStateDir(),
-		Name:      stateVolName,
-	}
-	return volume, mount
-}
-
-func osRunVolumeAndMount(planner *sharePlanner) (
-	corev1.Volume, corev1.VolumeMount) {
-	// volume
-	volume := corev1.Volume{
-		Name: osRunVolName,
-		VolumeSource: corev1.VolumeSource{
-			EmptyDir: &corev1.EmptyDirVolumeSource{
-				Medium: corev1.StorageMediumMemory,
-			},
-		},
-	}
-	// mount
-	mount := corev1.VolumeMount{
-		MountPath: planner.osRunDir(),
-		Name:      osRunVolName,
-	}
-	return volume, mount
-}
-
-func wbSocketsVolumeAndMount(planner *sharePlanner) (
-	corev1.Volume, corev1.VolumeMount) {
-	// volume
-	volume := corev1.Volume{
-		Name: wbSocketsVolName,
-		VolumeSource: corev1.VolumeSource{
-			EmptyDir: &corev1.EmptyDirVolumeSource{
-				Medium: corev1.StorageMediumMemory,
-			},
-		},
-	}
-	// mount
-	mount := corev1.VolumeMount{
-		MountPath: planner.winbindSocketsDir(),
-		Name:      wbSocketsVolName,
-	}
-	return volume, mount
-}
-
-func joinJSONFileVolumeAndMount(planner *sharePlanner, index int) (
-	corev1.Volume, corev1.VolumeMount) {
-	// volume
-	vname := joinJSONVolName + planner.joinJSONSuffix(index)
-	j := planner.SecurityConfig.Spec.JoinSources[index]
-	volume := corev1.Volume{
-		Name: vname,
-		VolumeSource: corev1.VolumeSource{
-			Secret: &corev1.SecretVolumeSource{
-				SecretName: j.UserJoin.Secret,
-				Items: []corev1.KeyToPath{{
-					Key:  j.UserJoin.Key,
-					Path: planner.joinJSONFileName(),
-				}},
-			},
-		},
-	}
-	// mount
-	mount := corev1.VolumeMount{
-		MountPath: planner.joinJSONSourceDir(index),
-		Name:      vname,
-	}
-	return volume, mount
-}
-
-func svcWatchVolumeAndMount(dir string) (
-	corev1.Volume, corev1.VolumeMount) {
-	// volume
-	name := "svcwatch"
-	volume := corev1.Volume{
-		Name: name,
-		VolumeSource: corev1.VolumeSource{
-			EmptyDir: &corev1.EmptyDirVolumeSource{
-				Medium: corev1.StorageMediumMemory,
-			},
-		},
-	}
-	// mount
-	mount := corev1.VolumeMount{
-		MountPath: dir,
-		Name:      name,
-	}
-	return volume, mount
 }
 
 func defaultPodEnv(planner *sharePlanner) []corev1.EnvVar {
@@ -436,9 +262,9 @@ func getJoinSources(planner *sharePlanner) joinSources {
 	}
 	for i, js := range planner.SecurityConfig.Spec.JoinSources {
 		if js.UserJoin != nil {
-			v, m := joinJSONFileVolumeAndMount(planner, i)
-			src.volumes = append(src.volumes, v)
-			src.mounts = append(src.mounts, m)
+			vm := joinJSONFileVolumeAndMount(planner, i)
+			src.volumes = append(src.volumes, vm.volume)
+			src.mounts = append(src.mounts, vm.mount)
 			src.paths = append(src.paths, planner.joinJSONSourcePath(i))
 		}
 	}
