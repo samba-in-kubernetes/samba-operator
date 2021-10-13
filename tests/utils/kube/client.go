@@ -33,20 +33,6 @@ func (tc *TestClient) Clientset() *kubernetes.Clientset {
 	return tc.clientset
 }
 
-// GetPodByLabel gets a single unique pod given a label selector and namespace.
-func (tc *TestClient) GetPodByLabel(
-	ctx context.Context, labelSelector string, ns string) (*corev1.Pod, error) {
-	// ---
-	p, err := tc.FetchPods(ctx, PodFetchOptions{
-		Namespace:     ns,
-		LabelSelector: labelSelector,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return &p[0], nil
-}
-
 // PodFetchOptions controls what set of pods will be fetched.
 type PodFetchOptions struct {
 	Namespace     string
@@ -114,52 +100,6 @@ func PodIsReady(pod *corev1.Pod) bool {
 		}
 	}
 	return podReady && containersReady
-}
-
-// WaitForPodReadyByLabel will wait for a pod to be ready, up to the deadline
-// specified by the context, if the context lacks a deadline the call will
-// block indefinitely. The label given must match only one pod, or an error
-// will be returned.
-func WaitForPodReadyByLabel(
-	ctx context.Context, tc *TestClient, label, ns string) error {
-	// ---
-	for {
-		pod, err := tc.GetPodByLabel(ctx, label, ns)
-		if err != nil {
-			return err
-		}
-		if PodIsReady(pod) {
-			break
-		}
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		time.Sleep(200 * time.Millisecond)
-	}
-	return nil
-}
-
-// WaitForPodExistsByLabel will wait for a pod to exist, up to the deadline
-// specified by the context, if the context lacks a deadline the call will
-// block indefinitely. The label given must match only one pod, or an error
-// will be returned.
-func WaitForPodExistsByLabel(
-	ctx context.Context, tc *TestClient, label, ns string) error {
-	// ---
-	for {
-		_, err := tc.GetPodByLabel(ctx, label, ns)
-		if err == nil {
-			break
-		}
-		if err != nil && !errors.Is(err, ErrNoMatchingPods) {
-			return err
-		}
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		time.Sleep(200 * time.Millisecond)
-	}
-	return nil
 }
 
 func waitFor(ctx context.Context, cond func() (bool, error)) error {
