@@ -96,14 +96,19 @@ func (s *SmbShareSuite) waitForPodReady() error {
 }
 
 func (s *SmbShareSuite) getPodIP() (string, error) {
-	pod, err := s.tc.GetPodByLabel(
+	l := fmt.Sprintf(
+		"samba-operator.samba.org/service=%s", s.smbShareResource.Name)
+	pods, err := s.tc.FetchPods(
 		context.TODO(),
-		fmt.Sprintf("samba-operator.samba.org/service=%s", s.smbShareResource.Name),
-		s.destNamespace)
+		kube.PodFetchOptions{
+			Namespace:     s.destNamespace,
+			LabelSelector: l,
+		},
+	)
 	if err != nil {
 		return "", err
 	}
-	return pod.Status.PodIP, nil
+	return pods[0].Status.PodIP, nil
 }
 
 func (s *SmbShareSuite) TestPodsReady() {
@@ -211,14 +216,19 @@ func (s *SmbShareWithDNSSuite) TestShareAccessByDomainName() {
 }
 
 func (s *SmbShareWithDNSSuite) TestPodForDNSContainers() {
-	pod, err := s.tc.GetPodByLabel(
+	l := fmt.Sprintf(
+		"samba-operator.samba.org/service=%s", s.smbShareResource.Name)
+	pods, err := s.tc.FetchPods(
 		context.TODO(),
-		fmt.Sprintf("samba-operator.samba.org/service=%s", s.smbShareResource.Name),
-		s.destNamespace)
+		kube.PodFetchOptions{
+			Namespace:     s.destNamespace,
+			LabelSelector: l,
+		},
+	)
 	s.Require().NoError(err)
-	s.Require().Equal(4, len(pod.Spec.Containers))
+	s.Require().Equal(4, len(pods[0].Spec.Containers))
 	names := []string{}
-	for _, cstatus := range pod.Status.ContainerStatuses {
+	for _, cstatus := range pods[0].Status.ContainerStatuses {
 		names = append(names, cstatus.Name)
 		s.Require().True(cstatus.Ready)
 	}
