@@ -182,17 +182,20 @@ func (s *SmbShareSuite) TestShareEvents() {
 	s.Require().NoError(err)
 	s.Require().GreaterOrEqual(len(l.Items), 1)
 	numCreatedPVC := 0
-	numCreatedDeployment := 0
+	numCreatedInstance := 0
 	for _, event := range l.Items {
 		if event.Reason == "CreatedPersistentVolumeClaim" {
 			numCreatedPVC++
 		}
 		if event.Reason == "CreatedDeployment" {
-			numCreatedDeployment++
+			numCreatedInstance++
+		}
+		if event.Reason == "CreatedStatefulSet" {
+			numCreatedInstance++
 		}
 	}
 	s.Require().Equal(1, numCreatedPVC)
-	s.Require().Equal(1, numCreatedDeployment)
+	s.Require().Equal(1, numCreatedInstance)
 }
 
 type SmbShareWithDNSSuite struct {
