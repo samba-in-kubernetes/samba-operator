@@ -276,6 +276,13 @@ func buildSmbdCtr(
 			Name:          "smb",
 		}},
 		VolumeMounts: getMounts(vols),
+		ReadinessProbe: &corev1.Probe{
+			Handler: corev1.Handler{
+				TCPSocket: &corev1.TCPSocketAction{
+					Port: intstr.FromInt(445),
+				},
+			},
+		},
 		LivenessProbe: &corev1.Probe{
 			Handler: corev1.Handler{
 				TCPSocket: &corev1.TCPSocketAction{
