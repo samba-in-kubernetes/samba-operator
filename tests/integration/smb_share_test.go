@@ -30,6 +30,7 @@ type SmbShareSuite struct {
 	shareName        string
 	testAuths        []smbclient.Auth
 	destNamespace    string
+	maxPods          int
 
 	// cached values
 	tc *kube.TestClient
@@ -39,6 +40,9 @@ func (s *SmbShareSuite) SetupSuite() {
 	// ensure the smbclient test pod exists
 	if s.destNamespace == "" {
 		s.destNamespace = testNamespace
+	}
+	if s.maxPods == 0 {
+		s.maxPods = 1
 	}
 	require := s.Require()
 	s.tc = kube.NewTestClient("")
@@ -76,8 +80,8 @@ func (s *SmbShareSuite) waitForPodExist() error {
 		kube.PodFetchOptions{
 			Namespace:     s.destNamespace,
 			LabelSelector: l,
-		},
-	)
+			MaxFound:      s.maxPods,
+		})
 }
 
 func (s *SmbShareSuite) waitForPodReady() error {
@@ -93,8 +97,8 @@ func (s *SmbShareSuite) waitForPodReady() error {
 		kube.PodFetchOptions{
 			Namespace:     s.destNamespace,
 			LabelSelector: l,
-		},
-	)
+			MaxFound:      s.maxPods,
+		})
 }
 
 func (s *SmbShareSuite) getPodIP() (string, error) {
@@ -105,8 +109,8 @@ func (s *SmbShareSuite) getPodIP() (string, error) {
 		kube.PodFetchOptions{
 			Namespace:     s.destNamespace,
 			LabelSelector: l,
-		},
-	)
+			MaxFound:      s.maxPods,
+		})
 	if err != nil {
 		return "", err
 	}
