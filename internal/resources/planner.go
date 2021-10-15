@@ -40,6 +40,12 @@ const (
 	dnsRegisterClusterIP  = dnsRegister("cluster-ip")
 )
 
+// "cheat codes"
+const (
+	nodeSpreadKey     = "samba-operator.samba.org/node-spread"
+	nodeSpreadDisable = "false"
+)
+
 type userSecuritySource struct {
 	Configured bool
 	Namespace  string
@@ -433,4 +439,10 @@ func (sp *sharePlanner) clusterSize() int32 {
 		return 1
 	}
 	return int32(sp.SmbShare.Spec.Scaling.MinClusterSize)
+}
+
+// nodeSpread returns true if pods are required to be spread over multiple
+// nodes.
+func (sp *sharePlanner) nodeSpread() bool {
+	return sp.SmbShare.Annotations[nodeSpreadKey] != nodeSpreadDisable
 }
