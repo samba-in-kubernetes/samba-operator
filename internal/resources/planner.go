@@ -427,6 +427,10 @@ func (sp *sharePlanner) sambaContainerDebugLevel() string {
 	return sp.GlobalConfig.SambaDebugLevel
 }
 
+func (sp *sharePlanner) mayCluster() bool {
+	return sp.GlobalConfig.ClusterSupport == "ctdb-is-experimental"
+}
+
 func (sp *sharePlanner) isClustered() bool {
 	if sp.SmbShare.Spec.Scaling == nil {
 		return false
