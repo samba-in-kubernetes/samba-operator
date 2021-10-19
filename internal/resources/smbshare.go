@@ -17,6 +17,7 @@ package resources
 
 import (
 	"context"
+	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -156,6 +157,13 @@ func (m *SmbShareManager) Update(
 	}
 
 	if planner.isClustered() {
+		if !planner.mayCluster() {
+			err = fmt.Errorf(
+				"CTDB clustering not enabled in ClusterSupport: %v",
+				planner.GlobalConfig.ClusterSupport)
+			m.logger.Error(err, "Clustering support is not enabled")
+			return Result{err: err}
+		}
 		_, created, err := m.getOrCreateStatePVC(
 			ctx, planner, destNamespace)
 		if err != nil {
