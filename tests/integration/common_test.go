@@ -15,6 +15,8 @@ var (
 	kustomizeCmd = "kustomize"
 
 	testExpectedImage = "quay.io/samba.org/samba-operator:latest"
+
+	testClusteredShares = false
 )
 
 func init() {
@@ -45,5 +47,10 @@ func init() {
 	timg := os.Getenv("SMBOP_TEST_EXPECT_MANAGER_IMG")
 	if timg != "" {
 		testExpectedImage = timg
+	}
+
+	testClustering := os.Getenv("SMBOP_TEST_CLUSTERED")
+	if testClustering != "" {
+		testClusteredShares = true
 	}
 }
