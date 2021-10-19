@@ -32,6 +32,9 @@ type OperatorConfig struct {
 	// StatePVCSize is a (string) value that indicates how large the operator
 	// should request shared state (not data!) PVCs.
 	StatePVCSize string `mapstructure:"state-pvc-size"`
+	// ClusterSupport is a (string) value that indicates if the operator
+	// will be allowed to set up clustered instances.
+	ClusterSupport string `mapstructure:"cluster-support"`
 }
 
 // Validate the OperatorConfig returning an error if the config is not
@@ -67,6 +70,7 @@ func NewSource() *Source {
 		"quay.io/samba.org/svcwatch:latest")
 	v.SetDefault("samba-debug-level", "")
 	v.SetDefault("state-pvc-size", "1Gi")
+	v.SetDefault("cluster-support", "")
 	return &Source{v: v}
 }
 
