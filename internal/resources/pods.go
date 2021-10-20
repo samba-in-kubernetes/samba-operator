@@ -261,6 +261,151 @@ func buildClusteredUserPodSpec(
 	return podSpec
 }
 
+func buildClusteredADPodSpec(
+	planner *sharePlanner,
+	dataPVCName, statePVCName string) corev1.PodSpec {
+	// ---
+	var (
+		volumes        []volMount
+		podCfgVols     []volMount
+		initContainers []corev1.Container
+		containers     []corev1.Container
+	)
+
+	shareVol := shareVolumeAndMount(planner, dataPVCName)
+	volumes = append(volumes, shareVol)
+
+	configVol := configVolumeAndMount(planner)
+	volumes = append(volumes, configVol)
+	podCfgVols = append(podCfgVols, configVol)
+
+	stateVol := sambaStateVolumeAndMount(planner)
+	volumes = append(volumes, stateVol)
+
+	ctdbConfigVol := ctdbConfigVolumeAndMount(planner)
+	volumes = append(volumes, ctdbConfigVol)
+
+	ctdbPeristentVol := ctdbPersistentVolumeAndMount(planner)
+	volumes = append(volumes, ctdbPeristentVol)
+
+	ctdbVolatileVol := ctdbVolatileVolumeAndMount(planner)
+	volumes = append(volumes, ctdbVolatileVol)
+
+	ctdbSocketsVol := ctdbSocketsVolumeAndMount(planner)
+	volumes = append(volumes, ctdbSocketsVol)
+
+	ctdbSharedVol := ctdbSharedStateVolumeAndMount(planner, statePVCName)
+	volumes = append(volumes, ctdbSharedVol)
+
+	// the winbind sockets volume is needed for winbind and clients (smbd)
+	wbSockVol := wbSocketsVolumeAndMount(planner)
+	volumes = append(volumes, wbSockVol)
+
+	jsrc := getJoinSources(planner)
+	joinEnv := []corev1.EnvVar{{
+		Name:  "SAMBACC_JOIN_FILES",
+		Value: planner.joinEnvPaths(jsrc.paths),
+	}}
+	volumes = append(volumes, jsrc.volumes...)
+
+	podEnv := defaultPodEnv(planner)
+	ctdbEnv := append(podEnv, ctdbHostnameEnv(planner)...)
+
+	initContainers = append(
+		initContainers,
+		buildInitCtr(planner, podEnv, append(
+			podCfgVols,
+			stateVol,
+			ctdbSharedVol, // needed to decide if real init or not
+		)))
+
+	joinVols := append(
+		append(podCfgVols, stateVol),
+		jsrc.volumes...)
+	initContainers = append(
+		initContainers,
+		buildMustJoinCtr(planner, joinEnv, joinVols),
+	)
+
+	initContainers = append(
+		initContainers,
+		buildCTDBMigrateCtr(planner, ctdbEnv, append(
+			podCfgVols,
+			stateVol,
+			ctdbSharedVol,
+			ctdbConfigVol,
+			ctdbPeristentVol,
+		)))
+
+	ctdbInitVols := append(
+		podCfgVols,
+		stateVol,
+		ctdbSharedVol,
+		ctdbConfigVol,
+	)
+	initContainers = append(
+		initContainers,
+		buildCTDBSetNodeCtr(planner, ctdbEnv, ctdbInitVols),
+		buildCTDBMustHaveNodeCtr(planner, ctdbEnv, ctdbInitVols),
+	)
+
+	ctdbdVols := append(
+		podCfgVols,
+		ctdbConfigVol,
+		ctdbPeristentVol,
+		ctdbVolatileVol,
+		ctdbSocketsVol,
+		ctdbSharedVol,
+	)
+	containers = append(
+		containers,
+		buildCTDBDaemonCtr(planner, ctdbEnv, ctdbdVols))
+
+	ctdbManageNodesVols := append(
+		podCfgVols,
+		ctdbConfigVol,
+		ctdbSocketsVol,
+		ctdbSharedVol,
+	)
+	containers = append(
+		containers,
+		buildCTDBManageNodesCtr(planner, ctdbEnv, ctdbManageNodesVols))
+
+	// winbindd
+	wbVols := append(
+		podCfgVols,
+		stateVol,
+		wbSockVol,
+		ctdbConfigVol,
+		ctdbPeristentVol,
+		ctdbVolatileVol,
+		ctdbSocketsVol,
+		ctdbSharedVol,
+	)
+	containers = append(
+		containers,
+		buildWinbinddCtr(planner, podEnv, wbVols))
+
+	// smbd
+	containers = append(
+		containers,
+		buildSmbdCtr(planner, podEnv, volumes))
+
+	// TODO: dns-register containers
+	// It may not handle running >1 pod well ATM. It may make more sense to
+	// teach the container/sambacc side to be cluster-leader aware
+
+	shareProcessNamespace := true
+	podSpec := corev1.PodSpec{
+		Volumes: getVolumes(volumes),
+		// we need to set ShareProcessNamespace to true.
+		ShareProcessNamespace: &shareProcessNamespace,
+		InitContainers:        initContainers,
+		Containers:            containers,
+	}
+	return podSpec
+}
+
 func buildSmbdCtr(
 	planner *sharePlanner,
 	env []corev1.EnvVar,
