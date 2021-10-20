@@ -39,6 +39,9 @@ func buildClusteredPodSPec(
 	planner *sharePlanner,
 	dataPVCName, statePVCName string) corev1.PodSpec {
 	// ---
+	if planner.securityMode() == adMode {
+		return buildClusteredADPodSpec(planner, dataPVCName, statePVCName)
+	}
 	return buildClusteredUserPodSpec(planner, dataPVCName, statePVCName)
 }
 
