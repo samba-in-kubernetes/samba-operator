@@ -395,6 +395,29 @@ func allSmbShareSuites() map[string]suite.TestingSuite {
 				Password: "r0b0t",
 			}},
 		}
+		m["smbShareClusteredDM1"] = &SmbShareSuite{
+			fileSources: []kube.FileSource{
+				{
+					Path:      path.Join(testFilesDir, "joinsecret1.yaml"),
+					Namespace: testNamespace,
+				},
+				{
+					Path:      path.Join(testFilesDir, "smbsecurityconfig2.yaml"),
+					Namespace: testNamespace,
+				},
+				{
+					Path:      path.Join(testFilesDir, "smbshare_ctdb2.yaml"),
+					Namespace: testNamespace,
+				},
+			},
+			smbShareResource: types.NamespacedName{testNamespace, "cshare2"},
+			maxPods:          3,
+			shareName:        "Three Kingdoms",
+			testAuths: []smbclient.Auth{{
+				Username: "DOMAIN1\\ckent",
+				Password: "1115Rose.",
+			}},
+		}
 	}
 
 	return m
