@@ -23,7 +23,6 @@ import (
 var svcSelectorKey = "samba-operator.samba.org/service"
 
 func newServiceForSmb(planner *sharePlanner, ns string) *corev1.Service {
-	// as of now we only generate ClusterIP type services
 	labels := labelsForSmbServer(planner.instanceName())
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
