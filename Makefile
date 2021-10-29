@@ -17,6 +17,7 @@ GIT_VERSION = $(shell git describe --match='v[0-9]*.[0-9].[0-9]' 2>/dev/null || 
 CONFIG_KUST_DIR:=config/default
 CRD_KUST_DIR:=config/crd
 MGR_KUST_DIR:=config/manager
+KUSTOMIZE_DEFAULT_BASE:=../default
 
 GO_CMD:=go
 GOFMT_CMD:=gofmt
@@ -82,7 +83,12 @@ deploy: manifests kustomize set-image
 delete-deploy: manifests kustomize
 	$(KUSTOMIZE) build $(CONFIG_KUST_DIR) | kubectl delete -f -
 
-set-image: kustomize
+%/kustomization.yaml: $(KUSTOMIZE)
+	mkdir -p $*
+	touch $@
+	cd $* && $(KUSTOMIZE) edit add base $(KUSTOMIZE_DEFAULT_BASE)
+
+set-image: kustomize $(MGR_KUST_DIR)/kustomization.yaml
 	cd $(MGR_KUST_DIR) && $(KUSTOMIZE) edit set image controller=${IMG}
 .PHONY: set-image
 
