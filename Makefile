@@ -148,15 +148,16 @@ endif
 # Generate bundle manifests and metadata, then validate generated files.
 .PHONY: bundle
 bundle: manifests
-	operator-sdk generate kustomize manifests -q
-	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
-	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
-	operator-sdk bundle validate ./bundle
+	@echo "This rule is currently disabled. It is retained for reference only."
+	@false
+	# See vcs history for how this could be restored or adapted in the future.
 
 # Build the bundle image.
 .PHONY: bundle-build
 bundle-build:
-	$(CONTAINER_CMD) build $(CONTAINER_BUILD_OPTS) -f bundle.Dockerfile -t $(BUNDLE_IMG) .
+	@echo "This rule is currently disabled. It is retained for reference only."
+	@false
+	# See vcs history for how this could be restored or adapted in the future.
 
 .PHONY: check check-revive check-format
 
