@@ -14,6 +14,10 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 COMMIT_ID = $(shell git describe --abbrev=40 --always --dirty=+ 2>/dev/null)
 GIT_VERSION = $(shell git describe --match='v[0-9]*.[0-9].[0-9]' 2>/dev/null || echo "(unset)")
 
+CONFIG_KUST_DIR:=config/default
+CRD_KUST_DIR:=config/crd
+MGR_KUST_DIR:=config/manager
+
 GO_CMD:=go
 GOFMT_CMD:=gofmt
 
@@ -65,26 +69,26 @@ run: generate vet manifests
 
 # Install CRDs into a cluster
 install: manifests kustomize
-	$(KUSTOMIZE) build config/crd | kubectl apply -f -
+	$(KUSTOMIZE) build $(CRD_KUST_DIR) | kubectl apply -f -
 
 # Uninstall CRDs from a cluster
 uninstall: manifests kustomize
-	$(KUSTOMIZE) build config/crd | kubectl delete -f -
+	$(KUSTOMIZE) build $(CRD_KUST_DIR) | kubectl delete -f -
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 deploy: manifests kustomize set-image
-	$(KUSTOMIZE) build config/default | kubectl apply -f -
+	$(KUSTOMIZE) build $(CONFIG_KUST_DIR) | kubectl apply -f -
 
 delete-deploy: manifests kustomize
-	$(KUSTOMIZE) build config/default | kubectl delete -f -
+	$(KUSTOMIZE) build $(CONFIG_KUST_DIR) | kubectl delete -f -
 
 set-image: kustomize
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	cd $(MGR_KUST_DIR) && $(KUSTOMIZE) edit set image controller=${IMG}
 .PHONY: set-image
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=$(CRD_KUST_DIR)/bases
 
 # Run go fmt to reformat code
 reformat:
