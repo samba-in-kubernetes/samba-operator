@@ -26,6 +26,7 @@ endif
 
 GO_CMD:=go
 GOFMT_CMD:=gofmt
+KUBECTL_CMD:=kubectl
 
 # Image URL to use all building/pushing image targets
 TAG ?= latest
@@ -75,18 +76,18 @@ run: generate vet manifests
 
 # Install CRDs into a cluster
 install: manifests kustomize
-	$(KUSTOMIZE) build $(CRD_KUST_DIR) | kubectl apply -f -
+	$(KUSTOMIZE) build $(CRD_KUST_DIR) | $(KUBECTL_CMD) apply -f -
 
 # Uninstall CRDs from a cluster
 uninstall: manifests kustomize
-	$(KUSTOMIZE) build $(CRD_KUST_DIR) | kubectl delete -f -
+	$(KUSTOMIZE) build $(CRD_KUST_DIR) | $(KUBECTL_CMD) delete -f -
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 deploy: manifests kustomize set-image
-	$(KUSTOMIZE) build $(CONFIG_KUST_DIR) | kubectl apply -f -
+	$(KUSTOMIZE) build $(CONFIG_KUST_DIR) | $(KUBECTL_CMD) apply -f -
 
 delete-deploy: manifests kustomize
-	$(KUSTOMIZE) build $(CONFIG_KUST_DIR) | kubectl delete -f -
+	$(KUSTOMIZE) build $(CONFIG_KUST_DIR) | $(KUBECTL_CMD) delete -f -
 
 %/kustomization.yaml: $(KUSTOMIZE)
 	mkdir -p $*
