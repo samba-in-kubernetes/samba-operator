@@ -27,3 +27,6 @@ bin
 
 # auto-generated tag files
 tags
+
+# user-local configuration
+config/developer/
