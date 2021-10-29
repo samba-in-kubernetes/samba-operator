@@ -53,6 +53,16 @@ endif
 ifeq ($(CONTAINER_CMD),)
 	CONTAINER_CMD:=$(shell podman version >/dev/null 2>&1 && echo podman)
 endif
+# handle the case where podman is present but is (defaulting) to remote and is
+# not not functioning correctly. Example: mac platform but not 'podman machine'
+# vms are ready
+ifeq ($(CONTAINER_CMD),)
+	CONTAINER_CMD:=$(shell podman --version >/dev/null 2>&1 && echo podman)
+ifneq ($(CONTAINER_CMD),)
+$(warning podman detected but 'podman version' failed. \
+	this may mean your podman is set up for remote use, but is not working)
+endif
+endif
 
 all: manager build-integration-tests
 
