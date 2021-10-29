@@ -27,6 +27,7 @@ endif
 GO_CMD:=go
 GOFMT_CMD:=gofmt
 KUBECTL_CMD:=kubectl
+BUILDAH_CMD:=buildah
 
 # Image URL to use all building/pushing image targets
 TAG ?= latest
@@ -124,11 +125,11 @@ image-build:
 
 .PHONY: image-build-buildah
 image-build-buildah: build
-	cn=$$(buildah from registry.access.redhat.com/ubi8/ubi-minimal:latest) && \
-	buildah copy $$cn bin/manager /manager && \
-	buildah config --cmd='[]' $$cn && \
-	buildah config --entrypoint='["/manager"]' $$cn && \
-	buildah commit $$cn ${IMG}
+	cn=$$($(BUILDAH_CMD) from registry.access.redhat.com/ubi8/ubi-minimal:latest) && \
+	$(BUILDAH_CMD) copy $$cn bin/manager /manager && \
+	$(BUILDAH_CMD) config --cmd='[]' $$cn && \
+	$(BUILDAH_CMD) config --entrypoint='["/manager"]' $$cn && \
+	$(BUILDAH_CMD) commit $$cn ${IMG}
 
 # Push the container image
 docker-push: container-push
