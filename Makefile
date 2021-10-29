@@ -19,6 +19,11 @@ CRD_KUST_DIR:=config/crd
 MGR_KUST_DIR:=config/manager
 KUSTOMIZE_DEFAULT_BASE:=../default
 
+ifneq ($(DEVELOPER),)
+CONFIG_KUST_DIR:=config/developer
+MGR_KUST_DIR:=config/developer
+endif
+
 GO_CMD:=go
 GOFMT_CMD:=gofmt
 
