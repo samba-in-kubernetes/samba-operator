@@ -27,7 +27,7 @@ func buildStatefulSet(
 	// ---
 	labels := labelsForSmbServer(planner.instanceName())
 	size := planner.clusterSize()
-	podSpec := buildClusteredPodSPec(planner, dataPVCName, statePVCName)
+	podSpec := buildClusteredPodSpec(planner, dataPVCName, statePVCName)
 	if planner.nodeSpread() {
 		podSpec.Affinity = buildOneSmbdPerNodeAffinity(labels, serviceLabel)
 	}
