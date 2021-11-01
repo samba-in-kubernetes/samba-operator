@@ -1,0 +1,23 @@
+---
+apiVersion: samba-operator.samba.org/v1alpha1
+kind: SmbShare
+metadata:
+  name: cshare2
+  annotations:
+    samba-operator.samba.org/node-spread: "false"
+spec:
+  shareName: "Three Kingdoms"
+  readOnly: false
+  browseable: true
+  securityConfig: adsec1
+  scaling:
+    availabilityMode: clustered
+    minClusterSize: 2
+  storage:
+    pvc:
+      spec:
+        accessModes:
+          - ReadWriteMany
+        resources:
+          requests:
+            storage: 1Gi

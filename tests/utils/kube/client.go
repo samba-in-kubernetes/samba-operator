@@ -33,24 +33,38 @@ func (tc *TestClient) Clientset() *kubernetes.Clientset {
 	return tc.clientset
 }
 
-// GetPodByLabel gets a single unique pod given a label selector and namespace.
-func (tc *TestClient) GetPodByLabel(
-	ctx context.Context, labelSelector string, ns string) (*corev1.Pod, error) {
+// PodFetchOptions controls what set of pods will be fetched.
+type PodFetchOptions struct {
+	Namespace     string
+	LabelSelector string
+	MaxFound      int
+}
+
+func (o PodFetchOptions) max() int {
+	if o.MaxFound == 0 {
+		return 1
+	}
+	return o.MaxFound
+}
+
+// FetchPods returns all available pods matching the PodFetchOptions.
+func (tc *TestClient) FetchPods(
+	ctx context.Context, fo PodFetchOptions) ([]corev1.Pod, error) {
 	// ---
 	opts := metav1.ListOptions{
-		LabelSelector: labelSelector,
+		LabelSelector: fo.LabelSelector,
 	}
-	l, err := tc.Clientset().CoreV1().Pods(ns).List(ctx, opts)
+	l, err := tc.Clientset().CoreV1().Pods(fo.Namespace).List(ctx, opts)
 	if err != nil {
 		return nil, err
 	}
-	if len(l.Items) > 1 {
+	if len(l.Items) > fo.max() {
 		return nil, ErrMultipleMatchingPods
 	}
 	if len(l.Items) == 0 {
 		return nil, ErrNoMatchingPods
 	}
-	return &l.Items[0], nil
+	return l.Items, nil
 }
 
 // NewTestClient return a new kube util test client.
@@ -88,19 +102,13 @@ func PodIsReady(pod *corev1.Pod) bool {
 	return podReady && containersReady
 }
 
-// WaitForPodReadyByLabel will wait for a pod to be ready, up to the deadline
-// specified by the context, if the context lacks a deadline the call will
-// block indefinitely. The label given must match only one pod, or an error
-// will be returned.
-func WaitForPodReadyByLabel(
-	ctx context.Context, tc *TestClient, label, ns string) error {
-	// ---
+func waitFor(ctx context.Context, cond func() (bool, error)) error {
 	for {
-		pod, err := tc.GetPodByLabel(ctx, label, ns)
+		c, err := cond()
 		if err != nil {
 			return err
 		}
-		if PodIsReady(pod) {
+		if c {
 			break
 		}
 		if err := ctx.Err(); err != nil {
@@ -111,25 +119,45 @@ func WaitForPodReadyByLabel(
 	return nil
 }
 
-// WaitForPodExistsByLabel will wait for a pod to exist, up to the deadline
+// WaitForAnyPodReady will wait for a pod to be ready, up to the deadline
 // specified by the context, if the context lacks a deadline the call will
-// block indefinitely. The label given must match only one pod, or an error
-// will be returned.
-func WaitForPodExistsByLabel(
-	ctx context.Context, tc *TestClient, label, ns string) error {
+// block indefinitely. Pods are selected using the PodFetchOptions.
+func WaitForAnyPodReady(
+	ctx context.Context, tc *TestClient, fo PodFetchOptions) error {
 	// ---
-	for {
-		_, err := tc.GetPodByLabel(ctx, label, ns)
-		if err == nil {
-			break
-		}
-		if err != nil && !errors.Is(err, ErrNoMatchingPods) {
-			return err
-		}
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		time.Sleep(200 * time.Millisecond)
-	}
-	return nil
+	return waitFor(
+		ctx,
+		func() (bool, error) {
+			pods, err := tc.FetchPods(ctx, fo)
+			if err != nil {
+				return false, err
+			}
+			for _, pod := range pods {
+				if PodIsReady(&pod) {
+					return true, nil
+				}
+			}
+			return false, nil
+		},
+	)
+}
+
+// WaitForAnyPodExists will wait for a pod to exist, up to the deadline
+// specified by the context, if the context lacks a deadline the call will
+// block indefinitely. Pods are selected using the PodFetchOptions.
+func WaitForAnyPodExists(
+	ctx context.Context, tc *TestClient, fo PodFetchOptions) error {
+	// ---
+	return waitFor(
+		ctx,
+		func() (bool, error) {
+			_, err := tc.FetchPods(ctx, fo)
+			if err == nil {
+				return true, nil
+			} else if errors.Is(err, ErrNoMatchingPods) {
+				return false, nil
+			}
+			return false, err
+		},
+	)
 }

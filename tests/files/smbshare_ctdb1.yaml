@@ -1,0 +1,23 @@
+---
+apiVersion: samba-operator.samba.org/v1alpha1
+kind: SmbShare
+metadata:
+  name: cshare1
+  annotations:
+    samba-operator.samba.org/node-spread: "false"
+spec:
+  shareName: "CTDB Me"
+  readOnly: false
+  browseable: false
+  securityConfig: sharesec1
+  scaling:
+    availabilityMode: clustered
+    minClusterSize: 2
+  storage:
+    pvc:
+      spec:
+        accessModes:
+          - ReadWriteMany
+        resources:
+          requests:
+            storage: 1Gi
