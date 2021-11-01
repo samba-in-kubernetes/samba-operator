@@ -35,7 +35,7 @@ func buildPodSpec(
 	return buildUserPodSpec(planner, cfg, pvcName)
 }
 
-func buildClusteredPodSPec(
+func buildClusteredPodSpec(
 	planner *sharePlanner,
 	dataPVCName, statePVCName string) corev1.PodSpec {
 	// ---
