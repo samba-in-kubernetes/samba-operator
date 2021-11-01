@@ -20,12 +20,21 @@ type OperatorConfig struct {
 	// SmbdContainerName can be used to set the name of the primary container,
 	// the one running smbd, in the pod.
 	SmbdContainerName string `mapstructure:"smbd-container-name"`
+	// WinbindContainerName can be used to the the name of the container
+	// running winbind.
+	WinbindContainerName string `mapstructure:"winbind-container-name"`
 	// WorkingNamespace defines the namespace the operator will (generally)
 	// make changes in.
 	WorkingNamespace string `mapstructure:"working-namespace"`
 	// SambaDebugLevel can be used to set debugging level for samba
 	// components in deployed containers.
 	SambaDebugLevel string `mapstructure:"samba-debug-level"`
+	// StatePVCSize is a (string) value that indicates how large the operator
+	// should request shared state (not data!) PVCs.
+	StatePVCSize string `mapstructure:"state-pvc-size"`
+	// ClusterSupport is a (string) value that indicates if the operator
+	// will be allowed to set up clustered instances.
+	ClusterSupport string `mapstructure:"cluster-support"`
 }
 
 // Validate the OperatorConfig returning an error if the config is not
@@ -54,11 +63,14 @@ func NewSource() *Source {
 		"smbd-container-image",
 		"quay.io/samba.org/samba-server:latest")
 	v.SetDefault("smbd-container-name", "samba")
+	v.SetDefault("winbind-container-name", "wb")
 	v.SetDefault("working-namespace", "")
 	v.SetDefault(
 		"svc-watch-container-image",
 		"quay.io/samba.org/svcwatch:latest")
 	v.SetDefault("samba-debug-level", "")
+	v.SetDefault("state-pvc-size", "1Gi")
+	v.SetDefault("cluster-support", "")
 	return &Source{v: v}
 }
 

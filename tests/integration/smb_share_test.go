@@ -20,6 +20,8 @@ import (
 	"github.com/samba-in-kubernetes/samba-operator/tests/utils/smbclient"
 )
 
+var waitForPodsTime = 20 * time.Second
+
 type SmbShareSuite struct {
 	suite.Suite
 
@@ -28,6 +30,7 @@ type SmbShareSuite struct {
 	shareName        string
 	testAuths        []smbclient.Auth
 	destNamespace    string
+	maxPods          int
 
 	// cached values
 	tc *kube.TestClient
@@ -37,6 +40,9 @@ func (s *SmbShareSuite) SetupSuite() {
 	// ensure the smbclient test pod exists
 	if s.destNamespace == "" {
 		s.destNamespace = testNamespace
+	}
+	if s.maxPods == 0 {
+		s.maxPods = 1
 	}
 	require := s.Require()
 	s.tc = kube.NewTestClient("")
@@ -64,13 +70,18 @@ func (s *SmbShareSuite) TearDownSuite() {
 func (s *SmbShareSuite) waitForPodExist() error {
 	ctx, cancel := context.WithDeadline(
 		context.TODO(),
-		time.Now().Add(10*time.Second))
+		time.Now().Add(waitForPodsTime))
 	defer cancel()
-	return kube.WaitForPodExistsByLabel(
+	l := fmt.Sprintf(
+		"samba-operator.samba.org/service=%s", s.smbShareResource.Name)
+	return kube.WaitForAnyPodExists(
 		ctx,
 		s.tc,
-		fmt.Sprintf("samba-operator.samba.org/service=%s", s.smbShareResource.Name),
-		s.destNamespace)
+		kube.PodFetchOptions{
+			Namespace:     s.destNamespace,
+			LabelSelector: l,
+			MaxFound:      s.maxPods,
+		})
 }
 
 func (s *SmbShareSuite) waitForPodReady() error {
@@ -78,22 +89,32 @@ func (s *SmbShareSuite) waitForPodReady() error {
 		context.TODO(),
 		time.Now().Add(60*time.Second))
 	defer cancel()
-	return kube.WaitForPodReadyByLabel(
+	l := fmt.Sprintf(
+		"samba-operator.samba.org/service=%s", s.smbShareResource.Name)
+	return kube.WaitForAnyPodReady(
 		ctx,
 		s.tc,
-		fmt.Sprintf("samba-operator.samba.org/service=%s", s.smbShareResource.Name),
-		s.destNamespace)
+		kube.PodFetchOptions{
+			Namespace:     s.destNamespace,
+			LabelSelector: l,
+			MaxFound:      s.maxPods,
+		})
 }
 
 func (s *SmbShareSuite) getPodIP() (string, error) {
-	pod, err := s.tc.GetPodByLabel(
+	l := fmt.Sprintf(
+		"samba-operator.samba.org/service=%s", s.smbShareResource.Name)
+	pods, err := s.tc.FetchPods(
 		context.TODO(),
-		fmt.Sprintf("samba-operator.samba.org/service=%s", s.smbShareResource.Name),
-		s.destNamespace)
+		kube.PodFetchOptions{
+			Namespace:     s.destNamespace,
+			LabelSelector: l,
+			MaxFound:      s.maxPods,
+		})
 	if err != nil {
 		return "", err
 	}
-	return pod.Status.PodIP, nil
+	return pods[0].Status.PodIP, nil
 }
 
 func (s *SmbShareSuite) TestPodsReady() {
@@ -161,17 +182,20 @@ func (s *SmbShareSuite) TestShareEvents() {
 	s.Require().NoError(err)
 	s.Require().GreaterOrEqual(len(l.Items), 1)
 	numCreatedPVC := 0
-	numCreatedDeployment := 0
+	numCreatedInstance := 0
 	for _, event := range l.Items {
 		if event.Reason == "CreatedPersistentVolumeClaim" {
 			numCreatedPVC++
 		}
 		if event.Reason == "CreatedDeployment" {
-			numCreatedDeployment++
+			numCreatedInstance++
+		}
+		if event.Reason == "CreatedStatefulSet" {
+			numCreatedInstance++
 		}
 	}
 	s.Require().Equal(1, numCreatedPVC)
-	s.Require().Equal(1, numCreatedDeployment)
+	s.Require().Equal(1, numCreatedInstance)
 }
 
 type SmbShareWithDNSSuite struct {
@@ -201,16 +225,21 @@ func (s *SmbShareWithDNSSuite) TestShareAccessByDomainName() {
 }
 
 func (s *SmbShareWithDNSSuite) TestPodForDNSContainers() {
-	pod, err := s.tc.GetPodByLabel(
+	l := fmt.Sprintf(
+		"samba-operator.samba.org/service=%s", s.smbShareResource.Name)
+	pods, err := s.tc.FetchPods(
 		context.TODO(),
-		fmt.Sprintf("samba-operator.samba.org/service=%s", s.smbShareResource.Name),
-		s.destNamespace)
+		kube.PodFetchOptions{
+			Namespace:     s.destNamespace,
+			LabelSelector: l,
+		},
+	)
 	s.Require().NoError(err)
-	s.Require().Equal(4, len(pod.Spec.Containers))
+	s.Require().Equal(4, len(pods[0].Spec.Containers))
 	names := []string{}
-	for _, cstatus := range pod.Status.ContainerStatuses {
+	for _, cstatus := range pods[0].Status.ContainerStatuses {
 		names = append(names, cstatus.Name)
-		s.Require().True(cstatus.Ready)
+		s.Require().True(cstatus.Ready, "container %s not ready", cstatus.Name)
 	}
 	s.Require().Contains(names, "dns-register")
 	s.Require().Contains(names, "svc-watch")
@@ -341,6 +370,55 @@ func allSmbShareSuites() map[string]suite.TestingSuite {
 			Password: "1nsecurely",
 		}},
 	}}
+
+	if testClusteredShares {
+		m["smbShareClustered1"] = &SmbShareSuite{
+			fileSources: []kube.FileSource{
+				{
+					Path:      path.Join(testFilesDir, "userssecret1.yaml"),
+					Namespace: testNamespace,
+				},
+				{
+					Path:      path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
+					Namespace: testNamespace,
+				},
+				{
+					Path:      path.Join(testFilesDir, "smbshare_ctdb1.yaml"),
+					Namespace: testNamespace,
+				},
+			},
+			smbShareResource: types.NamespacedName{testNamespace, "cshare1"},
+			maxPods:          3,
+			shareName:        "CTDB Me",
+			testAuths: []smbclient.Auth{{
+				Username: "bob",
+				Password: "r0b0t",
+			}},
+		}
+		m["smbShareClusteredDM1"] = &SmbShareSuite{
+			fileSources: []kube.FileSource{
+				{
+					Path:      path.Join(testFilesDir, "joinsecret1.yaml"),
+					Namespace: testNamespace,
+				},
+				{
+					Path:      path.Join(testFilesDir, "smbsecurityconfig2.yaml"),
+					Namespace: testNamespace,
+				},
+				{
+					Path:      path.Join(testFilesDir, "smbshare_ctdb2.yaml"),
+					Namespace: testNamespace,
+				},
+			},
+			smbShareResource: types.NamespacedName{testNamespace, "cshare2"},
+			maxPods:          3,
+			shareName:        "Three Kingdoms",
+			testAuths: []smbclient.Auth{{
+				Username: "DOMAIN1\\ckent",
+				Password: "1115Rose.",
+			}},
+		}
+	}
 
 	return m
 }

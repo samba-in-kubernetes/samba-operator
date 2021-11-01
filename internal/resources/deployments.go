@@ -25,6 +25,10 @@ import (
 	"github.com/samba-in-kubernetes/samba-operator/internal/conf"
 )
 
+var (
+	serviceLabel = "samba-operator.samba.org/service"
+)
+
 // buildDeployment returns a samba server deployment object
 func buildDeployment(cfg *conf.OperatorConfig,
 	planner *sharePlanner, pvcName, ns string) *appsv1.Deployment {
@@ -69,7 +73,7 @@ func labelsForSmbServer(name string) map[string]string {
 		"app.kubernetes.io/part-of":    "samba",
 		"app.kubernetes.io/managed-by": "samba-operator",
 		// our namespaced labels
-		"samba-operator.samba.org/service": labelValue(name),
+		serviceLabel: labelValue(name),
 	}
 }
 

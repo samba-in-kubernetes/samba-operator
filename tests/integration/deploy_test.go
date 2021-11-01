@@ -4,7 +4,6 @@ package integration
 
 import (
 	"context"
-	"fmt"
 	"os/exec"
 	"path"
 	"time"
@@ -53,17 +52,24 @@ func (s DeploySuite) TestOperatorReady() {
 		context.TODO(),
 		time.Now().Add(90*time.Second))
 	defer cancel()
-	err := kube.WaitForPodExistsByLabel(
+	l := "control-plane=controller-manager"
+	err := kube.WaitForAnyPodExists(
 		ctx,
 		s.tc,
-		fmt.Sprintf("control-plane=controller-manager"),
-		testNamespace)
+		kube.PodFetchOptions{
+			Namespace:     testNamespace,
+			LabelSelector: l,
+		},
+	)
 	s.Require().NoError(err)
-	err = kube.WaitForPodReadyByLabel(
+	err = kube.WaitForAnyPodReady(
 		ctx,
 		s.tc,
-		fmt.Sprintf("control-plane=controller-manager"),
-		testNamespace)
+		kube.PodFetchOptions{
+			Namespace:     testNamespace,
+			LabelSelector: l,
+		},
+	)
 	s.Require().NoError(err)
 }
 

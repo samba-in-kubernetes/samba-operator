@@ -17,10 +17,12 @@ package resources
 
 import (
 	"context"
+	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	kresource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -154,26 +156,58 @@ func (m *SmbShareManager) Update(
 		instance.Spec.Storage.Pvc.Name = pvc.Name
 	}
 
-	deployment, created, err := m.getOrCreateDeployment(
-		ctx, planner, destNamespace)
-	if err != nil {
-		return Result{err: err}
-	} else if created {
-		// Deployment created successfully - return and requeue
-		m.logger.Info("Created deployment")
-		m.recorder.Eventf(instance,
-			EventNormal,
-			ReasonCreatedDeployment,
-			"Created deployment %s for SmbShare", deployment.Name)
-		return Requeue
-	}
+	if planner.isClustered() {
+		if !planner.mayCluster() {
+			err = fmt.Errorf(
+				"CTDB clustering not enabled in ClusterSupport: %v",
+				planner.GlobalConfig.ClusterSupport)
+			m.logger.Error(err, "Clustering support is not enabled")
+			return Result{err: err}
+		}
+		_, created, err := m.getOrCreateStatePVC(
+			ctx, planner, destNamespace)
+		if err != nil {
+			return Result{err: err}
+		} else if created {
+			m.logger.Info("Created shared state PVC")
+			return Requeue
+		}
 
-	resized, err := m.updateDeploymentSize(ctx, deployment)
-	if err != nil {
-		return Result{err: err}
-	} else if resized {
-		m.logger.Info("Resized deployment")
-		return Requeue
+		statefulSet, created, err := m.getOrCreateStatefulSet(
+			ctx, planner, destNamespace)
+		if err != nil {
+			return Result{err: err}
+		} else if created {
+			// StatefulSet created successfully - return and requeue
+			m.logger.Info("Created StatefulSet")
+			m.recorder.Eventf(instance,
+				EventNormal,
+				ReasonCreatedStatefulSet,
+				"Created stateful set %s for SmbShare", statefulSet.Name)
+			return Requeue
+		}
+	} else {
+		deployment, created, err := m.getOrCreateDeployment(
+			ctx, planner, destNamespace)
+		if err != nil {
+			return Result{err: err}
+		} else if created {
+			// Deployment created successfully - return and requeue
+			m.logger.Info("Created deployment")
+			m.recorder.Eventf(instance,
+				EventNormal,
+				ReasonCreatedDeployment,
+				"Created deployment %s for SmbShare", deployment.Name)
+			return Requeue
+		}
+
+		resized, err := m.updateDeploymentSize(ctx, deployment)
+		if err != nil {
+			return Result{err: err}
+		} else if resized {
+			m.logger.Info("Resized deployment")
+			return Requeue
+		}
 	}
 
 	_, created, err = m.getOrCreateService(
@@ -287,14 +321,59 @@ func (m *SmbShareManager) getOrCreateDeployment(
 	return dep, true, nil
 }
 
+func (m *SmbShareManager) getOrCreateStatePVC(
+	ctx context.Context,
+	planner *sharePlanner,
+	ns string) (*corev1.PersistentVolumeClaim, bool, error) {
+	// ---
+	name := sharedStatePVCName(planner)
+	squant, err := kresource.ParseQuantity(
+		planner.GlobalConfig.StatePVCSize)
+	if err != nil {
+		return nil, false, err
+	}
+	spec := &corev1.PersistentVolumeClaimSpec{
+		AccessModes: []corev1.PersistentVolumeAccessMode{
+			corev1.ReadWriteMany,
+		},
+		Resources: corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceStorage: squant,
+			},
+		},
+	}
+	pvc, cr, err := m.getOrCreateGenericPVC(
+		ctx, planner.SmbShare, spec, name, ns)
+	if err != nil {
+		m.logger.Error(err, "Error establishing shared state PVC")
+	}
+	return pvc, cr, err
+}
+
 func (m *SmbShareManager) getOrCreatePvc(
 	ctx context.Context,
 	smbShare *sambaoperatorv1alpha1.SmbShare,
 	ns string) (*corev1.PersistentVolumeClaim, bool, error) {
+	// ---
+	name := pvcName(smbShare)
+	spec := smbShare.Spec.Storage.Pvc.Spec
+	pvc, cr, err := m.getOrCreateGenericPVC(
+		ctx, smbShare, spec, name, ns)
+	if err != nil {
+		m.logger.Error(err, "Error establishing data PVC")
+	}
+	return pvc, cr, err
+}
+
+func (m *SmbShareManager) getOrCreateGenericPVC(
+	ctx context.Context,
+	smbShare *sambaoperatorv1alpha1.SmbShare,
+	spec *corev1.PersistentVolumeClaimSpec,
+	name, ns string) (*corev1.PersistentVolumeClaim, bool, error) {
 	// Check if the pvc already exists, if not create it
 	pvc := &corev1.PersistentVolumeClaim{}
 	pvcKey := types.NamespacedName{
-		Name:      pvcName(smbShare),
+		Name:      name,
 		Namespace: ns,
 	}
 	err := m.client.Get(ctx, pvcKey, pvc)
@@ -317,10 +396,10 @@ func (m *SmbShareManager) getOrCreatePvc(
 	// not found - define a new pvc
 	pvc = &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      pvcName(smbShare),
+			Name:      name,
 			Namespace: ns,
 		},
-		Spec: *smbShare.Spec.Storage.Pvc.Spec,
+		Spec: *spec,
 	}
 	// set the smb share instance as the owner and controller
 	err = controllerutil.SetControllerReference(
@@ -492,6 +571,73 @@ func (m *SmbShareManager) getOrCreateConfigMap(
 	return cm, true, nil
 }
 
+func (m *SmbShareManager) getOrCreateStatefulSet(
+	ctx context.Context,
+	planner *sharePlanner,
+	ns string) (*appsv1.StatefulSet, bool, error) {
+	// Check if the ss already exists, if not create a new one
+	found := &appsv1.StatefulSet{}
+	ssKey := types.NamespacedName{
+		Name:      planner.instanceName(),
+		Namespace: ns,
+	}
+	err := m.client.Get(ctx, ssKey, found)
+	if err == nil {
+		return found, false, nil
+	}
+
+	if !errors.IsNotFound(err) {
+		// unexpected error
+		m.logger.Error(
+			err,
+			"Failed to get StatefulSet",
+			"SmbShare.Namespace", planner.SmbShare.Namespace,
+			"SmbShare.Name", planner.SmbShare.Name,
+			"SatefulSet.Namespace", ssKey.Namespace,
+			"SatefulSet.Name", ssKey.Name)
+		return nil, false, err
+	}
+
+	// not found - define a new stateful set
+	ss := buildStatefulSet(
+		planner,
+		planner.SmbShare.Spec.Storage.Pvc.Name,
+		sharedStatePVCName(planner),
+		ns)
+	// set the smbshare instance as the owner/controller
+	err = controllerutil.SetControllerReference(
+		planner.SmbShare, ss, m.scheme)
+	if err != nil {
+		m.logger.Error(
+			err,
+			"Failed to set controller reference",
+			"SmbShare.Namespace", planner.SmbShare.Namespace,
+			"SmbShare.Name", planner.SmbShare.Name,
+			"StatefulSet.Namespace", ss.Namespace,
+			"StatefulSet.Name", ss.Name)
+		return ss, false, err
+	}
+	m.logger.Info(
+		"Creating a new StatefulSet",
+		"SmbShare.Namespace", planner.SmbShare.Namespace,
+		"SmbShare.Name", planner.SmbShare.Name,
+		"StatefulSet.Namespace", ss.Namespace,
+		"StatefulSet.Name", ss.Name,
+		"StatefulSet.Replicas", ss.Spec.Replicas)
+	err = m.client.Create(ctx, ss)
+	if err != nil {
+		m.logger.Error(
+			err,
+			"Failed to create new StatefulSet",
+			"SmbShare.Namespace", planner.SmbShare.Namespace,
+			"SmbShare.Name", planner.SmbShare.Name,
+			"StatefulSet.Namespace", ss.Namespace,
+			"StatefulSet.Name", ss.Name)
+		return ss, false, err
+	}
+	return ss, true, err
+}
+
 func (m *SmbShareManager) updateDeploymentSize(
 	ctx context.Context,
 	deployment *appsv1.Deployment) (bool, error) {
@@ -520,6 +666,10 @@ func pvcName(s *sambaoperatorv1alpha1.SmbShare) string {
 		return s.Spec.Storage.Pvc.Name
 	}
 	return s.Name + "-pvc"
+}
+
+func sharedStatePVCName(planner *sharePlanner) string {
+	return planner.instanceName() + "-state"
 }
 
 func shareNeedsPvc(s *sambaoperatorv1alpha1.SmbShare) bool {
