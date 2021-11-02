@@ -126,3 +126,18 @@ configMapGenerator:
   name: controller-cfg
   namespace: system
 ```
+
+### Enabling experimental clustered instances (ctdb)
+
+The operator has incomplete support for clustered instances using CTDB. To
+enable this experimental feature the environment variable
+`SAMBA_OP_CLUSTER_SUPPORT` must be set to `ctdb-is-experimental`:
+
+```
+configMapGenerator:
+- behavior: merge
+  literals:
+  - "SAMBA_OP_CLUSTER_SUPPORT=ctdb-is-experimental"
+  name: controller-cfg
+  namespace: system
+```
