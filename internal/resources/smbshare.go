@@ -162,7 +162,8 @@ func (m *SmbShareManager) Update(
 		instance.Spec.Storage.Pvc.Name = pvc.Name
 	}
 
-	if instance.Annotations[serverBackend] == "" {
+	hasBackend := instance.Annotations[serverBackend] != ""
+	if !hasBackend {
 		if instance.Annotations == nil {
 			instance.Annotations = map[string]string{}
 		}
@@ -187,6 +188,41 @@ func (m *SmbShareManager) Update(
 			return Result{err: err}
 		}
 		return Requeue
+	}
+	if hasBackend {
+		// As of today, the system is too immature to try and trivially
+		// reconcile a change in availability mode. We use the previously
+		// recorded backend to check if a change is being made after the
+		// "point of no return".
+		// In the future we should certainly revisit this and support
+		// intelligent methods to handle changes like this.
+		b := instance.Annotations[serverBackend]
+		if planner.isClustered() && b != clusteredBackend {
+			err = fmt.Errorf(
+				"Can not convert SmbShare to clustered instance."+
+					" Current backend: %s",
+				b)
+			m.logger.Error(
+				err,
+				"Backend inconsistency detected",
+				"SmbShare.Namespace", instance.Namespace,
+				"SmbShare.Name", instance.Name,
+				"SmbShare.UID", instance.UID)
+			return Result{err: err}
+		}
+		if !planner.isClustered() && b != standardBackend {
+			err = fmt.Errorf(
+				"Can not convert SmbShare to non-clustered instance."+
+					" Current backend: %s",
+				b)
+			m.logger.Error(
+				err,
+				"Backend inconsistency detected",
+				"SmbShare.Namespace", instance.Namespace,
+				"SmbShare.Name", instance.Name,
+				"SmbShare.UID", instance.UID)
+			return Result{err: err}
+		}
 	}
 
 	if planner.isClustered() {
