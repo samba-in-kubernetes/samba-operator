@@ -36,6 +36,12 @@ import (
 
 const shareFinalizer = "samba-operator.samba.org/shareFinalizer"
 
+const (
+	serverBackend    = "samba-operator.samba.org/serverBackend"
+	clusteredBackend = "clustered:ctdb/statefulset"
+	standardBackend  = "standard:deployment"
+)
+
 // SmbShareManager is used to manage SmbShare resources.
 type SmbShareManager struct {
 	client   rtclient.Client
@@ -154,6 +160,33 @@ func (m *SmbShareManager) Update(
 		}
 		// if name is unset in the YAML, set it here
 		instance.Spec.Storage.Pvc.Name = pvc.Name
+	}
+
+	if instance.Annotations[serverBackend] == "" {
+		if instance.Annotations == nil {
+			instance.Annotations = map[string]string{}
+		}
+		if planner.isClustered() {
+			instance.Annotations[serverBackend] = clusteredBackend
+		} else {
+			instance.Annotations[serverBackend] = standardBackend
+		}
+		m.logger.Info("Setting backend",
+			"SmbShare.Namespace", instance.Namespace,
+			"SmbShare.Name", instance.Name,
+			"SmbShare.UID", instance.UID,
+			"backend", instance.Annotations[serverBackend])
+		err = m.client.Update(ctx, instance)
+		if err != nil {
+			m.logger.Error(
+				err,
+				"Failed to update SmbShare",
+				"SmbShare.Namespace", instance.Namespace,
+				"SmbShare.Name", instance.Name,
+				"SmbShare.UID", instance.UID)
+			return Result{err: err}
+		}
+		return Requeue
 	}
 
 	if planner.isClustered() {
