@@ -58,21 +58,26 @@ func (s *SmbShareSuite) TearDownSuite() {
 	deleteFromFiles(s.Require(), s.tc, s.fileSources)
 }
 
+func (s *SmbShareSuite) getPodFetchOptions() kube.PodFetchOptions {
+	l := fmt.Sprintf(
+		"samba-operator.samba.org/service=%s", s.smbShareResource.Name)
+	return kube.PodFetchOptions{
+		Namespace:     s.destNamespace,
+		LabelSelector: l,
+		MaxFound:      s.maxPods,
+	}
+}
+
 func (s *SmbShareSuite) waitForPodExist() error {
 	ctx, cancel := context.WithDeadline(
 		context.TODO(),
 		time.Now().Add(waitForPodsTime))
 	defer cancel()
-	l := fmt.Sprintf(
-		"samba-operator.samba.org/service=%s", s.smbShareResource.Name)
 	return kube.WaitForAnyPodExists(
 		ctx,
 		s.tc,
-		kube.PodFetchOptions{
-			Namespace:     s.destNamespace,
-			LabelSelector: l,
-			MaxFound:      s.maxPods,
-		})
+		s.getPodFetchOptions(),
+	)
 }
 
 func (s *SmbShareSuite) waitForPodReady() error {
@@ -80,16 +85,11 @@ func (s *SmbShareSuite) waitForPodReady() error {
 		context.TODO(),
 		time.Now().Add(waitForReadyTime))
 	defer cancel()
-	l := fmt.Sprintf(
-		"samba-operator.samba.org/service=%s", s.smbShareResource.Name)
 	return kube.WaitForAnyPodReady(
 		ctx,
 		s.tc,
-		kube.PodFetchOptions{
-			Namespace:     s.destNamespace,
-			LabelSelector: l,
-			MaxFound:      s.maxPods,
-		})
+		s.getPodFetchOptions(),
+	)
 }
 
 func (s *SmbShareSuite) getPodIP() (string, error) {
