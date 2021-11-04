@@ -20,11 +20,6 @@ import (
 	"github.com/samba-in-kubernetes/samba-operator/tests/utils/smbclient"
 )
 
-var (
-	waitForPodsTime  = 20 * time.Second
-	waitForReadyTime = 60 * time.Second
-)
-
 type SmbShareSuite struct {
 	suite.Suite
 
