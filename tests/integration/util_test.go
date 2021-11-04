@@ -4,8 +4,14 @@ package integration
 
 import (
 	"context"
+	"time"
 
 	"github.com/samba-in-kubernetes/samba-operator/tests/utils/kube"
+)
+
+var (
+	waitForPodsTime  = 20 * time.Second
+	waitForReadyTime = 60 * time.Second
 )
 
 type checker interface {
@@ -34,4 +40,37 @@ func deleteFromFiles(
 		)
 		require.NoError(err)
 	}
+}
+
+type withClient interface {
+	getTestClient() *kube.TestClient
+}
+
+type podTestClient interface {
+	withClient
+	getPodFetchOptions() kube.PodFetchOptions
+}
+
+func waitForPodExist(s podTestClient) error {
+	ctx, cancel := context.WithDeadline(
+		context.TODO(),
+		time.Now().Add(waitForPodsTime))
+	defer cancel()
+	return kube.WaitForAnyPodExists(
+		ctx,
+		s.getTestClient(),
+		s.getPodFetchOptions(),
+	)
+}
+
+func waitForPodReady(s podTestClient) error {
+	ctx, cancel := context.WithDeadline(
+		context.TODO(),
+		time.Now().Add(waitForReadyTime))
+	defer cancel()
+	return kube.WaitForAnyPodReady(
+		ctx,
+		s.getTestClient(),
+		s.getPodFetchOptions(),
+	)
 }
