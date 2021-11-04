@@ -46,25 +46,13 @@ func (s *SmbShareSuite) SetupSuite() {
 	}
 	require := s.Require()
 	s.tc = kube.NewTestClient("")
-	for _, fs := range s.fileSources {
-		_, err := s.tc.CreateFromFileIfMissing(
-			context.TODO(),
-			fs,
-		)
-		require.NoError(err)
-	}
+	createFromFiles(require, s.tc, s.fileSources)
 	require.NoError(s.waitForPodExist(), "smb server pod does not exist")
 	require.NoError(s.waitForPodReady(), "smb server pod is not ready")
 }
 
 func (s *SmbShareSuite) TearDownSuite() {
-	for _, fs := range s.fileSources {
-		err := s.tc.DeleteResourceMatchingFile(
-			context.TODO(),
-			fs,
-		)
-		s.Require().NoError(err)
-	}
+	deleteFromFiles(s.Require(), s.tc, s.fileSources)
 }
 
 func (s *SmbShareSuite) waitForPodExist() error {
