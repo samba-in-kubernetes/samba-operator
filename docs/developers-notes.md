@@ -49,62 +49,95 @@ export SMBOP_TEST_EXPECT_MANAGER_IMG="${IMG}"
 ./tests/test.sh
 ```
 
-## Using a custom samba server container image
+## Specifying custom configuration parameters
+
+The operator supports a number of configuration parameters that
+influence the behvaior of the operator itself. These parameters
+can be specified via a configuration file in TOML or YAML formats,
+via the operator's command line, or via environment variables.
+Environment variables are the simplest approach and is discussed below.
+These settings should not need to be changed for typical use, however
+some of them can be useful when developing the operator or when
+testing/debugging it.
+
+Our stock deployment assumes environment variables stored in a ConfigMap
+(base name "controller-cfg"). You can use kustomize to set these values
+using a configMapGenerator. We recommend placing the generator in an
+overlay kustomization.yaml file such as `config/default/kustomization.yaml`.
+We also support a "shortcut" location for developers at
+`config/developer/kustomization.yaml`. This location will be automatically
+used by the Makefile when variable DEVELOPER is set, for example
+`make DEVELOPER=1 deploy`. Files in the `config/developer` directory
+are ignored by git and are a good place for setting changes that
+are specific to you.
+
+An example of custom configuration parameters using kustomize:
+
+```
+configMapGenerator:
+- behavior: merge
+  literals:
+  - "SAMBA_OP_SAMBA_DEBUG_LEVEL=10"
+  - "SAMBA_OP_CLUSTER_SUPPORT=ctdb-is-experimental"
+  - "SOMETHING_ELSE=55"
+  name: controller-cfg
+  namespace: system
+```
+
+Append the above section to the appropriate kustomization.yaml file.  See the
+kustomize documentation for more information on how you can set environment
+variables in this config map.  See the
+[kustomize docs](https://kubectl.docs.kubernetes.io/references/kustomize/)
+for more information on how you can set environment variables in the ConfigMap
+or how you can use kustomize in general.
+
+Some specific examples follow. Remember that these examples as well as other
+variables can be combined in a single ConfigMap.
+
+### Using a custom samba server container image
 
 The operator itself will create pods running various samba-server container
-images. Certain aspects of the operator, such as the container image to use
-for the samba server are configurable. There are a few ways to configure the
-operator, as it can read it's config from TOML or YAML files as well as
-it's command line or environment variables. The following example uses
-environment variables set in the operator's own pod spec.
-
-We will set the environment variables using kustomize rules in the file
-`./config/manager/kustomization.yaml`. Add the following to that file:
+images. We will set the environment variables using kustomize to alter
+the container image used for samba server instances:
 
 ```
-patches:
-- patch: |-
-    - op: add
-      path: /spec/template/spec/containers/0/env/-
-      value:
-        name: "SAMBA_OP_SMBD_CONTAINER_IMAGE"
-        value: "registry.example.com/myuser/samba-server:experiment"
-  target:
-    kind: Deployment
+configMapGenerator:
+- behavior: merge
+  literals:
+  - "SAMBA_OP_SMBD_CONTAINER_IMAGE=registry.example.com/myuser/samba-server:experiment"
+  name: controller-cfg
+  namespace: system
 ```
 
-For multiple values, more than the "op" in the embedded yaml patch can be
-specified. Using "add" with "/spec/template/spec/containers/0/env/-" means to
-append the value to the end of the list at "env".
+### Debugging the samba containers
 
-You can also add your own "kustomize' patches and other rules.  See the
-[kustomize docs](https://kubectl.docs.kubernetes.io/references/kustomize/) for
-more information on using kustomize. You can also set other environment
-variables in a similar manner.
+The operator accepts a configuration value for samba debugging that will be
+passed on to the containers the operator creates. This parameter is
+`samba-debug-level` in configuration files and `SAMBA_OP_SAMBA_DEBUG_LEVEL` in
+the evnironment. The value should be a numeral 0 through 10 specified as a
+*string*:
 
-
-Please do not check changes made by kustomize to kustomization.yaml files
-in to git history.
-
-
-## Debugging the samba containers
-
-Similar to using a custom container image the operator accepts a configuration
-value for samba debugging that will be passed on to the containers the
-operator creates. This parameter is `samba-debug-level` in configuration
-files and `SAMBA_OP_SAMBA_DEBUG_LEVEL` in the evnironment. The value should
-be a numeral 0 through 10 specified as a *string*.
-
-Example setting the variable via the `./config/manager/kustomization.yaml` file:
 
 ```
-patches:
-- patch: |-
-    - op: add
-      path: /spec/template/spec/containers/0/env/-
-      value:
-        name: "SAMBA_OP_SAMBA_DEBUG_LEVEL"
-        value: "8"
-  target:
-    kind: Deployment
+configMapGenerator:
+- behavior: merge
+  literals:
+  - "SAMBA_OP_SAMBA_DEBUG_LEVEL=8"
+  name: controller-cfg
+  namespace: system
+```
+
+### Enabling experimental clustered instances (ctdb)
+
+The operator has incomplete support for clustered instances using CTDB. To
+enable this experimental feature the environment variable
+`SAMBA_OP_CLUSTER_SUPPORT` must be set to `ctdb-is-experimental`:
+
+```
+configMapGenerator:
+- behavior: merge
+  literals:
+  - "SAMBA_OP_CLUSTER_SUPPORT=ctdb-is-experimental"
+  name: controller-cfg
+  namespace: system
 ```
