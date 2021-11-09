@@ -36,6 +36,12 @@ import (
 
 const shareFinalizer = "samba-operator.samba.org/shareFinalizer"
 
+const (
+	serverBackend    = "samba-operator.samba.org/serverBackend"
+	clusteredBackend = "clustered:ctdb/statefulset"
+	standardBackend  = "standard:deployment"
+)
+
 // SmbShareManager is used to manage SmbShare resources.
 type SmbShareManager struct {
 	client   rtclient.Client
@@ -154,6 +160,69 @@ func (m *SmbShareManager) Update(
 		}
 		// if name is unset in the YAML, set it here
 		instance.Spec.Storage.Pvc.Name = pvc.Name
+	}
+
+	hasBackend := instance.Annotations[serverBackend] != ""
+	if !hasBackend {
+		if instance.Annotations == nil {
+			instance.Annotations = map[string]string{}
+		}
+		if planner.isClustered() {
+			instance.Annotations[serverBackend] = clusteredBackend
+		} else {
+			instance.Annotations[serverBackend] = standardBackend
+		}
+		m.logger.Info("Setting backend",
+			"SmbShare.Namespace", instance.Namespace,
+			"SmbShare.Name", instance.Name,
+			"SmbShare.UID", instance.UID,
+			"backend", instance.Annotations[serverBackend])
+		err = m.client.Update(ctx, instance)
+		if err != nil {
+			m.logger.Error(
+				err,
+				"Failed to update SmbShare",
+				"SmbShare.Namespace", instance.Namespace,
+				"SmbShare.Name", instance.Name,
+				"SmbShare.UID", instance.UID)
+			return Result{err: err}
+		}
+		return Requeue
+	}
+	if hasBackend {
+		// As of today, the system is too immature to try and trivially
+		// reconcile a change in availability mode. We use the previously
+		// recorded backend to check if a change is being made after the
+		// "point of no return".
+		// In the future we should certainly revisit this and support
+		// intelligent methods to handle changes like this.
+		b := instance.Annotations[serverBackend]
+		if planner.isClustered() && b != clusteredBackend {
+			err = fmt.Errorf(
+				"Can not convert SmbShare to clustered instance."+
+					" Current backend: %s",
+				b)
+			m.logger.Error(
+				err,
+				"Backend inconsistency detected",
+				"SmbShare.Namespace", instance.Namespace,
+				"SmbShare.Name", instance.Name,
+				"SmbShare.UID", instance.UID)
+			return Result{err: err}
+		}
+		if !planner.isClustered() && b != standardBackend {
+			err = fmt.Errorf(
+				"Can not convert SmbShare to non-clustered instance."+
+					" Current backend: %s",
+				b)
+			m.logger.Error(
+				err,
+				"Backend inconsistency detected",
+				"SmbShare.Namespace", instance.Namespace,
+				"SmbShare.Name", instance.Name,
+				"SmbShare.UID", instance.UID)
+			return Result{err: err}
+		}
 	}
 
 	if planner.isClustered() {

@@ -20,8 +20,6 @@ import (
 	"github.com/samba-in-kubernetes/samba-operator/tests/utils/smbclient"
 )
 
-var waitForPodsTime = 20 * time.Second
-
 type SmbShareSuite struct {
 	suite.Suite
 
@@ -46,59 +44,27 @@ func (s *SmbShareSuite) SetupSuite() {
 	}
 	require := s.Require()
 	s.tc = kube.NewTestClient("")
-	for _, fs := range s.fileSources {
-		_, err := s.tc.CreateFromFileIfMissing(
-			context.TODO(),
-			fs,
-		)
-		require.NoError(err)
-	}
-	require.NoError(s.waitForPodExist(), "smb server pod does not exist")
-	require.NoError(s.waitForPodReady(), "smb server pod is not ready")
+	createFromFiles(require, s.tc, s.fileSources)
+	require.NoError(waitForPodExist(s), "smb server pod does not exist")
+	require.NoError(waitForPodReady(s), "smb server pod is not ready")
 }
 
 func (s *SmbShareSuite) TearDownSuite() {
-	for _, fs := range s.fileSources {
-		err := s.tc.DeleteResourceMatchingFile(
-			context.TODO(),
-			fs,
-		)
-		s.Require().NoError(err)
+	deleteFromFiles(s.Require(), s.tc, s.fileSources)
+}
+
+func (s *SmbShareSuite) getTestClient() *kube.TestClient {
+	return s.tc
+}
+
+func (s *SmbShareSuite) getPodFetchOptions() kube.PodFetchOptions {
+	l := fmt.Sprintf(
+		"samba-operator.samba.org/service=%s", s.smbShareResource.Name)
+	return kube.PodFetchOptions{
+		Namespace:     s.destNamespace,
+		LabelSelector: l,
+		MaxFound:      s.maxPods,
 	}
-}
-
-func (s *SmbShareSuite) waitForPodExist() error {
-	ctx, cancel := context.WithDeadline(
-		context.TODO(),
-		time.Now().Add(waitForPodsTime))
-	defer cancel()
-	l := fmt.Sprintf(
-		"samba-operator.samba.org/service=%s", s.smbShareResource.Name)
-	return kube.WaitForAnyPodExists(
-		ctx,
-		s.tc,
-		kube.PodFetchOptions{
-			Namespace:     s.destNamespace,
-			LabelSelector: l,
-			MaxFound:      s.maxPods,
-		})
-}
-
-func (s *SmbShareSuite) waitForPodReady() error {
-	ctx, cancel := context.WithDeadline(
-		context.TODO(),
-		time.Now().Add(60*time.Second))
-	defer cancel()
-	l := fmt.Sprintf(
-		"samba-operator.samba.org/service=%s", s.smbShareResource.Name)
-	return kube.WaitForAnyPodReady(
-		ctx,
-		s.tc,
-		kube.PodFetchOptions{
-			Namespace:     s.destNamespace,
-			LabelSelector: l,
-			MaxFound:      s.maxPods,
-		})
 }
 
 func (s *SmbShareSuite) getPodIP() (string, error) {
@@ -118,7 +84,7 @@ func (s *SmbShareSuite) getPodIP() (string, error) {
 }
 
 func (s *SmbShareSuite) TestPodsReady() {
-	s.Require().NoError(s.waitForPodReady())
+	s.Require().NoError(waitForPodReady(s))
 }
 
 func (s *SmbShareSuite) TestSmbShareServerGroup() {
@@ -158,7 +124,7 @@ func (s *SmbShareSuite) TestShareAccessByServiceName() {
 }
 
 func (s *SmbShareSuite) TestShareEvents() {
-	s.Require().NoError(s.waitForPodReady())
+	s.Require().NoError(waitForPodReady(s))
 
 	// this unstructured stuff is just to get a UID for the SmbShare for event
 	// filtering. Since the tests don't currently have a way to use a typed
