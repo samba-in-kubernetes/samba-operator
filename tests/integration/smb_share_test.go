@@ -198,10 +198,11 @@ func (s *SmbShareWithDNSSuite) TestPodForDNSContainers() {
 		kube.PodFetchOptions{
 			Namespace:     s.destNamespace,
 			LabelSelector: l,
+			MaxFound:      s.maxPods,
 		},
 	)
 	s.Require().NoError(err)
-	s.Require().Equal(4, len(pods[0].Spec.Containers))
+	s.Require().GreaterOrEqual(len(pods[0].Spec.Containers), 4)
 	names := []string{}
 	for _, cstatus := range pods[0].Status.ContainerStatuses {
 		names = append(names, cstatus.Name)
