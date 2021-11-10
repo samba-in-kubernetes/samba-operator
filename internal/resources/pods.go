@@ -394,9 +394,20 @@ func buildClusteredADPodSpec(
 		containers,
 		buildSmbdCtr(planner, podEnv, volumes))
 
-	// TODO: dns-register containers
-	// It may not handle running >1 pod well ATM. It may make more sense to
-	// teach the container/sambacc side to be cluster-leader aware
+	// dns-register containers
+	if planner.dnsRegister() != dnsRegisterNever {
+		watchVol := svcWatchVolumeAndMount(
+			planner.serviceWatchStateDir(),
+		)
+		volumes = append(volumes, watchVol)
+		svcWatchVols := []volMount{watchVol}
+		dnsRegVols := append(wbVols, watchVol)
+		containers = append(
+			containers,
+			buildSvcWatchCtr(planner, svcWatchEnv(planner), svcWatchVols),
+			buildDNSRegCtr(planner, podEnv, dnsRegVols),
+		)
+	}
 
 	shareProcessNamespace := true
 	podSpec := corev1.PodSpec{
