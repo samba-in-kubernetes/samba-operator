@@ -85,7 +85,12 @@ func (s *SmbShareSuite) getPodIP() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return pods[0].Status.PodIP, nil
+	for _, pod := range pods {
+		if kube.PodIsReady(&pod) {
+			return pod.Status.PodIP, nil
+		}
+	}
+	return "", fmt.Errorf("no pods ready when fetching IP")
 }
 
 func (s *SmbShareSuite) TestPodsReady() {
