@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	waitForPodsTime  = 20 * time.Second
-	waitForReadyTime = 60 * time.Second
+	waitForPodsTime  = 60 * time.Second
+	waitForReadyTime = 120 * time.Second
 )
 
 type checker interface {
