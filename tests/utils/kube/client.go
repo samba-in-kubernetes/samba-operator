@@ -16,9 +16,9 @@ var (
 	// ErrNoMatchingPods indicates a selector didn't match any pods.
 	ErrNoMatchingPods = errors.New("no pods match selector")
 
-	// ErrMultipleMatchingPods indicates a selector should have matched
+	// ErrTooManyMatchingPods indicates a selector should have matched
 	// fewer pods than were selected.
-	ErrMultipleMatchingPods = errors.New("too many pods match selector")
+	ErrTooManyMatchingPods = errors.New("too many pods match selector")
 )
 
 // TestClient is a helper for doing common things for our tests
@@ -59,7 +59,7 @@ func (tc *TestClient) FetchPods(
 		return nil, err
 	}
 	if len(l.Items) > fo.max() {
-		return nil, ErrMultipleMatchingPods
+		return nil, ErrTooManyMatchingPods
 	}
 	if len(l.Items) == 0 {
 		return nil, ErrNoMatchingPods
