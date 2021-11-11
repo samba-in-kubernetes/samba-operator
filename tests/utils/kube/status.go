@@ -3,9 +3,11 @@ package kube
 import (
 	"context"
 	"errors"
-	"time"
+	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/samba-in-kubernetes/samba-operator/tests/utils/poll"
 )
 
 // PodIsReady returns true if a pod is running and containers are ready.
@@ -23,21 +25,73 @@ func PodIsReady(pod *corev1.Pod) bool {
 	return podReady && containersReady
 }
 
-func waitFor(ctx context.Context, cond func() (bool, error)) error {
-	for {
-		c, err := cond()
-		if err != nil {
-			return err
-		}
-		if c {
-			break
-		}
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		time.Sleep(200 * time.Millisecond)
+type podProbe struct {
+	poll.Prober
+
+	tc        *TestClient
+	fetchOpts PodFetchOptions
+	pods      []corev1.Pod
+}
+
+func (pp *podProbe) fetch(ctx context.Context) error {
+	pods, err := pp.tc.FetchPods(ctx, pp.fetchOpts)
+	if err == nil {
+		pp.pods = pods
 	}
-	return nil
+	return err
+}
+
+func (pp *podProbe) checkExists(ctx context.Context) (bool, error) {
+	err := pp.fetch(ctx)
+	if err == nil {
+		return true, nil
+	} else if errors.Is(err, ErrNoMatchingPods) {
+		return false, nil
+	} else if errors.Is(err, ErrTooFewMatchingPods) {
+		return false, nil
+	}
+	return false, err
+}
+
+func (pp *podProbe) checkReady(ctx context.Context) (bool, error) {
+	err := pp.fetch(ctx)
+	if err != nil {
+		return false, err
+	}
+	for _, pod := range pp.pods {
+		if PodIsReady(&pod) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (pp *podProbe) Completed(e error) error {
+	if e == nil {
+		return e
+	}
+	return fmt.Errorf(
+		"%w (opts: %+v; pods: %+v)",
+		e,
+		pp.fetchOpts,
+		podsSummary(pp.pods),
+	)
+}
+
+func podsSummary(pods []corev1.Pod) []string {
+	s := []string{}
+	for _, p := range pods {
+		s = append(s, podSummary(p))
+	}
+	return s
+}
+
+func podSummary(pod corev1.Pod) string {
+	return fmt.Sprintf("pod(%s/%s, ready=%v)",
+		pod.Namespace,
+		pod.Name,
+		PodIsReady(&pod),
+	)
 }
 
 // WaitForAnyPodReady will wait for a pod to be ready, up to the deadline
@@ -46,21 +100,12 @@ func waitFor(ctx context.Context, cond func() (bool, error)) error {
 func WaitForAnyPodReady(
 	ctx context.Context, tc *TestClient, fo PodFetchOptions) error {
 	// ---
-	return waitFor(
-		ctx,
-		func() (bool, error) {
-			pods, err := tc.FetchPods(ctx, fo)
-			if err != nil {
-				return false, err
-			}
-			for _, pod := range pods {
-				if PodIsReady(&pod) {
-					return true, nil
-				}
-			}
-			return false, nil
-		},
-	)
+	pp := &podProbe{
+		tc:        tc,
+		fetchOpts: fo,
+	}
+	pp.Cond = func() (bool, error) { return pp.checkReady(ctx) }
+	return poll.TryUntil(ctx, pp)
 }
 
 // WaitForAnyPodExists will wait for a pod to exist, up to the deadline
@@ -69,18 +114,10 @@ func WaitForAnyPodReady(
 func WaitForAnyPodExists(
 	ctx context.Context, tc *TestClient, fo PodFetchOptions) error {
 	// ---
-	return waitFor(
-		ctx,
-		func() (bool, error) {
-			_, err := tc.FetchPods(ctx, fo)
-			if err == nil {
-				return true, nil
-			} else if errors.Is(err, ErrNoMatchingPods) {
-				return false, nil
-			} else if errors.Is(err, ErrTooFewMatchingPods) {
-				return false, nil
-			}
-			return false, err
-		},
-	)
+	pp := &podProbe{
+		tc:        tc,
+		fetchOpts: fo,
+	}
+	pp.Cond = func() (bool, error) { return pp.checkExists(ctx) }
+	return poll.TryUntil(ctx, pp)
 }
