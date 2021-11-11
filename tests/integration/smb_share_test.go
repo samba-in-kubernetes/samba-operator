@@ -16,7 +16,9 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	sambaoperatorv1alpha1 "github.com/samba-in-kubernetes/samba-operator/api/v1alpha1"
+	"github.com/samba-in-kubernetes/samba-operator/tests/utils/dnsclient"
 	"github.com/samba-in-kubernetes/samba-operator/tests/utils/kube"
+	"github.com/samba-in-kubernetes/samba-operator/tests/utils/poll"
 	"github.com/samba-in-kubernetes/samba-operator/tests/utils/smbclient"
 )
 
@@ -179,17 +181,41 @@ type SmbShareWithDNSSuite struct {
 }
 
 func (s *SmbShareWithDNSSuite) TestShareAccessByDomainName() {
-	// HACK: sleep for a short bit before running the smbclient command.  This
-	// test works often but is flaky, and that appears due to the dns name not
-	// always resolving. This hack adds a small delay to try and reduce the
-	// test flakes. Obviously, a sleep is poor way to improve a test case. In
-	// the future we should poll-with-a-timeout for the dns name, but that
-	// needs to be done in-cluster/in-the-pod and that's a bunch of yak shaving
-	// - so for now: a hack.
-	time.Sleep(400 * time.Millisecond)
-
 	dnsname := fmt.Sprintf("%s-cluster.domain1.sink.test",
 		s.smbShareResource.Name)
+	lbl := fmt.Sprintf(
+		"samba-operator.samba.org/service=%s", s.smbShareResource.Name)
+
+	// get the ip of the service that should have been added to the ad dns. We
+	// take these extra steps to help disentangle dns update, caching, or
+	// resolution problems from access to the share when using DNS names.
+	// Previously, we just had a sleep but it was an unreliable workaround and
+	// it didn't help detect where the problem was.
+	sl, err := s.tc.Clientset().CoreV1().Services(s.destNamespace).List(
+		context.TODO(),
+		metav1.ListOptions{
+			LabelSelector: lbl,
+		},
+	)
+	s.Require().NoError(err, "failed to get services")
+	s.Require().Len(sl.Items, 1, "expected exactly one matching service")
+	svcClusterIP := sl.Items[0].Spec.ClusterIP
+	// test that the IP in ad dns matches the service
+	ctx, cancel := context.WithDeadline(
+		context.TODO(),
+		time.Now().Add(30*time.Second))
+	defer cancel()
+	hc := dnsclient.MustPodExec(s.tc, testNamespace, "smbclient", "")
+	s.Require().NoError(poll.TryUntil(ctx, &poll.Prober{
+		Cond: func() (bool, error) {
+			ip4addr, err := hc.HostAddress(dnsname)
+			if err != nil {
+				return false, nil
+			}
+			return ip4addr == svcClusterIP, nil
+		},
+	}))
+
 	shareAccessSuite := &ShareAccessSuite{
 		share: smbclient.Share{
 			Host: smbclient.Host(dnsname),
