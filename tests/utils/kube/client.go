@@ -19,6 +19,10 @@ var (
 	// ErrTooManyMatchingPods indicates a selector should have matched
 	// fewer pods than were selected.
 	ErrTooManyMatchingPods = errors.New("too many pods match selector")
+
+	// ErrTooFewMatchingPods indicates a selector should have matched
+	// more pods than were selected.
+	ErrTooFewMatchingPods = errors.New("too few pods match selector")
 )
 
 // TestClient is a helper for doing common things for our tests
@@ -38,6 +42,7 @@ type PodFetchOptions struct {
 	Namespace     string
 	LabelSelector string
 	MaxFound      int
+	MinFound      int
 }
 
 func (o PodFetchOptions) max() int {
@@ -45,6 +50,10 @@ func (o PodFetchOptions) max() int {
 		return 1
 	}
 	return o.MaxFound
+}
+
+func (o PodFetchOptions) min() int {
+	return o.MinFound
 }
 
 // FetchPods returns all available pods matching the PodFetchOptions.
@@ -63,6 +72,9 @@ func (tc *TestClient) FetchPods(
 	}
 	if len(l.Items) == 0 {
 		return nil, ErrNoMatchingPods
+	}
+	if len(l.Items) < fo.min() {
+		return nil, ErrTooFewMatchingPods
 	}
 	return l.Items, nil
 }
@@ -155,6 +167,8 @@ func WaitForAnyPodExists(
 			if err == nil {
 				return true, nil
 			} else if errors.Is(err, ErrNoMatchingPods) {
+				return false, nil
+			} else if errors.Is(err, ErrTooFewMatchingPods) {
 				return false, nil
 			}
 			return false, err
