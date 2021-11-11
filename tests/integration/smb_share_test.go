@@ -29,6 +29,7 @@ type SmbShareSuite struct {
 	testAuths        []smbclient.Auth
 	destNamespace    string
 	maxPods          int
+	minPods          int
 
 	// cached values
 	tc *kube.TestClient
@@ -42,9 +43,12 @@ func (s *SmbShareSuite) SetupSuite() {
 	if s.maxPods == 0 {
 		s.maxPods = 1
 	}
-	require := s.Require()
 	s.tc = kube.NewTestClient("")
-	createFromFiles(require, s.tc, s.fileSources)
+	createFromFiles(s.Require(), s.tc, s.fileSources)
+}
+
+func (s *SmbShareSuite) SetupTest() {
+	require := s.Require()
 	require.NoError(waitForPodExist(s), "smb server pod does not exist")
 	require.NoError(waitForPodReady(s), "smb server pod is not ready")
 }
@@ -64,6 +68,7 @@ func (s *SmbShareSuite) getPodFetchOptions() kube.PodFetchOptions {
 		Namespace:     s.destNamespace,
 		LabelSelector: l,
 		MaxFound:      s.maxPods,
+		MinFound:      s.minPods,
 	}
 }
 
@@ -402,6 +407,7 @@ func allSmbShareSuites() map[string]suite.TestingSuite {
 			},
 			smbShareResource: types.NamespacedName{testNamespace, "cshare2"},
 			maxPods:          3,
+			minPods:          2,
 			shareName:        "Three Kingdoms",
 			testAuths: []smbclient.Auth{{
 				Username: "DOMAIN1\\ckent",
