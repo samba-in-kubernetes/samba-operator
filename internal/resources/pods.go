@@ -323,7 +323,7 @@ func buildClusteredADPodSpec(
 		)))
 
 	joinVols := append(
-		append(podCfgVols, stateVol),
+		append(podCfgVols, stateVol, ctdbSharedVol),
 		jsrc.volumes...)
 	initContainers = append(
 		initContainers,
