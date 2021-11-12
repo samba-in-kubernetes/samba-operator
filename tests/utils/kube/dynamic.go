@@ -23,13 +23,15 @@ import (
 type InputSource interface {
 	Open() (io.ReadCloser, error)
 	GetNamespace() string
+	Rename(string) string
 }
 
 // FileSource selects a file path and an optional namespace where
 // the file contains one or more k8s resource.
 type FileSource struct {
-	Path      string
-	Namespace string
+	Path       string
+	Namespace  string
+	NameSuffix string
 }
 
 // Open returns a file opened for reading.
@@ -44,6 +46,14 @@ func (f FileSource) Open() (io.ReadCloser, error) {
 // GetNamespace returns the specified namespace.
 func (f FileSource) GetNamespace() string {
 	return f.Namespace
+}
+
+// Rename adjusts the name of the resource.
+func (f FileSource) Rename(n string) string {
+	if f.NameSuffix != "" {
+		return n + f.NameSuffix
+	}
+	return n
 }
 
 // DirectSource interfaces are used to specify k8s resources directly
@@ -61,6 +71,11 @@ func (d DirectSource) Open() (io.ReadCloser, error) {
 // GetNamespace returns the specified namespace.
 func (d DirectSource) GetNamespace() string {
 	return d.Namespace
+}
+
+// Rename is currently a no-op for DirectSource.
+func (DirectSource) Rename(n string) string {
+	return n
 }
 
 // CreateFromFile creates new resources given a (yaml) file input.
@@ -162,6 +177,7 @@ func getUnstructuredObjects(src InputSource) (
 		} else if err != nil {
 			return nil, err
 		}
+		obj.SetName(src.Rename(obj.GetName()))
 		objects = append(objects, obj)
 	}
 	return objects, nil
