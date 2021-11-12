@@ -67,13 +67,13 @@ func (tc *TestClient) FetchPods(
 		return nil, err
 	}
 	if len(l.Items) > fo.max() {
-		return nil, ErrTooManyMatchingPods
+		return l.Items, ErrTooManyMatchingPods
 	}
 	if len(l.Items) == 0 {
 		return nil, ErrNoMatchingPods
 	}
 	if len(l.Items) < fo.min() {
-		return nil, ErrTooFewMatchingPods
+		return l.Items, ErrTooFewMatchingPods
 	}
 	return l.Items, nil
 }
