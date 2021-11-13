@@ -97,11 +97,12 @@ func allReconcileSuites() map[string]suite.TestingSuite {
 					Namespace: testNamespace,
 				},
 				{
-					Path:      path.Join(testFilesDir, "smbshare1.yaml"),
-					Namespace: testNamespace,
+					Path:       path.Join(testFilesDir, "smbshare1.yaml"),
+					Namespace:  testNamespace,
+					NameSuffix: "-bk",
 				},
 			},
-			smbShareResource: types.NamespacedName{testNamespace, "tshare1"},
+			smbShareResource: types.NamespacedName{testNamespace, "tshare1-bk"},
 			expectBackend:    "standard",
 			nextMode:         "clustered",
 		}
@@ -116,11 +117,12 @@ func allReconcileSuites() map[string]suite.TestingSuite {
 					Namespace: testNamespace,
 				},
 				{
-					Path:      path.Join(testFilesDir, "smbshare_ctdb1.yaml"),
-					Namespace: testNamespace,
+					Path:       path.Join(testFilesDir, "smbshare_ctdb1.yaml"),
+					Namespace:  testNamespace,
+					NameSuffix: "-bk",
 				},
 			},
-			smbShareResource: types.NamespacedName{testNamespace, "cshare1"},
+			smbShareResource: types.NamespacedName{testNamespace, "cshare1-bk"},
 			expectBackend:    "clustered",
 			nextMode:         "standard",
 		}
