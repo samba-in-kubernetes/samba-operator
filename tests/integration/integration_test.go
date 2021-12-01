@@ -21,5 +21,6 @@ func runSuiteTests(sm map[string]suite.TestingSuite) func(t *testing.T) {
 func TestIntegration(t *testing.T) {
 	t.Run("deploy", runSuiteTests(allDeploySuites()))
 	t.Run("smbShares", runSuiteTests(allSmbShareSuites()))
+	t.Run("createDelete", runSuiteTests(allShareCreateDeleteSuites()))
 	t.Run("reconciliation", runSuiteTests(allReconcileSuites()))
 }
