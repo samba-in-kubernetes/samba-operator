@@ -144,12 +144,13 @@ func (s *ShareCreateDeleteSuite) getCurrentResources() resourceSnapshot {
 }
 
 func (s *ShareCreateDeleteSuite) TestCreateAndDelete() {
+	var err error
 	require := s.Require()
 	existing := s.getCurrentResources()
 
 	createFromFiles(require, s.tc, s.fileSources)
 	require.NoError(waitForPodExist(s))
-	require.NoError(waitForPodReady(s))
+	require.NoError(waitForAllPodReady(s))
 
 	rs1 := s.getCurrentResources()
 	require.Greater(len(rs1.pods.Items), len(existing.pods.Items))
@@ -162,12 +163,18 @@ func (s *ShareCreateDeleteSuite) TestCreateAndDelete() {
 	require.GreaterOrEqual(
 		len(rs1.statefulSets.Items), len(existing.statefulSets.Items))
 
-	deleteFromFiles(require, s.tc, s.fileSources)
-
 	ctx, cancel := context.WithDeadline(
 		context.TODO(),
 		time.Now().Add(60*time.Second))
 	defer cancel()
+
+	// remove smbshare
+	smbShare := &sambaoperatorv1alpha1.SmbShare{}
+	smbShare.Namespace = s.smbShareResource.Namespace
+	smbShare.Name = s.smbShareResource.Name
+	err = s.tc.TypedObjectClient().Delete(ctx, smbShare)
+	require.NoError(err)
+
 	// wait for smbshare to go away
 	require.NoError(poll.TryUntil(ctx, &poll.Prober{
 		Cond: func() (bool, error) {
@@ -186,8 +193,11 @@ func (s *ShareCreateDeleteSuite) TestCreateAndDelete() {
 		},
 	}))
 	// wait for pods to go away
-	err := s.waitForNoSmbServices()
+	err = s.waitForNoSmbServices()
 	require.NoError(err)
+
+	deleteFromFiles(require, s.tc, s.fileSources)
+	time.Sleep(200 * time.Millisecond)
 
 	rs2 := s.getCurrentResources()
 	require.Equal(len(rs2.pods.Items), len(existing.pods.Items))
@@ -266,6 +276,51 @@ func allShareCreateDeleteSuites() map[string]suite.TestingSuite {
 		smbShareResource: types.NamespacedName{"default", "tshare3"},
 		maxPods:          1,
 		minPods:          1,
+	}
+
+	if testClusteredShares {
+		m["clustered"] = &ShareCreateDeleteSuite{
+			fileSources: []kube.FileSource{
+				{
+					Path:      path.Join(testFilesDir, "userssecret1.yaml"),
+					Namespace: ns,
+				},
+				{
+					Path:      path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
+					Namespace: ns,
+				},
+				{
+					Path:       path.Join(testFilesDir, "smbshare_ctdb1.yaml"),
+					Namespace:  ns,
+					NameSuffix: "-cleanme",
+				},
+			},
+			destNamespace:    ns,
+			smbShareResource: types.NamespacedName{ns, "cshare1-cleanme"},
+			maxPods:          3,
+			minPods:          2,
+		}
+		m["clusteredDomainMember"] = &ShareCreateDeleteSuite{
+			fileSources: []kube.FileSource{
+				{
+					Path:      path.Join(testFilesDir, "joinsecret1.yaml"),
+					Namespace: ns,
+				},
+				{
+					Path:      path.Join(testFilesDir, "smbsecurityconfig2.yaml"),
+					Namespace: ns,
+				},
+				{
+					Path:       path.Join(testFilesDir, "smbshare_ctdb2.yaml"),
+					Namespace:  ns,
+					NameSuffix: "-cleanme",
+				},
+			},
+			destNamespace:    ns,
+			smbShareResource: types.NamespacedName{ns, "cshare2-cleanme"},
+			maxPods:          3,
+			minPods:          2,
+		}
 	}
 
 	return m
