@@ -246,5 +246,27 @@ func allShareCreateDeleteSuites() map[string]suite.TestingSuite {
 		minPods:          1,
 	}
 
+	// should we use a namespace other than default for this test?
+	m["altNamespace"] = &ShareCreateDeleteSuite{
+		fileSources: []kube.FileSource{
+			{
+				Path:      path.Join(testFilesDir, "userssecret1.yaml"),
+				Namespace: "default",
+			},
+			{
+				Path:      path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
+				Namespace: "default",
+			},
+			{
+				Path:      path.Join(testFilesDir, "smbshare3.yaml"),
+				Namespace: "default",
+			},
+		},
+		destNamespace:    "default",
+		smbShareResource: types.NamespacedName{"default", "tshare3"},
+		maxPods:          1,
+		minPods:          1,
+	}
+
 	return m
 }
