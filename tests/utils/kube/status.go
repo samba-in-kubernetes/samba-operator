@@ -66,6 +66,19 @@ func (pp *podProbe) checkReady(ctx context.Context) (bool, error) {
 	return false, nil
 }
 
+func (pp *podProbe) checkAllReady(ctx context.Context) (bool, error) {
+	err := pp.fetch(ctx)
+	if err != nil {
+		return false, err
+	}
+	for _, pod := range pp.pods {
+		if !PodIsReady(&pod) {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
 func (pp *podProbe) Completed(e error) error {
 	if e == nil {
 		return e
@@ -105,6 +118,20 @@ func WaitForAnyPodReady(
 		fetchOpts: fo,
 	}
 	pp.Cond = func() (bool, error) { return pp.checkReady(ctx) }
+	return poll.TryUntil(ctx, pp)
+}
+
+// WaitForAllPodReady will for all pods selected to be ready, up to the
+// deadline specified by the context, if the context lacks a deadline the
+// call will block indefinitely. Pods are slected using the PodFetchOptions.
+func WaitForAllPodReady(
+	ctx context.Context, tc *TestClient, fo PodFetchOptions) error {
+	// ---
+	pp := &podProbe{
+		tc:        tc,
+		fetchOpts: fo,
+	}
+	pp.Cond = func() (bool, error) { return pp.checkAllReady(ctx) }
 	return poll.TryUntil(ctx, pp)
 }
 
