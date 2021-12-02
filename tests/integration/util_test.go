@@ -74,3 +74,15 @@ func waitForPodReady(s podTestClient) error {
 		s.getPodFetchOptions(),
 	)
 }
+
+func waitForAllPodReady(s podTestClient) error {
+	ctx, cancel := context.WithDeadline(
+		context.TODO(),
+		time.Now().Add(waitForReadyTime))
+	defer cancel()
+	return kube.WaitForAllPodReady(
+		ctx,
+		s.getTestClient(),
+		s.getPodFetchOptions(),
+	)
+}
