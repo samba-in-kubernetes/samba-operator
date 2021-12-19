@@ -243,7 +243,8 @@ func (sp *sharePlanner) idmapOptions() smbcc.SmbOptions {
 func (sp *sharePlanner) update() (changed bool, err error) {
 	globals, found := sp.ConfigState.Globals[smbcc.Globals]
 	if !found {
-		globals = smbcc.NewGlobals()
+		globalOptions := smbcc.NewGlobalOptions()
+		globals = smbcc.NewGlobals(globalOptions)
 		sp.ConfigState.Globals[smbcc.Globals] = globals
 		changed = true
 	}
