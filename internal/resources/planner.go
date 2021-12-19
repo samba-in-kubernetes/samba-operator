@@ -241,10 +241,10 @@ func (sp *sharePlanner) idmapOptions() smbcc.SmbOptions {
 }
 
 func (sp *sharePlanner) update() (changed bool, err error) {
-	noprinting, found := sp.ConfigState.Globals[smbcc.NoPrintingKey]
+	globals, found := sp.ConfigState.Globals[smbcc.Globals]
 	if !found {
-		noprinting = smbcc.NewNoPrintingGlobals()
-		sp.ConfigState.Globals[smbcc.NoPrintingKey] = noprinting
+		globals = smbcc.NewGlobals()
+		sp.ConfigState.Globals[smbcc.Globals] = globals
 		changed = true
 	}
 	shareKey := smbcc.Key(sp.shareName())
@@ -265,7 +265,7 @@ func (sp *sharePlanner) update() (changed bool, err error) {
 	if !found || cfg.Shares[0] != shareKey {
 		cfg = smbcc.ConfigSection{
 			Shares:       []smbcc.Key{shareKey},
-			Globals:      []smbcc.Key{smbcc.NoPrintingKey},
+			Globals:      []smbcc.Key{smbcc.Globals},
 			InstanceName: sp.instanceName(),
 		}
 		if sp.securityMode() == adMode {
