@@ -84,7 +84,8 @@ func TestMarshal(t *testing.T) {
 	globalsKey := Key("globals")
 	shareKey := Key("share")
 	wbtestKey := Key("wbtest")
-	scc.Globals[globalsKey] = NewGlobals()
+	opts := NewGlobalOptions()
+	scc.Globals[globalsKey] = NewGlobals(opts)
 	scc.Globals[wbtestKey] = GlobalConfig{
 		Options: SmbOptions{
 			"log level":                "10",

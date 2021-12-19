@@ -27,6 +27,12 @@ const (
 	CTDB FeatureFlag = "ctdb"
 )
 
+// GlobalOptions is used to pass options to modify the samba configuration
+type GlobalOptions struct {
+	// AddVFSFileid is used to check if we add vfs_fileid to the smb config
+	AddVFSFileid bool
+}
+
 // SambaContainerConfig holds one or more configuration for samba
 // containers.
 type SambaContainerConfig struct {
@@ -101,6 +107,13 @@ const (
 	No = "no"
 )
 
+// NewGlobalOptions is the constructor for struct SambaConfigOptions
+func NewGlobalOptions() GlobalOptions {
+	return GlobalOptions{
+		AddVFSFileid: true,
+	}
+}
+
 // New returns a new samba container config.
 func New() *SambaContainerConfig {
 	return &SambaContainerConfig{
@@ -112,8 +125,8 @@ func New() *SambaContainerConfig {
 }
 
 // NewGlobals returns a default GlobalConfig.
-func NewGlobals() GlobalConfig {
-	return GlobalConfig{
+func NewGlobals(opts GlobalOptions) GlobalConfig {
+	cfg := GlobalConfig{
 		Options: SmbOptions{
 			"load printers":   No,
 			"printing":        "bsd",
@@ -121,6 +134,18 @@ func NewGlobals() GlobalConfig {
 			"disable spoolss": Yes,
 		},
 	}
+
+	if opts.AddVFSFileid {
+		_, found := cfg.Options["vfs objects"]
+		if found {
+			cfg.Options["vfs objects"] += " fileid"
+		} else {
+			cfg.Options["vfs objects"] = "fileid"
+		}
+		cfg.Options["fileid:algorithm"] = "fsid"
+	}
+
+	return cfg
 }
 
 // NewSimpleShare returns a ShareConfig with a simple configuration.
