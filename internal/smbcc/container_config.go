@@ -84,8 +84,8 @@ type SmbOptions map[string]string
 const version0 = "v0"
 
 const (
-	// NoPrintingKey is used for the standard "noprinting" globals subsection.
-	NoPrintingKey = Key("noprinting")
+	// Globals is used for the default globals subsection.
+	Globals = Key("globals")
 	// AllEntriesKey is used for the standard "all_entries" default key for
 	// users and groups.
 	AllEntriesKey = Key("all_entries")
@@ -111,8 +111,8 @@ func New() *SambaContainerConfig {
 	}
 }
 
-// NewNoPrintingGlobals returns a GlobalConfig that disables printing.
-func NewNoPrintingGlobals() GlobalConfig {
+// NewGlobals returns a default GlobalConfig.
+func NewGlobals() GlobalConfig {
 	return GlobalConfig{
 		Options: SmbOptions{
 			"load printers":   No,

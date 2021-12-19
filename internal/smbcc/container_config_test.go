@@ -81,10 +81,10 @@ func TestUnmarshal(t *testing.T) {
 
 func TestMarshal(t *testing.T) {
 	scc := New()
-	noprintingKey := Key("noprinting")
+	globalsKey := Key("globals")
 	shareKey := Key("share")
 	wbtestKey := Key("wbtest")
-	scc.Globals[noprintingKey] = NewNoPrintingGlobals()
+	scc.Globals[globalsKey] = NewGlobals()
 	scc.Globals[wbtestKey] = GlobalConfig{
 		Options: SmbOptions{
 			"log level":                "10",
@@ -99,7 +99,7 @@ func TestMarshal(t *testing.T) {
 	scc.Shares[shareKey] = NewSimpleShare("/path")
 	cfg := NewConfigSection("WB1")
 	cfg.Shares = []Key{shareKey}
-	cfg.Globals = []Key{noprintingKey, wbtestKey}
+	cfg.Globals = []Key{globalsKey, wbtestKey}
 	scc.Configs[wbtestKey] = cfg
 
 	b, err := json.Marshal(scc)
