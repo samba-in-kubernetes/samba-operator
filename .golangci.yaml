@@ -8,6 +8,7 @@ linters:
     - deadcode
     - depguard
     - dupl
+    - errcheck
     - exportloopref
     - goconst
     - goheader

@@ -113,7 +113,10 @@ func (s *Source) Read() (*OperatorConfig, error) {
 
 	// use cli flags if available
 	if s.fset != nil {
-		v.BindPFlags(s.fset)
+		err = v.BindPFlags(s.fset)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// we isolate config handling to this package. thus we marshal
