@@ -301,6 +301,7 @@ func (sp *sharePlanner) update() (changed bool, err error) {
 	return
 }
 
+// nolint:unused
 func (sp *sharePlanner) prune() (changed bool, err error) {
 	cfgKey := sp.instanceID()
 	if _, found := sp.ConfigState.Configs[cfgKey]; found {
