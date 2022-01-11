@@ -50,6 +50,9 @@ func toServiceType(s string) corev1.ServiceType {
 	case corev1.ServiceTypeClusterIP:
 	case corev1.ServiceTypeNodePort:
 	case corev1.ServiceTypeLoadBalancer:
+
+	case corev1.ServiceTypeExternalName:
+		fallthrough
 	default:
 		panic("invalid value for service type")
 	}

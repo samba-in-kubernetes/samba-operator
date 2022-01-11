@@ -9,6 +9,7 @@ linters:
     - depguard
     - dupl
     - errcheck
+    - exhaustive
     - exportloopref
     - goconst
     - goheader

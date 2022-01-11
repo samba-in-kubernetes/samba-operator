@@ -325,6 +325,8 @@ func (sp *sharePlanner) dnsRegister() dnsRegister {
 	// allowed values
 	case dnsRegisterExternalIP, dnsRegisterClusterIP:
 	// anything else is reverted to "never"
+	case dnsRegisterNever:
+		fallthrough
 	default:
 		reg = dnsRegisterNever
 	}
