@@ -12,20 +12,30 @@ linters:
     - exhaustive
     - exportloopref
     - funlen
+    # - gci
     - goconst
     - gocritic
+    # - godot
+    # - godox
     - goheader
     - gofmt
     - gosimple
     - govet
+    # - ineffassign
+    # - ifshort
     - lll
     - megacheck
     - misspell
+    # - nlreturn
+    # - nolintlint
     - revive
     - staticcheck
     - structcheck
+    # - tagliatelle
+    # - testpackage
     - typecheck
     - unconvert
+    # - unparam
     - unused
     - varcheck
     - whitespace
