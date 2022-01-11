@@ -1,0 +1,24 @@
+---
+run:
+  timeout: 3m
+linters:
+  disable-all: true
+  enable:
+    - asciicheck
+    - deadcode
+    - depguard
+    - dupl
+    - exportloopref
+    - goconst
+    - goheader
+    - gofmt
+    - gosimple
+    - govet
+    - megacheck
+    - misspell
+    - structcheck
+    - typecheck
+    - unconvert
+    - varcheck
+    - whitespace
+
