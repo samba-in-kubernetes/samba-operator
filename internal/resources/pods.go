@@ -72,15 +72,11 @@ func buildADPodSpec(
 	smbdVols := append(smbServerVols, shareVol)
 
 	jsrc := getJoinSources(planner)
-	joinEnv := []corev1.EnvVar{{
-		Name:  "SAMBACC_JOIN_FILES",
-		Value: planner.joinEnvPaths(jsrc.paths),
-	}}
 	volumes = append(volumes, jsrc.volumes...)
 	joinVols := append(smbAllVols, jsrc.volumes...)
 
 	podEnv := defaultPodEnv(planner)
-	joinEnv = append(
+	joinEnv := append(
 		podEnv,
 		corev1.EnvVar{
 			Name:  "SAMBACC_JOIN_FILES",

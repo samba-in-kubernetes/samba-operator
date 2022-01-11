@@ -16,6 +16,7 @@ linters:
     - govet
     - megacheck
     - misspell
+    - staticcheck
     - structcheck
     - typecheck
     - unconvert
