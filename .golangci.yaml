@@ -11,6 +11,7 @@ linters:
     - errcheck
     - exhaustive
     - exportloopref
+    - funlen
     - goconst
     - goheader
     - gofmt
@@ -25,4 +26,7 @@ linters:
     - unused
     - varcheck
     - whitespace
-
+linters-settings:
+  funlen:
+    lines: 188
+    statements: 60
