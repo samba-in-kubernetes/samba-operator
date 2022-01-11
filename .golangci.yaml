@@ -13,6 +13,7 @@ linters:
     - exportloopref
     - funlen
     - goconst
+    - gocritic
     - goheader
     - gofmt
     - gosimple

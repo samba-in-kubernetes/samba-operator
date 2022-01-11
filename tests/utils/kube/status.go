@@ -45,9 +45,11 @@ func (pp *podProbe) checkExists(ctx context.Context) (bool, error) {
 	err := pp.fetch(ctx)
 	if err == nil {
 		return true, nil
-	} else if errors.Is(err, ErrNoMatchingPods) {
+	}
+	if errors.Is(err, ErrNoMatchingPods) {
 		return false, nil
-	} else if errors.Is(err, ErrTooFewMatchingPods) {
+	}
+	if errors.Is(err, ErrTooFewMatchingPods) {
 		return false, nil
 	}
 	return false, err
