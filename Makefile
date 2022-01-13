@@ -231,3 +231,17 @@ GOLANGCI_LINT=$(GOBIN)/golangci-lint
 else
 GOLANGCI_LINT=$(shell command -v golangci-lint ;)
 endif
+
+# find or download yq
+.PHONY: yq
+yq:
+ifeq (, $(shell command -v yq ;))
+	@echo "yq not found in PATH, checking in GOBIN ($(GOBIN))..."
+ifeq (, $(shell command -v $(GOBIN)/yq ;))
+	$(GO_CMD) install github.com/mikefarah/yq/v4@latest
+	@echo "yq installed in GOBIN"
+endif
+YQ=$(GOBIN)/yq
+else
+YQ=$(shell command -v yq ;)
+endif
