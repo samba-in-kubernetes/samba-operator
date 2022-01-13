@@ -28,6 +28,7 @@ GO_CMD:=go
 GOFMT_CMD:=gofmt
 KUBECTL_CMD:=kubectl
 BUILDAH_CMD:=buildah
+YAMLLINT_CMD:=yamllint
 
 # Image URL to use all building/pushing image targets
 TAG ?= latest
@@ -121,6 +122,11 @@ reformat:
 vet:
 	$(GO_CMD) vet ./...
 
+# Format yaml files for yamllint standard
+.PHONY: yaml-fmt
+yaml-fmt: yq
+	YQ=$(YQ) ./hack/yq-fixup-yamls.sh ./
+
 # Generate code
 generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
@@ -186,9 +192,9 @@ bundle-build:
 	@false
 	# See vcs history for how this could be restored or adapted in the future.
 
-.PHONY: check check-revive check-golangci-lint check-format
+.PHONY: check check-revive check-golangci-lint check-format check-yaml
 
-check: check-revive check-golangci-lint check-format vet
+check: check-revive check-golangci-lint check-format vet check-yaml
 
 check-format:
 	! $(GOFMT_CMD) $(CHECK_GOFMT_FLAGS) . | sed 's,^,formatting error: ,' | grep 'go$$'
@@ -200,6 +206,9 @@ check-revive: revive
 
 check-golangci-lint: golangci-lint
 	$(GOLANGCI_LINT) -c .golangci.yaml run ./...
+
+check-yaml:
+	$(YAMLLINT_CMD) -c ./.yamllint.yaml ./
 
 # find or download revive
 .PHONY: revive
