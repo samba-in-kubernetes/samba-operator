@@ -64,23 +64,23 @@ func buildADPodSpec(
 	// for smb server containers (not init containers)
 	wbSockVol := wbSocketsVolumeAndMount(planner)
 	volumes = append(volumes, wbSockVol)
+	// nolint:gocritic
 	smbServerVols := append(smbAllVols, wbSockVol)
 
 	// for smbd only
 	shareVol := shareVolumeAndMount(planner, pvcName)
 	volumes = append(volumes, shareVol)
+	// nolint:gocritic
 	smbdVols := append(smbServerVols, shareVol)
 
 	jsrc := getJoinSources(planner)
-	joinEnv := []corev1.EnvVar{{
-		Name:  "SAMBACC_JOIN_FILES",
-		Value: planner.joinEnvPaths(jsrc.paths),
-	}}
 	volumes = append(volumes, jsrc.volumes...)
+	// nolint:gocritic
 	joinVols := append(smbAllVols, jsrc.volumes...)
 
 	podEnv := defaultPodEnv(planner)
-	joinEnv = append(
+	// nolint:gocritic
+	joinEnv := append(
 		podEnv,
 		corev1.EnvVar{
 			Name:  "SAMBACC_JOIN_FILES",
@@ -99,6 +99,7 @@ func buildADPodSpec(
 		)
 		volumes = append(volumes, watchVol)
 		svcWatchVols := []volMount{watchVol}
+		// nolint:gocritic
 		dnsRegVols := append(smbServerVols, watchVol)
 		containers = append(
 			containers,
@@ -194,6 +195,7 @@ func buildClusteredUserPodSpec(
 	}
 
 	podEnv := defaultPodEnv(planner)
+	// nolint:gocritic
 	ctdbEnv := append(podEnv, ctdbHostnameEnv(planner)...)
 
 	initContainers = append(
@@ -214,6 +216,7 @@ func buildClusteredUserPodSpec(
 			ctdbPeristentVol,
 		)))
 
+	// nolint:gocritic
 	ctdbInitVols := append(
 		podCfgVols,
 		stateVol,
@@ -226,6 +229,7 @@ func buildClusteredUserPodSpec(
 		buildCTDBMustHaveNodeCtr(planner, ctdbEnv, ctdbInitVols),
 	)
 
+	// nolint:gocritic
 	ctdbdVols := append(
 		podCfgVols,
 		ctdbConfigVol,
@@ -238,6 +242,7 @@ func buildClusteredUserPodSpec(
 		containers,
 		buildCTDBDaemonCtr(planner, ctdbEnv, ctdbdVols))
 
+	// nolint:gocritic
 	ctdbManageNodesVols := append(
 		podCfgVols,
 		ctdbConfigVol,
@@ -312,6 +317,7 @@ func buildClusteredADPodSpec(
 	volumes = append(volumes, jsrc.volumes...)
 
 	podEnv := defaultPodEnv(planner)
+	// nolint:gocritic
 	ctdbEnv := append(podEnv, ctdbHostnameEnv(planner)...)
 
 	initContainers = append(
@@ -340,6 +346,7 @@ func buildClusteredADPodSpec(
 			ctdbPeristentVol,
 		)))
 
+	// nolint:gocritic
 	ctdbInitVols := append(
 		podCfgVols,
 		stateVol,
@@ -352,6 +359,7 @@ func buildClusteredADPodSpec(
 		buildCTDBMustHaveNodeCtr(planner, ctdbEnv, ctdbInitVols),
 	)
 
+	// nolint:gocritic
 	ctdbdVols := append(
 		podCfgVols,
 		ctdbConfigVol,
@@ -364,6 +372,7 @@ func buildClusteredADPodSpec(
 		containers,
 		buildCTDBDaemonCtr(planner, ctdbEnv, ctdbdVols))
 
+	// nolint:gocritic
 	ctdbManageNodesVols := append(
 		podCfgVols,
 		ctdbConfigVol,
@@ -375,6 +384,7 @@ func buildClusteredADPodSpec(
 		buildCTDBManageNodesCtr(planner, ctdbEnv, ctdbManageNodesVols))
 
 	// winbindd
+	// nolint:gocritic
 	wbVols := append(
 		podCfgVols,
 		stateVol,
@@ -401,6 +411,7 @@ func buildClusteredADPodSpec(
 		)
 		volumes = append(volumes, watchVol)
 		svcWatchVols := []volMount{watchVol}
+		// nolint:gocritic
 		dnsRegVols := append(wbVols, watchVol)
 		containers = append(
 			containers,

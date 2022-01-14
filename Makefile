@@ -186,9 +186,9 @@ bundle-build:
 	@false
 	# See vcs history for how this could be restored or adapted in the future.
 
-.PHONY: check check-revive check-format
+.PHONY: check check-revive check-golangci-lint check-format
 
-check: check-revive check-format vet
+check: check-revive check-golangci-lint check-format vet
 
 check-format:
 	! $(GOFMT_CMD) $(CHECK_GOFMT_FLAGS) . | sed 's,^,formatting error: ,' | grep 'go$$'
@@ -198,6 +198,10 @@ check-revive: revive
 	# See: https://github.com/mgechev/revive
 	$(REVIVE) -config .revive.toml $$($(GO_CMD) list ./... | grep -v /vendor/)
 
+check-golangci-lint: golangci-lint
+	$(GOLANGCI_LINT) -c .golangci.yaml run ./...
+
+# find or download revive
 .PHONY: revive
 revive:
 ifeq (, $(shell command -v revive ;))
@@ -212,4 +216,18 @@ REVIVE=$(shell command -v $(GOBIN)/revive ;)
 else
 	@echo "revive found in PATH"
 REVIVE=$(shell command -v revive ;)
+endif
+
+# find or download golangci-lint
+.PHONY: golangci-lint
+golangci-lint:
+ifeq (, $(shell command -v golangci-lint ;))
+	@echo "golangci-lint not found in PATH, checking in GOBIN ($(GOBIN))..."
+ifeq (, $(shell command -v $(GOBIN)/golangci-lint ;))
+	$(GO_CMD) install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.43.0
+	@echo "golangci-lint installed in GOBIN"
+endif
+GOLANGCI_LINT=$(GOBIN)/golangci-lint
+else
+GOLANGCI_LINT=$(shell command -v golangci-lint ;)
 endif

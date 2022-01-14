@@ -36,6 +36,7 @@ type SmbCommonConfigReconciler struct {
 
 //revive:disable kubebuilder directives
 
+// nolint:lll
 // +kubebuilder:rbac:groups=samba-operator.samba.org,resources=smbcommonconfigs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=samba-operator.samba.org,resources=smbcommonconfigs/status,verbs=get;update;patch
 

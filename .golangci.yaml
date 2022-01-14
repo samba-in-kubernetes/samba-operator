@@ -1,0 +1,101 @@
+---
+run:
+  timeout: 3m
+linters:
+  disable-all: true
+  enable:
+    - asciicheck
+    - deadcode
+    - depguard
+    - dupl
+    - errcheck
+    - exhaustive
+    - exportloopref
+    - funlen
+    # - gci
+    - goconst
+    - gocritic
+    # - godot
+    # - godox
+    - goheader
+    - gofmt
+    - gosimple
+    - govet
+    # - ineffassign
+    # - ifshort
+    - lll
+    - megacheck
+    - misspell
+    # - nlreturn
+    # - nolintlint
+    - revive
+    - staticcheck
+    - structcheck
+    # - tagliatelle
+    # - testpackage
+    - typecheck
+    - unconvert
+    # - unparam
+    - unused
+    - varcheck
+    - whitespace
+linters-settings:
+  funlen:
+    lines: 188
+    statements: 60
+  lll:
+    line-length: 98
+  revive:
+    ignore-generated-header: false
+    severity: error
+    rules:
+      - name: blank-imports
+      - name: context-as-argument
+      - name: context-keys-type
+      - name: dot-imports
+      - name: error-return
+      - name: error-strings
+      - name: error-naming
+      - name: exported
+      - name: if-return
+      - name: increment-decrement
+      - name: var-naming
+        arguments: [["UID", "GID"]]
+      - name: var-declaration
+      - name: package-comments
+      - name: range
+      - name: receiver-naming
+      - name: time-naming
+      - name: unexported-return
+      - name: indent-error-flow
+      - name: errorf
+      - name: empty-block
+      - name: superfluous-else
+      - name: unused-parameter
+      - name: unreachable-code
+      - name: redefines-builtin-id
+      - name: atomic
+      - name: bool-literal-in-expr
+      - name: constant-logical-expr
+      - name: unnecessary-stmt
+      - name: unused-receiver
+      - name: get-return
+      - name: flag-parameter
+      - name: confusing-results
+      - name: confusing-naming
+      - name: modifies-parameter
+      - name: modifies-value-receiver
+      - name: import-shadowing
+      - name: range-val-in-closure
+      - name: waitgroup-by-value
+      - name: call-to-gc
+      - name: duplicated-imports
+      - name: argument-limit
+        arguments: [7]
+      - name: function-result-limit
+        arguments: [3]
+      - name: unhandled-error
+        arguments: ["fmt.Printf", "fmt.Println"]
+      # - name: struct-tag
+      - name: line-length-limit
+        arguments: [98]
