@@ -2,16 +2,12 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 # Adds namespace to all resources.
 namespace: samba-operator-system
-
 # Value of this field is prepended to the names of all resources
 namePrefix: samba-operator-
-
 # Labels to add to all resources and selectors.
 #commonLabels:
 #  someName: someValue
-
 bases:
-- ../crd
-- ../rbac
-- ../manager-full
-
+  - ../crd
+  - ../rbac
+  - ../manager-full

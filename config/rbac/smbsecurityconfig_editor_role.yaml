@@ -4,21 +4,21 @@ kind: ClusterRole
 metadata:
   name: smbsecurityconfig-editor-role
 rules:
-- apiGroups:
-  - samba-operator.samba.org
-  resources:
-  - smbsecurityconfigs
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - samba-operator.samba.org
-  resources:
-  - smbsecurityconfigs/status
-  verbs:
-  - get
+  - apiGroups:
+      - samba-operator.samba.org
+    resources:
+      - smbsecurityconfigs
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - samba-operator.samba.org
+    resources:
+      - smbsecurityconfigs/status
+    verbs:
+      - get

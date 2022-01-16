@@ -4,17 +4,17 @@ kind: ClusterRole
 metadata:
   name: smbsecurityconfig-viewer-role
 rules:
-- apiGroups:
-  - samba-operator.samba.org
-  resources:
-  - smbsecurityconfigs
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - samba-operator.samba.org
-  resources:
-  - smbsecurityconfigs/status
-  verbs:
-  - get
+  - apiGroups:
+      - samba-operator.samba.org
+    resources:
+      - smbsecurityconfigs
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - samba-operator.samba.org
+    resources:
+      - smbsecurityconfigs/status
+    verbs:
+      - get
