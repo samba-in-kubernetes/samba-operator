@@ -9,14 +9,13 @@ spec:
     - name: client
       image: quay.io/samba.org/samba-client:latest
       command:
-      - sleep
-      - infinity
+        - sleep
+        - infinity
       workingDir: "/srv"
       volumeMounts:
-      - mountPath: "/srv"
-        name: data
+        - mountPath: "/srv"
+          name: data
   volumes:
-  - configMap:
-      name: sample-data1
-    name: data
-
+    - configMap:
+        name: sample-data1
+      name: data

@@ -16,42 +16,42 @@ spec:
     spec:
       hostname: dc1
       containers:
-      - name: samba
-        image: quay.io/samba.org/samba-ad-server:latest
-        securityContext:
-          capabilities:
-            add: ["SYS_ADMIN"]
-        ports:
-        # https://wiki.samba.org/index.php/Samba_AD_DC_Port_Usage
-        - containerPort: 53
-          name: dns
-        - containerPort: 135
-          name: epm
-          protocol: TCP
-        - containerPort: 137
-          name: netbios-ns
-          protocol: UDP
-        - containerPort: 138
-          name: netbios-dgram
-          protocol: UDP
-        - containerPort: 139
-          name: netbios-session
-          protocol: TCP
-        - containerPort: 389
-          name: ldap
-        - containerPort: 445
-          name: smb
-          protocol: TCP
-        - containerPort: 464
-          name: kerberos
-        - containerPort: 636
-          name: ldaps
-          protocol: TCP
-        - containerPort: 3268
-          name: gc
-          protocol: TCP
-        - containerPort: 3269
-          name: gc-ssl
-          protocol: TCP
-        # need 49152-65535 for dynamic RPC ports
-        # but currently not possible to specify ranges
+        - name: samba
+          image: quay.io/samba.org/samba-ad-server:latest
+          securityContext:
+            capabilities:
+              add: ["SYS_ADMIN"]
+          ports:
+            # https://wiki.samba.org/index.php/Samba_AD_DC_Port_Usage
+            - containerPort: 53
+              name: dns
+            - containerPort: 135
+              name: epm
+              protocol: TCP
+            - containerPort: 137
+              name: netbios-ns
+              protocol: UDP
+            - containerPort: 138
+              name: netbios-dgram
+              protocol: UDP
+            - containerPort: 139
+              name: netbios-session
+              protocol: TCP
+            - containerPort: 389
+              name: ldap
+            - containerPort: 445
+              name: smb
+              protocol: TCP
+            - containerPort: 464
+              name: kerberos
+            - containerPort: 636
+              name: ldaps
+              protocol: TCP
+            - containerPort: 3268
+              name: gc
+              protocol: TCP
+            - containerPort: 3269
+              name: gc-ssl
+              protocol: TCP
+              # need 49152-65535 for dynamic RPC ports
+              # but currently not possible to specify ranges
