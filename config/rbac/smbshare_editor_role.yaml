@@ -4,21 +4,21 @@ kind: ClusterRole
 metadata:
   name: smbshare-editor-role
 rules:
-- apiGroups:
-  - samba-operator.samba.org
-  resources:
-  - smbshares
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - samba-operator.samba.org
-  resources:
-  - smbshares/status
-  verbs:
-  - get
+  - apiGroups:
+      - samba-operator.samba.org
+    resources:
+      - smbshares
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - samba-operator.samba.org
+    resources:
+      - smbshares/status
+    verbs:
+      - get

@@ -1,149 +1,147 @@
-
----
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   creationTimestamp: null
   name: manager-role
 rules:
-- apiGroups:
-  - apps
-  resources:
-  - deployments
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - apps
-  resources:
-  - statefulsets
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - configmaps
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - events
-  verbs:
-  - create
-- apiGroups:
-  - ""
-  resources:
-  - persistentvolumeclaims
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - pods
-  verbs:
-  - get
-  - list
-- apiGroups:
-  - ""
-  resources:
-  - services
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - samba-operator.samba.org
-  resources:
-  - smbcommonconfigs
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - samba-operator.samba.org
-  resources:
-  - smbcommonconfigs/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - samba-operator.samba.org
-  resources:
-  - smbsecurityconfigs
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - samba-operator.samba.org
-  resources:
-  - smbsecurityconfigs/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - samba-operator.samba.org
-  resources:
-  - smbshares
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - samba-operator.samba.org
-  resources:
-  - smbshares/finalizers
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - samba-operator.samba.org
-  resources:
-  - smbshares/status
-  verbs:
-  - get
-  - patch
-  - update
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps
+    resources:
+      - statefulsets
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+  - apiGroups:
+      - ""
+    resources:
+      - persistentvolumeclaims
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - get
+      - list
+  - apiGroups:
+      - ""
+    resources:
+      - services
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - samba-operator.samba.org
+    resources:
+      - smbcommonconfigs
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - samba-operator.samba.org
+    resources:
+      - smbcommonconfigs/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - samba-operator.samba.org
+    resources:
+      - smbsecurityconfigs
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - samba-operator.samba.org
+    resources:
+      - smbsecurityconfigs/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - samba-operator.samba.org
+    resources:
+      - smbshares
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - samba-operator.samba.org
+    resources:
+      - smbshares/finalizers
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - samba-operator.samba.org
+    resources:
+      - smbshares/status
+    verbs:
+      - get
+      - patch
+      - update

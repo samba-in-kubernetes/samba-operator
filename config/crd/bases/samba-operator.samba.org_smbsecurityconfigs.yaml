@@ -1,5 +1,3 @@
-
----
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -16,117 +14,99 @@ spec:
     singular: smbsecurityconfig
   scope: Namespaced
   versions:
-  - name: v1alpha1
-    schema:
-      openAPIV3Schema:
-        description: SmbSecurityConfig is the Schema for the smbsecurityconfigs API
-        properties:
-          apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
-            type: string
-          kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-            type: string
-          metadata:
-            type: object
-          spec:
-            description: SmbSecurityConfigSpec defines the desired state of SmbSecurityConfig
-            properties:
-              dns:
-                description: DNS is used to configure properties related to the DNS
-                  services of the domain.
-                properties:
-                  register:
-                    description: 'Register a specified member server''s address with
-                      the domain''s DNS or disabled when set to "never". NOTE: cluster-ip
-                      is not generally supported, it is only for testing.'
-                    enum:
-                    - never
-                    - external-ip
-                    - cluster-ip
-                    type: string
-                type: object
-              domains:
-                description: Domains holds a list of primary & trusted domain configurations.
-                  If left empty a simple default that automatically works with trusted
-                  domains will be used.
-                items:
-                  description: SmbSecurityDomainSpec configures samba's domain management
-                    and ID mapping behavior for the specified domain.
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: SmbSecurityConfig is the Schema for the smbsecurityconfigs API
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: SmbSecurityConfigSpec defines the desired state of SmbSecurityConfig
+              properties:
+                dns:
+                  description: DNS is used to configure properties related to the DNS services of the domain.
                   properties:
-                    backend:
-                      description: Mode specifies what approach to security is being
-                        used.
+                    register:
+                      description: 'Register a specified member server''s address with the domain''s DNS or disabled when set to "never". NOTE: cluster-ip is not generally supported, it is only for testing.'
                       enum:
-                      - autorid
-                      - ad-rfc2307
+                        - never
+                        - external-ip
+                        - cluster-ip
                       type: string
-                    name:
-                      description: Name of the domain.
+                  type: object
+                domains:
+                  description: Domains holds a list of primary & trusted domain configurations. If left empty a simple default that automatically works with trusted domains will be used.
+                  items:
+                    description: SmbSecurityDomainSpec configures samba's domain management and ID mapping behavior for the specified domain.
+                    properties:
+                      backend:
+                        description: Mode specifies what approach to security is being used.
+                        enum:
+                          - autorid
+                          - ad-rfc2307
+                        type: string
+                      name:
+                        description: Name of the domain.
+                        minLength: 1
+                        type: string
+                    type: object
+                  type: array
+                joinSources:
+                  description: JoinSources holds a list of sources for domain join data for this configuration.
+                  items:
+                    description: SmbSecurityJoinSpec configures how samba instances are allowed to join to active directory if needed.
+                    properties:
+                      userJoin:
+                        description: SmbSecurityUserJoinSpec configures samba container instances to use a secret containing a username and password.
+                        properties:
+                          key:
+                            default: join.json
+                            description: Key within the secret containing the username and password.
+                            type: string
+                          secret:
+                            description: Secret that contains the username and password.
+                            minLength: 1
+                            type: string
+                        type: object
+                    type: object
+                  type: array
+                mode:
+                  description: Mode specifies what approach to security is being used.
+                  enum:
+                    - user
+                    - active-directory
+                  type: string
+                realm:
+                  description: Realm specifies the active directory domain to use.
+                  type: string
+                users:
+                  description: Users is used to configure "local" user and group based security.
+                  properties:
+                    key:
+                      description: Key identifies the key within the secret that stores the user and group configuration json.
+                      minLength: 1
+                      type: string
+                    secret:
+                      description: Secret identifies the name of the secret storing user and group configuration json.
                       minLength: 1
                       type: string
                   type: object
-                type: array
-              joinSources:
-                description: JoinSources holds a list of sources for domain join data
-                  for this configuration.
-                items:
-                  description: SmbSecurityJoinSpec configures how samba instances
-                    are allowed to join to active directory if needed.
-                  properties:
-                    userJoin:
-                      description: SmbSecurityUserJoinSpec configures samba container
-                        instances to use a secret containing a username and password.
-                      properties:
-                        key:
-                          default: join.json
-                          description: Key within the secret containing the username
-                            and password.
-                          type: string
-                        secret:
-                          description: Secret that contains the username and password.
-                          minLength: 1
-                          type: string
-                      type: object
-                  type: object
-                type: array
-              mode:
-                description: Mode specifies what approach to security is being used.
-                enum:
-                - user
-                - active-directory
-                type: string
-              realm:
-                description: Realm specifies the active directory domain to use.
-                type: string
-              users:
-                description: Users is used to configure "local" user and group based
-                  security.
-                properties:
-                  key:
-                    description: Key identifies the key within the secret that stores
-                      the user and group configuration json.
-                    minLength: 1
-                    type: string
-                  secret:
-                    description: Secret identifies the name of the secret storing
-                      user and group configuration json.
-                    minLength: 1
-                    type: string
-                type: object
-            type: object
-          status:
-            description: SmbSecurityConfigStatus defines the observed state of SmbSecurityConfig
-            type: object
-        type: object
-    served: true
-    storage: true
-    subresources:
-      status: {}
+              type: object
+            status:
+              description: SmbSecurityConfigStatus defines the observed state of SmbSecurityConfig
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
 status:
   acceptedNames:
     kind: ""
