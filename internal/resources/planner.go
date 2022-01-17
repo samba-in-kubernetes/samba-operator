@@ -439,7 +439,7 @@ func (sp *sharePlanner) isClustered() bool {
 	if sp.SmbShare.Spec.Scaling == nil {
 		return false
 	}
-	return sp.SmbShare.Spec.Scaling.AvailbilityMode == "clustered"
+	return sp.SmbShare.Spec.Scaling.AvailabilityMode == "clustered"
 }
 
 func (sp *sharePlanner) clusterSize() int32 {

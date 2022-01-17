@@ -90,11 +90,11 @@ type SmbSharePvcSpec struct {
 
 // SmbShareScalingSpec defines scaling parameters for a share.
 type SmbShareScalingSpec struct {
-	// AvailbilityMode specifies how the operator is to scale share resources
+	// AvailabilityMode specifies how the operator is to scale share resources
 	// for (high-)availability purposes.
 	// +optional
 	// +kubebuilder:validation:Enum:=standard;clustered
-	AvailbilityMode string `json:"availabilityMode,omitempty"`
+	AvailabilityMode string `json:"availabilityMode,omitempty"`
 	// MinClusterSize specifies the minimum number of smb server instances
 	// to establish when availabilityMode is "clustered".
 	MinClusterSize int `json:"minClusterSize,omitempty"`

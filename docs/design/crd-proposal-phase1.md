@@ -128,7 +128,7 @@ Spec Options:
       migration. The "clustered" availability mode enables smb aware clustering
       mechanisms.
     * `minClusterSize` - int - Minimum number of smbd instances when clustered
-      for High-Availbility.
+      for High-Availability.
     * TBD - other clustering specific options
 * `customConfig` - mapping - A new subsection used to load "non-supported" settings
    * `name` - Name of a ConfigMap. TBD - how to express options in the config map.
