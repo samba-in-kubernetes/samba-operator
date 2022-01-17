@@ -57,7 +57,7 @@ spec:
                   can and should be scaled.
                 properties:
                   availabilityMode:
-                    description: AvailbilityMode specifies how the operator is to
+                    description: AvailabilityMode specifies how the operator is to
                       scale share resources for (high-)availability purposes.
                     enum:
                     - standard

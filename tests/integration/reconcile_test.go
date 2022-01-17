@@ -68,7 +68,7 @@ func (s *limitAvailModeChangeSuite) TestAvailModeUnchanged() {
 	if smbShare.Spec.Scaling == nil {
 		smbShare.Spec.Scaling = &sambaoperatorv1alpha1.SmbShareScalingSpec{}
 	}
-	smbShare.Spec.Scaling.AvailbilityMode = s.nextMode
+	smbShare.Spec.Scaling.AvailabilityMode = s.nextMode
 	smbShare.Spec.Scaling.MinClusterSize = 2
 
 	err = s.tc.TypedObjectClient().Update(
