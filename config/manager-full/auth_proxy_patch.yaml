@@ -13,7 +13,8 @@ spec:
           # this is apparently the same code as
           # https://github.com/brancz/kube-rbac-proxy/
           # but build by/for kubebuilder. The brancz repo also has
-          # newer releases but v0.8 is the lastest at this repo
+
+          # newer releases but v0.8 is the latest at this repo
           # according to skopeo on 2021-11-06.
           image: gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0
           args:

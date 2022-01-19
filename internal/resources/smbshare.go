@@ -590,7 +590,7 @@ func (m *SmbShareManager) getOrCreateConfigMap(
 	}
 
 	if !errors.IsNotFound(err) {
-		// unexpected errror!
+		// unexpected error!
 		m.logger.Error(
 			err,
 			"Failed to get ConfigMap",
