@@ -1,0 +1,4 @@
+[codespell]
+skip = ./.git,./vendor
+builtin = clear,rare,names
+ignore-words = ./.codespellignore
