@@ -1,6 +1,6 @@
 name: CI
 # Run tests on pull requests and when changes are directly
-# commited to master.
+# committed to master.
 on:
   push:
     branches: [master]
@@ -64,7 +64,7 @@ jobs:
           EOF
       - name: build container image
         # note: forcing use of podman here since we are
-        # using podman explicity for the push job
+        # using podman explicitly for the push job
         run: make CONTAINER_CMD=podman image-build
   dockerbuild:
     runs-on: ubuntu-latest
@@ -75,7 +75,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: build container image
         # note: forcing use of podman here since we are
-        # using podman explicity for the push job
+        # using podman explicitly for the push job
         run: make CONTAINER_CMD=docker image-build
   test-kubernetes:
     #runs-on: ubuntu-latest
