@@ -1,18 +1,18 @@
 # Current Operator version
-VERSION ?= 0.0.1
+VERSION?=0.0.1
 # Default bundle image tag
-BUNDLE_IMG ?= samba-operator-bundle:$(VERSION)
+BUNDLE_IMG?=samba-operator-bundle:$(VERSION)
 # Options for 'bundle-build'
 ifneq ($(origin CHANNELS), undefined)
-BUNDLE_CHANNELS := --channels=$(CHANNELS)
+BUNDLE_CHANNELS:=--channels=$(CHANNELS)
 endif
 ifneq ($(origin DEFAULT_CHANNEL), undefined)
-BUNDLE_DEFAULT_CHANNEL := --default-channel=$(DEFAULT_CHANNEL)
+BUNDLE_DEFAULT_CHANNEL:=--default-channel=$(DEFAULT_CHANNEL)
 endif
-BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
+BUNDLE_METADATA_OPTS?=$(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 
-COMMIT_ID = $(shell git describe --abbrev=40 --always --dirty=+ 2>/dev/null)
-GIT_VERSION = $(shell git describe --match='v[0-9]*.[0-9].[0-9]' 2>/dev/null || echo "(unset)")
+COMMIT_ID=$(shell git describe --abbrev=40 --always --dirty=+ 2>/dev/null)
+GIT_VERSION=$(shell git describe --match='v[0-9]*.[0-9].[0-9]' 2>/dev/null || echo "(unset)")
 
 CONFIG_KUST_DIR:=config/default
 CRD_KUST_DIR:=config/crd
@@ -31,13 +31,13 @@ BUILDAH_CMD:=buildah
 YAMLLINT_CMD:=yamllint
 
 # Image URL to use all building/pushing image targets
-TAG ?= latest
-IMG ?= quay.io/samba.org/samba-operator:$(TAG)
+TAG?=latest
+IMG?=quay.io/samba.org/samba-operator:$(TAG)
 
 # Produce CRDs that work on Kubernetes 1.16 or later
-CRD_OPTIONS ?= "crd:trivialVersions=true,crdVersions=v1"
+CRD_OPTIONS?="crd:trivialVersions=true,crdVersions=v1"
 
-CHECK_GOFMT_FLAGS ?= -e -s -l
+CHECK_GOFMT_FLAGS?=-e -s -l
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell $(GO_CMD) env GOBIN))
@@ -46,8 +46,8 @@ else
 GOBIN=$(shell $(GO_CMD) env GOBIN)
 endif
 
-CONTAINER_BUILD_OPTS ?=
-CONTAINER_CMD ?=
+CONTAINER_BUILD_OPTS?=
+CONTAINER_CMD?=
 ifeq ($(CONTAINER_CMD),)
 	CONTAINER_CMD:=$(shell docker version >/dev/null 2>&1 && echo docker)
 endif
