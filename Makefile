@@ -46,6 +46,9 @@ else
 GOBIN=$(shell $(GO_CMD) env GOBIN)
 endif
 
+# Get current GOARCH
+GOARCH?=$(shell $(GO_CMD) env GOARCH)
+
 CONTAINER_BUILD_OPTS?=
 CONTAINER_CMD?=
 ifeq ($(CONTAINER_CMD),)
@@ -137,7 +140,8 @@ image-build:
 	$(CONTAINER_CMD) build \
 		--build-arg=GIT_VERSION="$(GIT_VERSION)" \
 		--build-arg=COMMIT_ID="$(COMMIT_ID)" \
-		$(CONTAINER_BUILD_OPTS) $(CONTAINER_BUILD_OPTS) . -t $(IMG)
+		--build-arg=ARCH="$(GOARCH)" \
+		$(CONTAINER_BUILD_OPTS) . -t $(IMG)
 
 .PHONY: image-build-buildah
 image-build-buildah: build

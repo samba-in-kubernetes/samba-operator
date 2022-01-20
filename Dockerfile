@@ -2,6 +2,7 @@
 FROM docker.io/golang:1.17 as builder
 ARG GIT_VERSION="(unset)"
 ARG COMMIT_ID="(unset)"
+ARG ARCH=""
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
@@ -18,7 +19,7 @@ COPY controllers/ controllers/
 COPY internal/ internal/
 
 # Build
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on \
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=${ARCH} GO111MODULE=on \
     go build -a \
     -ldflags "-X main.Version=${GIT_VERSION} -X main.CommitID=${COMMIT_ID}" \
     -o manager main.go
