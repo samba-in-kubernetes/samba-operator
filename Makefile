@@ -107,7 +107,7 @@ delete-deploy: manifests kustomize
 	cd $* && $(KUSTOMIZE) edit add base $(KUSTOMIZE_DEFAULT_BASE)
 
 set-image: kustomize $(MGR_KUST_DIR)/kustomization.yaml
-	cd $(MGR_KUST_DIR) && $(KUSTOMIZE) edit set image controller=${IMG}
+	cd $(MGR_KUST_DIR) && $(KUSTOMIZE) edit set image controller=$(IMG)
 .PHONY: set-image
 
 # Generate manifests e.g. CRD, RBAC etc.
@@ -137,7 +137,7 @@ image-build:
 	$(CONTAINER_CMD) build \
 		--build-arg=GIT_VERSION="$(GIT_VERSION)" \
 		--build-arg=COMMIT_ID="$(COMMIT_ID)" \
-		$(CONTAINER_BUILD_OPTS) $(CONTAINER_BUILD_OPTS) . -t ${IMG}
+		$(CONTAINER_BUILD_OPTS) $(CONTAINER_BUILD_OPTS) . -t $(IMG)
 
 .PHONY: image-build-buildah
 image-build-buildah: build
@@ -145,12 +145,12 @@ image-build-buildah: build
 	$(BUILDAH_CMD) copy $$cn bin/manager /manager && \
 	$(BUILDAH_CMD) config --cmd='[]' $$cn && \
 	$(BUILDAH_CMD) config --entrypoint='["/manager"]' $$cn && \
-	$(BUILDAH_CMD) commit $$cn ${IMG}
+	$(BUILDAH_CMD) commit $$cn $(IMG)
 
 # Push the container image
 docker-push: container-push
 container-push:
-	$(CONTAINER_CMD) push ${IMG}
+	$(CONTAINER_CMD) push $(IMG)
 
 # find or download controller-gen
 # download controller-gen if necessary
