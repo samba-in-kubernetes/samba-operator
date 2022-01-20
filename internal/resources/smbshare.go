@@ -256,6 +256,16 @@ func (m *SmbShareManager) Update(
 				"Created stateful set %s for SmbShare", statefulSet.Name)
 			return Requeue
 		}
+
+		resized, err := m.updateStatefulSetSize(
+			ctx, statefulSet,
+			int32(planner.SmbShare.Spec.Scaling.MinClusterSize))
+		if err != nil {
+			return Result{err: err}
+		} else if resized {
+			m.logger.Info("Resized statefulSet")
+			return Requeue
+		}
 	} else {
 		deployment, created, err := m.getOrCreateDeployment(
 			ctx, planner, destNamespace)
@@ -706,6 +716,27 @@ func (m *SmbShareManager) getOrCreateStatefulSet(
 		return ss, false, err
 	}
 	return ss, true, err
+}
+
+func (m *SmbShareManager) updateStatefulSetSize(
+	ctx context.Context,
+	statefulSet *appsv1.StatefulSet,
+	size int32) (bool, error) {
+	// Ensure the StatefulSet size is the same as the spec
+	if *statefulSet.Spec.Replicas < size {
+		statefulSet.Spec.Replicas = &size
+		err := m.client.Update(ctx, statefulSet)
+		if err != nil {
+			m.logger.Error(
+				err,
+				"Failed to update StatefulSet",
+				"StatefulSet.Namespace", statefulSet.Namespace,
+				"StatefulSet.Name", statefulSet.Name)
+			return false, err
+		}
+		return true, nil
+	}
+	return false, nil
 }
 
 func (m *SmbShareManager) updateDeploymentSize(
