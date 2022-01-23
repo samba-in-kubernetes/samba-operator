@@ -30,3 +30,4 @@ tags
 
 # user-local configuration
 config/developer/
+devel.mk

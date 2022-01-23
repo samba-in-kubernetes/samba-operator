@@ -1,3 +1,6 @@
+# Alllow developer to override some defaults
+-include devel.mk
+
 # Current Operator version
 VERSION?=0.0.1
 # Default bundle image tag
