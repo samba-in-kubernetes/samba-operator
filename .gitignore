@@ -31,3 +31,6 @@ tags
 # user-local configuration
 config/developer/
 devel.mk
+
+# local GOBIN for build tools
+/.bin

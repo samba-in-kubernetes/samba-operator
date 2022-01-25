@@ -52,6 +52,10 @@ endif
 # Get current GOARCH
 GOARCH?=$(shell $(GO_CMD) env GOARCH)
 
+# Local (alternative) GOBIN for auxiliary build tools
+GOBIN_ALT:=$(CURDIR)/.bin/
+
+
 CONTAINER_BUILD_OPTS?=
 CONTAINER_CMD?=
 ifeq ($(CONTAINER_CMD),)
@@ -159,32 +163,6 @@ docker-push: container-push
 container-push:
 	$(CONTAINER_CMD) push $(IMG)
 
-# find or download controller-gen
-# download controller-gen if necessary
-controller-gen:
-ifeq (, $(shell command -v controller-gen ;))
-	@echo "controller-gen not found in PATH, checking in GOBIN ($(GOBIN))..."
-ifeq (, $(shell command -v $(GOBIN)/controller-gen ;))
-	$(GO_CMD) install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.6.2
-	@echo "controller-gen installed in GOBIN"
-endif
-CONTROLLER_GEN=$(GOBIN)/controller-gen
-else
-CONTROLLER_GEN=$(shell command -v controller-gen ;)
-endif
-
-kustomize:
-ifeq (, $(shell command -v kustomize ;))
-	@echo "kustomize not found in PATH, checking in GOBIN ($(GOBIN))..."
-ifeq (, $(shell command -v $(GOBIN)/kustomize ;))
-	$(GO_CMD) install sigs.k8s.io/kustomize/kustomize/v4@v4.3.0
-	@echo "kustomize installed in GOBIN"
-endif
-KUSTOMIZE=$(GOBIN)/kustomize
-else
-KUSTOMIZE=$(shell command -v kustomize ;)
-endif
-
 # Generate bundle manifests and metadata, then validate generated files.
 .PHONY: bundle
 bundle: manifests
@@ -217,47 +195,71 @@ check-golangci-lint: golangci-lint
 check-yaml:
 	$(YAMLLINT_CMD) -c ./.yamllint.yaml ./
 
-# find or download revive
-.PHONY: revive
+# find or download auxiliary build tools
+.PHONY: build-tools controller-gen kustomize revive golangci-lint yq
+build-tools: controller-gen kustomize revive golangci-lint yq
+
+define installtool
+	@GOBIN=$(GOBIN_ALT) GO_CMD=$(GO_CMD) $(CURDIR)/hack/install-tools.sh $(1)
+endef
+
+controller-gen:
+ifeq (, $(shell command -v controller-gen ;))
+	@echo "controller-gen not found in PATH, checking $(GOBIN_ALT)"
+ifeq (, $(shell command -v $(GOBIN_ALT)/controller-gen ;))
+	@$(call installtool, --controller-gen)
+	@echo "controller-gen installed in $(GOBIN_ALT)"
+endif
+CONTROLLER_GEN=$(GOBIN_ALT)/controller-gen
+else
+CONTROLLER_GEN=$(shell command -v controller-gen ;)
+endif
+
+kustomize:
+ifeq (, $(shell command -v kustomize ;))
+	@echo "kustomize not found in PATH, checking $(GOBIN_ALT)"
+ifeq (, $(shell command -v $(GOBIN_ALT)/kustomize ;))
+	@$(call installtool, --kustomize)
+	@echo "kustomize installed in $(GOBIN_ALT)"
+endif
+KUSTOMIZE=$(GOBIN_ALT)/kustomize
+else
+KUSTOMIZE=$(shell command -v kustomize ;)
+endif
+
 revive:
 ifeq (, $(shell command -v revive ;))
-	@echo "revive not found in PATH, checking in GOBIN ($(GOBIN))..."
-ifeq (, $(shell command -v $(GOBIN)/revive ;))
-	$(GO_CMD) install github.com/mgechev/revive@latest
-	@echo "revive installed in GOBIN"
-else
-	@echo "revive found in GOBIN"
+	@echo "revive not found in PATH, checking $(GOBIN_ALT)"
+ifeq (, $(shell command -v $(GOBIN_ALT)/revive ;))
+	@$(call installtool, --revive)
+	@echo "revive installed in $(GOBIN_ALT)"
 endif
-REVIVE=$(shell command -v $(GOBIN)/revive ;)
+REVIVE=$(GOBIN_ALT)/revive
 else
 	@echo "revive found in PATH"
 REVIVE=$(shell command -v revive ;)
 endif
 
-# find or download golangci-lint
-.PHONY: golangci-lint
 golangci-lint:
 ifeq (, $(shell command -v golangci-lint ;))
-	@echo "golangci-lint not found in PATH, checking in GOBIN ($(GOBIN))..."
-ifeq (, $(shell command -v $(GOBIN)/golangci-lint ;))
-	$(GO_CMD) install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.43.0
-	@echo "golangci-lint installed in GOBIN"
+	@echo "golangci-lint not found in PATH, checking $(GOBIN_ALT)"
+ifeq (, $(shell command -v $(GOBIN_ALT)/golangci-lint ;))
+	@$(call installtool, --golangci-lint)
+	@echo "golangci-lint installed in $(GOBIN_ALT)"
 endif
-GOLANGCI_LINT=$(GOBIN)/golangci-lint
+GOLANGCI_LINT=$(GOBIN_ALT)/golangci-lint
 else
 GOLANGCI_LINT=$(shell command -v golangci-lint ;)
 endif
 
-# find or download yq
-.PHONY: yq
 yq:
 ifeq (, $(shell command -v yq ;))
-	@echo "yq not found in PATH, checking in GOBIN ($(GOBIN))..."
-ifeq (, $(shell command -v $(GOBIN)/yq ;))
-	$(GO_CMD) install github.com/mikefarah/yq/v4@latest
-	@echo "yq installed in GOBIN"
+	@echo "yq not found in PATH, checking $(GOBIN_ALT)"
+ifeq (, $(shell command -v $(GOBIN_ALT)/yq ;))
+	@$(call installtool, --yq)
+	@echo "yq installed in $(GOBIN_ALT)"
 endif
-YQ=$(GOBIN)/yq
+YQ=$(GOBIN_ALT)/yq
 else
 YQ=$(shell command -v yq ;)
 endif
