@@ -76,6 +76,12 @@ all: manager build-integration-tests
 # Run unit tests
 test: generate manifests vet
 	$(GO_CMD) test ./... -coverprofile cover.out
+.PHONY: test
+
+cover.out: test
+coverage.html: cover.out
+	$(GO_CMD) tool cover  -html=cover.out  -o coverage.html
+.PHONY: coverage.html cover.out
 
 # Build manager binary
 manager: generate build vet
