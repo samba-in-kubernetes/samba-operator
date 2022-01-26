@@ -77,9 +77,9 @@ endif
 
 all: manager build-integration-tests
 
-# Run tests
+# Run unit tests
 test: generate manifests vet
-	hack/test.sh
+	$(GO_CMD) test ./... -coverprofile cover.out
 
 # Build manager binary
 manager: generate build vet
