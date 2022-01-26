@@ -122,10 +122,26 @@ deploy: manifests kustomize set-image
 delete-deploy: manifests kustomize
 	$(KUSTOMIZE) build $(CONFIG_KUST_DIR) | $(KUBECTL_CMD) delete -f -
 
-%/kustomization.yaml: $(KUSTOMIZE)
+# the bar symbol below is an order only prerequisite
+#  https://www.gnu.org/software/make/manual/make.html#index-order_002donly-prerequisites
+# this is needed because kustomize is phony but we really do not want to
+# have that force the kustomization.yaml to be considered "dirty"
+%/kustomization.yaml: | kustomize
 	mkdir -p $*
 	touch $@
 	cd $* && $(KUSTOMIZE) edit add base $(KUSTOMIZE_DEFAULT_BASE)
+
+# We could make developer-dir always create a developer dir, but I want to be
+# consistent and "train" the caller to use DEVELOPER=1 whenever "developer
+# mode" is being invoked even when it is not strictly needed for
+# implementation.
+ifneq ($(DEVELOPER),)
+developer-dir: $(MGR_KUST_DIR)/kustomization.yaml
+else
+developer-dir:
+	@echo "When creating a developer-dir, DEVELOPER=1 is required." && exit 1
+endif
+.PHONY: developer-dir
 
 set-image: kustomize $(MGR_KUST_DIR)/kustomization.yaml
 	cd $(MGR_KUST_DIR) && $(KUSTOMIZE) edit set image controller=$(IMG)
