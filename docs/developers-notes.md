@@ -69,11 +69,19 @@ We also support a "shortcut" location for developers at
 used by the Makefile when variable DEVELOPER is set, for example
 `make DEVELOPER=1 deploy`. Files in the `config/developer` directory
 are ignored by git and are a good place for setting changes that
-are specific to you.
+are specific to you. You can create a developer config with default
+settings by running `make developer-dir DEVELOPER=1`. If you are already
+familiar with kustomize, feel free to populate the kustomization.yaml
+with whatever settings you desire.
 
 An example of custom configuration parameters using kustomize:
 
 ```
+$ make developer-dir DEVELOPER=1
+$ $EDITOR config/developer/kustomization.yaml
+```
+```
+# ^^^ append to default config/developer/kustomization.yaml ^^^ #
 configMapGenerator:
 - behavior: merge
   literals:
@@ -101,6 +109,11 @@ images. We will set the environment variables using kustomize to alter
 the container image used for samba server instances:
 
 ```
+$ make developer-dir DEVELOPER=1
+$ $EDITOR config/developer/kustomization.yaml
+```
+```
+# ^^^ append to default config/developer/kustomization.yaml ^^^ #
 configMapGenerator:
 - behavior: merge
   literals:
@@ -119,6 +132,11 @@ the evnironment. The value should be a numeral 0 through 10 specified as a
 
 
 ```
+$ make developer-dir DEVELOPER=1
+$ $EDITOR config/developer/kustomization.yaml
+```
+```
+# ^^^ append to default config/developer/kustomization.yaml ^^^ #
 configMapGenerator:
 - behavior: merge
   literals:
@@ -134,6 +152,11 @@ enable this experimental feature the environment variable
 `SAMBA_OP_CLUSTER_SUPPORT` must be set to `ctdb-is-experimental`:
 
 ```
+$ make developer-dir DEVELOPER=1
+$ $EDITOR config/developer/kustomization.yaml
+```
+```
+# ^^^ append to default config/developer/kustomization.yaml ^^^ #
 configMapGenerator:
 - behavior: merge
   literals:
