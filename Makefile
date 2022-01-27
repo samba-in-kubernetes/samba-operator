@@ -71,6 +71,11 @@ $(warning podman detected but 'podman version' failed. \
 endif
 endif
 
+# Helper function to re-format yamls using helper script
+define yamls_reformat
+	YQ=$(YQ) $(CURDIR)/hack/yq-fixup-yamls.sh $(1)
+endef
+
 all: manager build-integration-tests
 
 # Run tests
@@ -118,7 +123,9 @@ set-image: kustomize $(MGR_KUST_DIR)/kustomization.yaml
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=$(CRD_KUST_DIR)/bases
+	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook \
+		paths="./..." output:crd:artifacts:config=$(CRD_KUST_DIR)/bases
+	$(call yamls_reformat, $(CURDIR)/config)
 
 # Run go fmt to reformat code
 reformat:
@@ -131,7 +138,7 @@ vet:
 # Format yaml files for yamllint standard
 .PHONY: yaml-fmt
 yaml-fmt: yq
-	YQ=$(YQ) ./hack/yq-fixup-yamls.sh ./
+	$(call yamls_reformat, $(CURDIR))
 
 # Generate code
 generate: controller-gen
