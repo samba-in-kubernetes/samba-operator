@@ -12,6 +12,7 @@ import (
 
 	sambaoperatorv1alpha1 "github.com/samba-in-kubernetes/samba-operator/api/v1alpha1"
 	"github.com/samba-in-kubernetes/samba-operator/tests/utils/kube"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (
@@ -83,6 +84,71 @@ func (s *limitAvailModeChangeSuite) TestAvailModeUnchanged() {
 	require.Contains(smbShare.Annotations[backendAnnotation], s.expectBackend)
 }
 
+type scaleoutClusterSuite struct {
+	suite.Suite
+
+	fileSources      []kube.FileSource
+	smbShareResource types.NamespacedName
+
+	// cached values
+	tc *kube.TestClient
+}
+
+func (s *scaleoutClusterSuite) SetupSuite() {
+	// ensure the smbclient test pod exists
+	require := s.Require()
+	s.tc = kube.NewTestClient("")
+	createFromFiles(require, s.tc, s.fileSources)
+	require.NoError(waitForPodExist(s), "smb server pod does not exist")
+	require.NoError(waitForPodReady(s), "smb server pod is not ready")
+}
+
+func (s *scaleoutClusterSuite) TearDownSuite() {
+	deleteFromFiles(s.Require(), s.tc, s.fileSources)
+}
+
+func (s *scaleoutClusterSuite) getTestClient() *kube.TestClient {
+	return s.tc
+}
+
+func (s *scaleoutClusterSuite) getPodFetchOptions() kube.PodFetchOptions {
+	l := fmt.Sprintf(
+		"samba-operator.samba.org/service=%s", s.smbShareResource.Name)
+	return kube.PodFetchOptions{
+		Namespace:     s.smbShareResource.Namespace,
+		LabelSelector: l,
+		MaxFound:      3,
+	}
+}
+
+func (s *scaleoutClusterSuite) TestScaleoutClusterSuite() {
+	require := s.Require()
+	smbShare := &sambaoperatorv1alpha1.SmbShare{}
+	err := s.tc.TypedObjectClient().Get(
+		context.TODO(), s.smbShareResource, smbShare)
+	require.NoError(err)
+
+	// Increase Cluster Size by 1 and check result
+	newClusterSize := smbShare.Spec.Scaling.MinClusterSize + 1
+	smbShare.Spec.Scaling.MinClusterSize = newClusterSize
+	err = s.tc.TypedObjectClient().Update(
+		context.TODO(), smbShare)
+	require.NoError(err)
+	require.NoError(waitForPodExist(s), "smb server pod does not exist")
+	require.NoError(waitForPodReady(s), "smb server pod is not ready")
+
+	l, err := s.tc.Clientset().AppsV1().StatefulSets(s.smbShareResource.Namespace).List(
+		context.TODO(),
+		metav1.ListOptions{
+			LabelSelector: fmt.Sprintf("samba-operator.samba.org/service=%s",
+				s.smbShareResource.Name),
+		})
+	require.NoError(err)
+	// Only one stateful set should be available for this smbshare.
+	require.Len(l.Items, 1)
+	require.Equal(int32(newClusterSize), *l.Items[0].Spec.Replicas, "Clustersize not as expected")
+}
+
 func allReconcileSuites() map[string]suite.TestingSuite {
 	m := map[string]suite.TestingSuite{}
 	if testClusteredShares {
@@ -125,6 +191,24 @@ func allReconcileSuites() map[string]suite.TestingSuite {
 			smbShareResource: types.NamespacedName{testNamespace, "cshare1-bk"},
 			expectBackend:    "clustered",
 			nextMode:         "standard",
+		}
+		m["scaleoutCluster"] = &scaleoutClusterSuite{
+			fileSources: []kube.FileSource{
+				{
+					Path:      path.Join(testFilesDir, "userssecret1.yaml"),
+					Namespace: testNamespace,
+				},
+				{
+					Path:      path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
+					Namespace: testNamespace,
+				},
+				{
+					Path:       path.Join(testFilesDir, "smbshare_ctdb1.yaml"),
+					Namespace:  testNamespace,
+					NameSuffix: "-bk",
+				},
+			},
+			smbShareResource: types.NamespacedName{testNamespace, "cshare1-bk"},
 		}
 	}
 	return m
