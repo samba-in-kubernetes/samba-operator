@@ -3,7 +3,8 @@
 
 ## Running a custom operator
 
-As noted in the [README](../README.md) the operator can be deployed using a custom image. This section elaborates on that.
+As noted in the [README](../README.md) the operator can be deployed using a
+custom image. This section elaborates on that.
 
 The makefile is aware of two variables (env vars or directly used by `make`):
 * TAG - specify a custom tag for your container image
