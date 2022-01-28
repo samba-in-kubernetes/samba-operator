@@ -30,7 +30,7 @@ must support Services with type `LoadBalancer`.
 
 ### Start the operator
 
-In order to install the CRDs, other resorces, and start the operator,
+In order to install the CRDs, other resources, and start the operator,
 invoke:
 
 ```

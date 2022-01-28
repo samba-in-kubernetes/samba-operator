@@ -33,7 +33,7 @@ One or more SmbSecurityConfig resources can be defined in the cluster. One or
 more SmbCommonConfig resources can be defined in the cluster. Each SmbShare CR
 can refer to one SmbSecurityConfig resource and one SmbCommonConfig resource.
 The operator will provide a mechanism for marking SmbSecurityConfig and
-SmbCommonConfig resources as "default". If an SmbShare does not name a specifc
+SmbCommonConfig resources as "default". If an SmbShare does not name a specific
 config resource the operator will use settings from the "default" resources, or
 if no defaults are set rely on the default settings of the operator.  The
 SmbSecurityConfig reference will define the security properties of the smbd
