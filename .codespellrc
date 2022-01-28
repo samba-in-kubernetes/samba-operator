@@ -1,0 +1,5 @@
+[codespell]
+skip = ./.git,./vendor
+builtin = clear,rare,names
+ignore-words = ./.codespellignore
+exclude-file = tests/files/data1.yaml
