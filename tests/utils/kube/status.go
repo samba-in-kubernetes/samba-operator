@@ -125,7 +125,7 @@ func WaitForAnyPodReady(
 
 // WaitForAllPodReady will for all pods selected to be ready, up to the
 // deadline specified by the context, if the context lacks a deadline the
-// call will block indefinitely. Pods are slected using the PodFetchOptions.
+// call will block indefinitely. Pods are selected using the PodFetchOptions.
 func WaitForAllPodReady(
 	ctx context.Context, tc *TestClient, fo PodFetchOptions) error {
 	// ---
