@@ -15,6 +15,8 @@ limitations under the License.
 
 package smbcc
 
+import "strconv"
+
 // Key values are used to select subsections in the container config.
 type Key string
 
@@ -25,12 +27,17 @@ type FeatureFlag string
 const (
 	// CTDB feature flag indicates the system should be configured with CTDB.
 	CTDB FeatureFlag = "ctdb"
+
+	// DefaultSmbPort is the default port which containerized smbd binds to.
+	DefaultSmbPort int = 445
 )
 
 // GlobalOptions is used to pass options to modify the samba configuration
 type GlobalOptions struct {
 	// AddVFSFileid is used to check if we add vfs_fileid to the smb config
 	AddVFSFileid bool
+	// SmbPort is used as value to 'smb ports' config
+	SmbPort int
 }
 
 // SambaContainerConfig holds one or more configuration for samba
@@ -111,6 +118,7 @@ const (
 func NewGlobalOptions() GlobalOptions {
 	return GlobalOptions{
 		AddVFSFileid: true,
+		SmbPort:      DefaultSmbPort,
 	}
 }
 
@@ -132,6 +140,7 @@ func NewGlobals(opts GlobalOptions) GlobalConfig {
 			"printing":        "bsd",
 			"printcap name":   "/dev/null",
 			"disable spoolss": Yes,
+			"smb ports":       strconv.Itoa(opts.SmbPort),
 		},
 	}
 
