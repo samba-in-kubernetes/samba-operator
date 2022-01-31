@@ -436,27 +436,28 @@ func buildSmbdCtr(
 	env []corev1.EnvVar,
 	vols []volMount) corev1.Container {
 	// ---
+	portnum := planner.GlobalConfig.SmbdPort
 	return corev1.Container{
 		Image: planner.GlobalConfig.SmbdContainerImage,
 		Name:  planner.GlobalConfig.SmbdContainerName,
 		Args:  planner.runDaemonArgs("smbd"),
 		Env:   env,
 		Ports: []corev1.ContainerPort{{
-			ContainerPort: 445,
+			ContainerPort: int32(portnum),
 			Name:          "smb",
 		}},
 		VolumeMounts: getMounts(vols),
 		ReadinessProbe: &corev1.Probe{
 			Handler: corev1.Handler{
 				TCPSocket: &corev1.TCPSocketAction{
-					Port: intstr.FromInt(445),
+					Port: intstr.FromInt(portnum),
 				},
 			},
 		},
 		LivenessProbe: &corev1.Probe{
 			Handler: corev1.Handler{
 				TCPSocket: &corev1.TCPSocketAction{
-					Port: intstr.FromInt(445),
+					Port: intstr.FromInt(portnum),
 				},
 			},
 		},
