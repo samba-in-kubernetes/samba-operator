@@ -18,6 +18,7 @@ package resources
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 var svcSelectorKey = "samba-operator.samba.org/service"
@@ -33,9 +34,10 @@ func newServiceForSmb(planner *sharePlanner, ns string) *corev1.Service {
 		Spec: corev1.ServiceSpec{
 			Type: toServiceType(planner.serviceType()),
 			Ports: []corev1.ServicePort{{
-				Name:     "smb",
-				Protocol: corev1.ProtocolTCP,
-				Port:     445,
+				Name:       "smb",
+				Protocol:   corev1.ProtocolTCP,
+				Port:       int32(planner.GlobalConfig.SmbServicePort),
+				TargetPort: intstr.FromInt(planner.GlobalConfig.SmbdPort),
 			}},
 			Selector: map[string]string{
 				svcSelectorKey: labels[svcSelectorKey],
