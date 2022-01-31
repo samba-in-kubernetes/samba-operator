@@ -438,10 +438,11 @@ func buildSmbdCtr(
 	// ---
 	portnum := planner.GlobalConfig.SmbdPort
 	return corev1.Container{
-		Image: planner.GlobalConfig.SmbdContainerImage,
-		Name:  planner.GlobalConfig.SmbdContainerName,
-		Args:  planner.runDaemonArgs("smbd"),
-		Env:   env,
+		Image:   planner.GlobalConfig.SmbdContainerImage,
+		Name:    planner.GlobalConfig.SmbdContainerName,
+		Command: []string{"samba-container"},
+		Args:    planner.runDaemonArgs("smbd"),
+		Env:     env,
 		Ports: []corev1.ContainerPort{{
 			ContainerPort: int32(portnum),
 			Name:          "smb",
