@@ -34,7 +34,7 @@ func (s DeploySuite) createKustomized(dir string) {
 	stdout, err := cmd.StdoutPipe()
 	s.Require().NoError(err)
 	err = cmd.Start()
-	s.Require().NoError(err)
+	s.Require().NoError(err, "kustomize command failed to start")
 	_, err = s.tc.CreateFromFileIfMissing(
 		context.TODO(),
 		kube.DirectSource{
@@ -42,9 +42,9 @@ func (s DeploySuite) createKustomized(dir string) {
 			Namespace: testNamespace,
 		},
 	)
-	s.Require().NoError(err)
+	s.Require().NoError(err, "CreateFromFileIfMissing failed")
 	err = cmd.Wait()
-	s.Require().NoError(err)
+	s.Require().NoError(err, "kustomize command failed")
 }
 
 func (s DeploySuite) TestOperatorReady() {
