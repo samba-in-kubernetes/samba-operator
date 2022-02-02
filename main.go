@@ -83,10 +83,12 @@ func main() {
 		setupLog.Error(err, "unable to configure")
 		os.Exit(1)
 	}
+
 	if err := conf.Get().Validate(); err != nil {
-		setupLog.Error(err, "invalid configuration")
+		setupLog.Error(err, "invalid configuration", "config", conf.Get())
 		os.Exit(1)
 	}
+	setupLog.Info("loaded configuration successfully", "config", conf.Get())
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
