@@ -55,6 +55,9 @@ type OperatorConfig struct {
 	// SmbdPort is an (integer) value that defines the port number on which
 	// smbd binds and serve.
 	SmbdPort int `mapstructure:"smbd-port"`
+	// ServiceAccountName is a (string) which overrides the default service
+	// account associated with child pods. Required in OpenShift.
+	ServiceAccountName string `mapstructure:"service-account-name"`
 }
 
 // Validate the OperatorConfig returning an error if the config is not
@@ -98,6 +101,7 @@ func NewSource() *Source {
 	v.SetDefault("cluster-support", d.ClusterSupport)
 	v.SetDefault("smb-service-port", d.SmbServicePort)
 	v.SetDefault("smbd-port", d.SmbdPort)
+	v.SetDefault("service-account-name", d.ServiceAccountName)
 	return &Source{v: v}
 }
 
