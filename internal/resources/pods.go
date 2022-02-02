@@ -109,16 +109,13 @@ func buildADPodSpec(
 	}
 
 	shareProcessNamespace := true
-	podSpec := corev1.PodSpec{
-		Volumes: getVolumes(volumes),
-		// we need to set ShareProcessNamespace to true.
-		ShareProcessNamespace: &shareProcessNamespace,
-		InitContainers: []corev1.Container{
-			buildInitCtr(planner, podEnv, smbAllVols),
-			buildMustJoinCtr(planner, joinEnv, joinVols),
-		},
-		Containers: containers,
+	podSpec := defaultPodSpec(planner, &shareProcessNamespace)
+	podSpec.Volumes = getVolumes(volumes)
+	podSpec.InitContainers = []corev1.Container{
+		buildInitCtr(planner, podEnv, smbAllVols),
+		buildMustJoinCtr(planner, joinEnv, joinVols),
 	}
+	podSpec.Containers = containers
 	return podSpec
 }
 
@@ -143,11 +140,10 @@ func buildUserPodSpec(
 		vols = append(vols, v)
 	}
 	podEnv := defaultPodEnv(planner)
-	podSpec := corev1.PodSpec{
-		Volumes: getVolumes(vols),
-		Containers: []corev1.Container{
-			buildSmbdCtr(planner, podEnv, vols),
-		},
+	podSpec := defaultPodSpec(planner, nil)
+	podSpec.Volumes = getVolumes(vols)
+	podSpec.Containers = []corev1.Container{
+		buildSmbdCtr(planner, podEnv, vols),
 	}
 	return podSpec
 }
@@ -259,13 +255,10 @@ func buildClusteredUserPodSpec(
 		buildSmbdCtr(planner, podEnv, volumes))
 
 	shareProcessNamespace := true
-	podSpec := corev1.PodSpec{
-		Volumes: getVolumes(volumes),
-		// we need to set ShareProcessNamespace to true.
-		ShareProcessNamespace: &shareProcessNamespace,
-		InitContainers:        initContainers,
-		Containers:            containers,
-	}
+	podSpec := defaultPodSpec(planner, &shareProcessNamespace)
+	podSpec.Volumes = getVolumes(volumes)
+	podSpec.InitContainers = initContainers
+	podSpec.Containers = containers
 	return podSpec
 }
 
@@ -421,13 +414,10 @@ func buildClusteredADPodSpec(
 	}
 
 	shareProcessNamespace := true
-	podSpec := corev1.PodSpec{
-		Volumes: getVolumes(volumes),
-		// we need to set ShareProcessNamespace to true.
-		ShareProcessNamespace: &shareProcessNamespace,
-		InitContainers:        initContainers,
-		Containers:            containers,
-	}
+	podSpec := defaultPodSpec(planner, &shareProcessNamespace)
+	podSpec.Volumes = getVolumes(volumes)
+	podSpec.InitContainers = initContainers
+	podSpec.Containers = containers
 	return podSpec
 }
 
@@ -666,6 +656,13 @@ func defaultPodEnv(planner *sharePlanner) []corev1.EnvVar {
 		})
 	}
 	return env
+}
+
+func defaultPodSpec(planner *sharePlanner, sharens *bool) corev1.PodSpec {
+	return corev1.PodSpec{
+		ServiceAccountName:    planner.GlobalConfig.ServiceAccountName,
+		ShareProcessNamespace: sharens,
+	}
 }
 
 func ctdbHostnameEnv(_ *sharePlanner) []corev1.EnvVar {
