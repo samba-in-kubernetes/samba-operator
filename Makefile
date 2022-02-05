@@ -132,7 +132,7 @@ set-image: kustomize $(MGR_KUST_DIR)/kustomization.yaml
 .PHONY: set-image
 
 # Generate manifests e.g. CRD, RBAC etc.
-manifests: controller-gen
+manifests: yq controller-gen
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook \
 		paths="./..." output:crd:artifacts:config=$(CRD_KUST_DIR)/bases
 	$(call yamls_reformat, $(CURDIR)/config)
