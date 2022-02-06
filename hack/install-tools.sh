@@ -6,7 +6,7 @@
 #
 set -e
 GO_CMD=${GO_CMD:-$(command -v go)}
-GOBIN=${GOBIN:-$(pwd)/bin}
+GOBIN=${GOBIN:-${GOPATH}/bin}
 
 _require_gobin() {
 	mkdir -p "${GOBIN}"
