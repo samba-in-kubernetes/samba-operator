@@ -67,6 +67,12 @@ type OperatorConfig struct {
 	// operator should run metrics-exporter container within samba-server pod.
 	// Valid values are "enabled", "disabled" or empty string (default).
 	MetricsExporterMode string `mapstructure:"metrics-exporter-mode"`
+	// PodName is a (string) which defines the currnt operator pod name.
+	PodName string `mapstructure:"pod-name"`
+	// PodNamespace is a (string) which defines the currnt operator namespace.
+	PodNamespace string `mapstructure:"pod-namespace"`
+	// PodIP is a (string) which defines the currnt pod cluster-ip.
+	PodIP string `mapstructure:"pod-ip"`
 }
 
 // Validate the OperatorConfig returning an error if the config is not
@@ -113,6 +119,9 @@ func NewSource() *Source {
 	v.SetDefault("smbd-port", d.SmbdPort)
 	v.SetDefault("service-account-name", d.ServiceAccountName)
 	v.SetDefault("metrics-exporter-mode", d.MetricsExporterMode)
+	v.SetDefault("pod-name", d.PodName)
+	v.SetDefault("pod-namespace", d.PodNamespace)
+	v.SetDefault("pod-ip", d.PodIP)
 	return &Source{v: v}
 }
 
