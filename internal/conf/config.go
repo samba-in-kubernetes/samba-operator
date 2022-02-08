@@ -58,6 +58,12 @@ type OperatorConfig struct {
 	// ServiceAccountName is a (string) which overrides the default service
 	// account associated with child pods. Required in OpenShift.
 	ServiceAccountName string `mapstructure:"service-account-name"`
+	// PodName is a (string) which defines the currnt operator pod name.
+	PodName string `mapstructure:"pod-name"`
+	// PodNamespace is a (string) which defines the currnt operator namespace.
+	PodNamespace string `mapstructure:"pod-namespace"`
+	// PodIP is a (string) which defines the currnt pod cluster-ip.
+	PodIP string `mapstructure:"pod-ip"`
 }
 
 // Validate the OperatorConfig returning an error if the config is not
@@ -102,6 +108,9 @@ func NewSource() *Source {
 	v.SetDefault("smb-service-port", d.SmbServicePort)
 	v.SetDefault("smbd-port", d.SmbdPort)
 	v.SetDefault("service-account-name", d.ServiceAccountName)
+	v.SetDefault("pod-name", d.PodName)
+	v.SetDefault("pod-namespace", d.PodNamespace)
+	v.SetDefault("pod-ip", d.PodIP)
 	return &Source{v: v}
 }
 
