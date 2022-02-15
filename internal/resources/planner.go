@@ -244,6 +244,7 @@ func (sp *sharePlanner) update() (changed bool, err error) {
 	globals, found := sp.ConfigState.Globals[smbcc.Globals]
 	if !found {
 		globalOptions := smbcc.NewGlobalOptions()
+		globalOptions.SmbPort = sp.GlobalConfig.SmbdPort
 		globals = smbcc.NewGlobals(globalOptions)
 		sp.ConfigState.Globals[smbcc.Globals] = globals
 		changed = true

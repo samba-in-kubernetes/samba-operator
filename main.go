@@ -72,14 +72,23 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 
+	setupLog.Info("Initializing Manager",
+		"ProgramName", os.Args[0],
+		"Version", Version,
+		"CommitID", CommitID,
+		"GoVersion", goruntime.Version(),
+	)
+
 	if err := conf.Load(confSource); err != nil {
 		setupLog.Error(err, "unable to configure")
 		os.Exit(1)
 	}
+
 	if err := conf.Get().Validate(); err != nil {
-		setupLog.Error(err, "invalid configuration")
+		setupLog.Error(err, "invalid configuration", "config", conf.Get())
 		os.Exit(1)
 	}
+	setupLog.Info("loaded configuration successfully", "config", conf.Get())
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
@@ -125,11 +134,7 @@ func main() {
 	}
 	// +kubebuilder:scaffold:builder
 
-	setupLog.Info("starting manager",
-		"Version", Version,
-		"CommitID", CommitID,
-		"GoVersion", goruntime.Version(),
-	)
+	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
