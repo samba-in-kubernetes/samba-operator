@@ -12,20 +12,12 @@ _require_gobin() {
 	mkdir -p "${GOBIN}"
 }
 
-_install_kustomize() {
-	curdir="$(pwd)"
-	tmpdir="$(mktemp -d)"
-
-	mkdir -p "${tmpdir}"
-	cd "${tmpdir}"
-	${GO_CMD} get sigs.k8s.io/kustomize/kustomize/v4@v4.3.0
-	cd "${curdir}"
-	find "${tmpdir}" -type d -exec chmod 700 {} \;
-	rm -rf "${tmpdir}"
-}
-
 _install_tool() {
 	GOBIN="${GOBIN}" ${GO_CMD} install "$1"
+}
+
+_install_kustomize() {
+	_install_tool sigs.k8s.io/kustomize/kustomize/v4@v4.5.2
 }
 
 _install_controller_gen() {
