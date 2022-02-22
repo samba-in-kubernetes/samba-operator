@@ -103,6 +103,7 @@ Spec Options:
         * `spec` - mapping, embedded pvc spec - An embedded PVC spec that will
           be used to dynamically create a backing PVC for the share; sharing
           the life-cycle of the PVC with the share
+        * `path` - string - The path within the PVC which should be exported.
     * TBD - Any other more custom storage back-ends if needed
 * `securityConfig` - string - The name of the SmbSecurityConfig CR associated
   with this share
