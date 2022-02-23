@@ -88,6 +88,7 @@ type SmbSharePvcSpec struct {
 	Spec *corev1.PersistentVolumeClaimSpec `json:"spec,omitempty"`
 
 	// Path within the PVC which should be exported.
+	// +kubebuilder:validation:Pattern=`^[^\/]+$`
 	// +optional
 	Path string `json:"path,omitempty"`
 }
