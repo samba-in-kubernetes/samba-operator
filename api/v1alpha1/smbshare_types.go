@@ -86,6 +86,10 @@ type SmbSharePvcSpec struct {
 	// Behaves similar to the embedded PVC spec for pods.
 	// +optional
 	Spec *corev1.PersistentVolumeClaimSpec `json:"spec,omitempty"`
+
+	// Path within the PVC which should be exported.
+	// +optional
+	Path string `json:"path,omitempty"`
 }
 
 // SmbShareScalingSpec defines scaling parameters for a share.
