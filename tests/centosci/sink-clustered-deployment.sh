@@ -21,7 +21,7 @@ IMG="${CI_IMG_OP}" make container-push
 
 install_kustomize
 
-#enable_ctdb
+enable_ctdb
 
 deploy_op
 
@@ -33,7 +33,8 @@ IMG="${CI_IMG_OP}" make test
 ./tests/test-deploy-ad-server.sh
 
 # Run integration tests
-SMBOP_TEST_EXPECT_MANAGER_IMG="${CI_IMG_OP}" ./tests/test.sh
+SMBOP_TEST_CLUSTERED=1 SMBOP_TEST_EXPECT_MANAGER_IMG="${CI_IMG_OP}" \
+	./tests/test.sh
 
 teardown_op
 
