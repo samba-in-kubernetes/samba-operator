@@ -10,3 +10,10 @@ DEVELOPER=1
 # Image URL to use all building/pushing image targets
 TAG=latest
 IMG=quay.io/quayusername/samba-operator:$(TAG)
+
+# Custom developer targets
+.PHONY: image
+image: docker-build docker-push
+
+# When using custom targets, you should also define '.DEFAULT_GOAL'
+.DEFAULT_GOAL:=all

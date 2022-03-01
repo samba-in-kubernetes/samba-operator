@@ -1,6 +1,32 @@
 
 # Developer's Guide & Tips
 
+## Build from source
+
+The top-level [Makefile](../Makefile) is the entry point for various build
+commands. The minimal required Go version is 1.16. A developer can verify the
+build environment by running:
+
+```bash
+make build
+make test
+```
+
+Few external tools are required during the build process (namely,
+`controller-gen`,  `golangci-lint`,  `kustomize`,  `revive` and `yq`). If any
+of those tools is not found in `$PATH`, it is automatically installed during
+the build process under the `.bin` directory, at the project's root. You
+may also install those tools manually with:
+
+```bash
+make build-tools
+```
+
+Some variables may be passed as part of `make` invocation. Alternatively, a
+developer may pass those variables via (optional) top-level `devel.mk`
+(see [sample](../devel.mk.sample) file).
+
+
 ## Running a custom operator
 
 As noted in the [README](../README.md) the operator can be deployed using a
@@ -53,7 +79,7 @@ export SMBOP_TEST_EXPECT_MANAGER_IMG="${IMG}"
 ## Specifying custom configuration parameters
 
 The operator supports a number of configuration parameters that
-influence the behvaior of the operator itself. These parameters
+influence the behavior of the operator itself. These parameters
 can be specified via a configuration file in TOML or YAML formats,
 via the operator's command line, or via environment variables.
 Environment variables are the simplest approach and is discussed below.
@@ -128,7 +154,7 @@ configMapGenerator:
 The operator accepts a configuration value for samba debugging that will be
 passed on to the containers the operator creates. This parameter is
 `samba-debug-level` in configuration files and `SAMBA_OP_SAMBA_DEBUG_LEVEL` in
-the evnironment. The value should be a numeral 0 through 10 specified as a
+the environment. The value should be a numeral 0 through 10 specified as a
 *string*:
 
 
