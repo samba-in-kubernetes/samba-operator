@@ -488,6 +488,13 @@ func buildCTDBDaemonCtr(
 		Args:         planner.ctdbDaemonArgs(),
 		Env:          env,
 		VolumeMounts: getMounts(vols),
+		ReadinessProbe: &corev1.Probe{
+			Handler: corev1.Handler{
+				Exec: &corev1.ExecAction{
+					Command: planner.ctdbReadinessProbeArgs(),
+				},
+			},
+		},
 	}
 }
 
