@@ -421,6 +421,14 @@ func (*sharePlanner) ctdbMustHaveNodeArgs() []string {
 	}
 }
 
+func (*sharePlanner) ctdbReadinessProbeArgs() []string {
+	return []string{
+		"samba-container",
+		"check",
+		"ctdb-nodestatus",
+	}
+}
+
 func (sp *sharePlanner) serviceType() string {
 	if sp.CommonConfig != nil && sp.CommonConfig.Spec.Network.Publish == "external" {
 		return "LoadBalancer"
