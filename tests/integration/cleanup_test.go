@@ -83,7 +83,7 @@ func (s *ShareCreateDeleteSuite) getPodFetchOptions() kube.PodFetchOptions {
 func (s *ShareCreateDeleteSuite) waitForNoSmbServices() error {
 	ctx, cancel := context.WithDeadline(
 		context.TODO(),
-		time.Now().Add(60*time.Second))
+		time.Now().Add(waitForPodsTime))
 	defer cancel()
 	err := poll.TryUntil(ctx, &poll.Prober{
 		Cond: func() (bool, error) {
@@ -165,7 +165,7 @@ func (s *ShareCreateDeleteSuite) TestCreateAndDelete() {
 
 	ctx, cancel := context.WithDeadline(
 		context.TODO(),
-		time.Now().Add(60*time.Second))
+		time.Now().Add(waitForPodsTime))
 	defer cancel()
 
 	// remove smbshare
@@ -197,7 +197,7 @@ func (s *ShareCreateDeleteSuite) TestCreateAndDelete() {
 	require.NoError(err)
 
 	deleteFromFiles(require, s.tc, s.fileSources)
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(waitForClearTime)
 
 	rs2 := s.getCurrentResources()
 	require.Equal(len(rs2.pods.Items), len(existing.pods.Items))
