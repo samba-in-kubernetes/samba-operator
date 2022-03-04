@@ -53,7 +53,7 @@ endif
 GOARCH?=$(shell $(GO_CMD) env GOARCH)
 
 # Local (alternative) GOBIN for auxiliary build tools
-GOBIN_ALT:=$(CURDIR)/.bin/
+GOBIN_ALT:=$(CURDIR)/.bin
 
 
 CONTAINER_BUILD_OPTS?=
