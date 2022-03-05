@@ -4,7 +4,11 @@ set -e
 cd "$(dirname "${0}")/.."
 
 gtest() {
-    go test -tags integration -v -count 1 "$@"
+    if [ "$SMBOP_TEST_CLUSTERED" ]; then
+        go test -tags integration -v -count 1 -timeout 20m "$@"
+    else
+        go test -tags integration -v -count 1 "$@"
+    fi
 }
 
 if [ "$SMBOP_TEST_RUN" ]; then
