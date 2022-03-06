@@ -129,14 +129,6 @@ func (sp *Planner) workgroup() string {
 	return parts[0]
 }
 
-func (*Planner) joinJSONSuffix(index int) string {
-	return fmt.Sprintf("-%d", index)
-}
-
-func (*Planner) joinEnvPaths(p []string) string {
-	return strings.Join(p, ":")
-}
-
 func (sp *Planner) userSecuritySource() userSecuritySource {
 	s := userSecuritySource{}
 	if sp.securityMode() != userMode {
