@@ -62,7 +62,8 @@ type InstanceConfiguration struct {
 	GlobalConfig   *conf.OperatorConfig
 }
 
-type sharePlanner struct {
+// Planner arranges the state of the instance to be.
+type Planner struct {
 	// InstanceConfiguration is used as the configuration "intent".
 	// The planner treats it as read only.
 	InstanceConfiguration
@@ -74,26 +75,28 @@ type sharePlanner struct {
 	ConfigState *smbcc.SambaContainerConfig
 }
 
-func newSharePlanner(
+// New instance of a planner based on the configuration CRs as well
+// an existing configuration state (if it existed).
+func New(
 	ic InstanceConfiguration,
-	state *smbcc.SambaContainerConfig) *sharePlanner {
-	// return a new sharePlanner
-	return &sharePlanner{
+	state *smbcc.SambaContainerConfig) *Planner {
+	// return a new Planner
+	return &Planner{
 		InstanceConfiguration: ic,
 		ConfigState:           state,
 	}
 }
 
-func (sp *sharePlanner) instanceName() string {
+func (sp *Planner) instanceName() string {
 	// for now, its the name of the Server Group
 	return sp.SmbShare.Status.ServerGroup
 }
 
-func (sp *sharePlanner) instanceID() smbcc.Key {
+func (sp *Planner) instanceID() smbcc.Key {
 	return smbcc.Key(sp.instanceName())
 }
 
-func (sp *sharePlanner) shareName() string {
+func (sp *Planner) shareName() string {
 	// todo: make sure this is smb-conf clean, otherwise we need to
 	// fix up the name value(s).
 	if sp.SmbShare.Spec.ShareName != "" {
@@ -104,11 +107,11 @@ func (sp *sharePlanner) shareName() string {
 	return sp.SmbShare.Name
 }
 
-func (sp *sharePlanner) sharePath() string {
+func (sp *Planner) sharePath() string {
 	return path.Join("/mnt", string(sp.SmbShare.UID))
 }
 
-func (sp *sharePlanner) containerConfigPath() string {
+func (sp *Planner) containerConfigPath() string {
 	cpath := path.Join(sp.containerConfigDir(), "config.json")
 	if sp.userSecuritySource().Configured {
 		upath := path.Join(sp.usersConfigDir(), sp.usersConfigFileName())
@@ -117,31 +120,31 @@ func (sp *sharePlanner) containerConfigPath() string {
 	return cpath
 }
 
-func (*sharePlanner) containerConfigDir() string {
+func (*Planner) containerConfigDir() string {
 	return "/etc/container-config"
 }
 
-func (*sharePlanner) usersConfigFileName() string {
+func (*Planner) usersConfigFileName() string {
 	return "users.json"
 }
 
-func (*sharePlanner) usersConfigDir() string {
+func (*Planner) usersConfigDir() string {
 	return "/etc/container-users"
 }
 
-func (*sharePlanner) winbindSocketsDir() string {
+func (*Planner) winbindSocketsDir() string {
 	return "/run/samba/winbindd"
 }
 
-func (*sharePlanner) sambaStateDir() string {
+func (*Planner) sambaStateDir() string {
 	return "/var/lib/samba"
 }
 
-func (*sharePlanner) osRunDir() string {
+func (*Planner) osRunDir() string {
 	return "/run"
 }
 
-func (sp *sharePlanner) securityMode() securityMode {
+func (sp *Planner) securityMode() securityMode {
 	if sp.SecurityConfig == nil {
 		return userMode
 	}
@@ -154,37 +157,37 @@ func (sp *sharePlanner) securityMode() securityMode {
 	return m
 }
 
-func (sp *sharePlanner) realm() string {
+func (sp *Planner) realm() string {
 	return strings.ToUpper(sp.SecurityConfig.Spec.Realm)
 }
 
-func (sp *sharePlanner) workgroup() string {
+func (sp *Planner) workgroup() string {
 	// todo: this is a big hack. needs thought and cleanup
 	parts := strings.SplitN(sp.realm(), ".", 2)
 	return parts[0]
 }
 
-func (*sharePlanner) joinJSONSuffix(index int) string {
+func (*Planner) joinJSONSuffix(index int) string {
 	return fmt.Sprintf("-%d", index)
 }
 
-func (*sharePlanner) joinJSONSourceDir(index int) string {
+func (*Planner) joinJSONSourceDir(index int) string {
 	return fmt.Sprintf("/var/tmp/join/%d", index)
 }
 
-func (*sharePlanner) joinJSONFileName() string {
+func (*Planner) joinJSONFileName() string {
 	return "join.json"
 }
 
-func (sp *sharePlanner) joinJSONSourcePath(index int) string {
+func (sp *Planner) joinJSONSourcePath(index int) string {
 	return path.Join(sp.joinJSONSourceDir(index), sp.joinJSONFileName())
 }
 
-func (*sharePlanner) joinEnvPaths(p []string) string {
+func (*Planner) joinEnvPaths(p []string) string {
 	return strings.Join(p, ":")
 }
 
-func (sp *sharePlanner) userSecuritySource() userSecuritySource {
+func (sp *Planner) userSecuritySource() userSecuritySource {
 	s := userSecuritySource{}
 	if sp.securityMode() != userMode {
 		return s
@@ -199,7 +202,7 @@ func (sp *sharePlanner) userSecuritySource() userSecuritySource {
 	return s
 }
 
-func (sp *sharePlanner) idmapOptions() smbcc.SmbOptions {
+func (sp *Planner) idmapOptions() smbcc.SmbOptions {
 	if sp.SecurityConfig == nil || len(sp.SecurityConfig.Spec.Domains) == 0 {
 		// default idmap config
 		return smbcc.SmbOptions{
@@ -240,7 +243,7 @@ func (sp *sharePlanner) idmapOptions() smbcc.SmbOptions {
 	return o
 }
 
-func (sp *sharePlanner) update() (changed bool, err error) {
+func (sp *Planner) update() (changed bool, err error) {
 	globals, found := sp.ConfigState.Globals[smbcc.Globals]
 	if !found {
 		globalOptions := smbcc.NewGlobalOptions()
@@ -304,7 +307,7 @@ func (sp *sharePlanner) update() (changed bool, err error) {
 }
 
 // nolint:unused
-func (sp *sharePlanner) prune() (changed bool, err error) {
+func (sp *Planner) prune() (changed bool, err error) {
 	cfgKey := sp.instanceID()
 	if _, found := sp.ConfigState.Configs[cfgKey]; found {
 		delete(sp.ConfigState.Configs, cfgKey)
@@ -318,7 +321,7 @@ func (sp *sharePlanner) prune() (changed bool, err error) {
 	return
 }
 
-func (sp *sharePlanner) dnsRegister() dnsRegister {
+func (sp *Planner) dnsRegister() dnsRegister {
 	reg := dnsRegisterNever
 	if sp.securityMode() == adMode && sp.SecurityConfig.Spec.DNS != nil {
 		reg = dnsRegister(sp.SecurityConfig.Spec.DNS.Register)
@@ -335,15 +338,15 @@ func (sp *sharePlanner) dnsRegister() dnsRegister {
 	return reg
 }
 
-func (*sharePlanner) serviceWatchStateDir() string {
+func (*Planner) serviceWatchStateDir() string {
 	return "/var/lib/svcwatch"
 }
 
-func (sp *sharePlanner) serviceWatchJSONPath() string {
+func (sp *Planner) serviceWatchJSONPath() string {
 	return path.Join(sp.serviceWatchStateDir(), "status.json")
 }
 
-func (sp *sharePlanner) initializerArgs(cmd string) []string {
+func (sp *Planner) initializerArgs(cmd string) []string {
 	args := []string{}
 	if sp.isClustered() {
 		// if this is a ctdb enabled setup, this "initializer"
@@ -355,7 +358,7 @@ func (sp *sharePlanner) initializerArgs(cmd string) []string {
 	return args
 }
 
-func (sp *sharePlanner) dnsRegisterArgs() []string {
+func (sp *Planner) dnsRegisterArgs() []string {
 	args := []string{
 		"dns-register",
 		"--watch",
@@ -367,7 +370,7 @@ func (sp *sharePlanner) dnsRegisterArgs() []string {
 	return args
 }
 
-func (sp *sharePlanner) runDaemonArgs(name string) []string {
+func (sp *Planner) runDaemonArgs(name string) []string {
 	args := []string{"run", name}
 	if sp.isClustered() {
 		if sp.securityMode() == adMode {
@@ -379,7 +382,7 @@ func (sp *sharePlanner) runDaemonArgs(name string) []string {
 	return args
 }
 
-func (*sharePlanner) ctdbDaemonArgs() []string {
+func (*Planner) ctdbDaemonArgs() []string {
 	return []string{
 		"run",
 		"ctdbd",
@@ -390,7 +393,7 @@ func (*sharePlanner) ctdbDaemonArgs() []string {
 	}
 }
 
-func (*sharePlanner) ctdbManageNodesArgs() []string {
+func (*Planner) ctdbManageNodesArgs() []string {
 	return []string{
 		"ctdb-manage-nodes",
 		"--hostname=$(HOSTNAME)",
@@ -398,14 +401,14 @@ func (*sharePlanner) ctdbManageNodesArgs() []string {
 	}
 }
 
-func (*sharePlanner) ctdbMigrateArgs() []string {
+func (*Planner) ctdbMigrateArgs() []string {
 	return []string{
 		"ctdb-migrate",
 		"--dest-dir=/var/lib/ctdb/persistent",
 	}
 }
 
-func (*sharePlanner) ctdbSetNodeArgs() []string {
+func (*Planner) ctdbSetNodeArgs() []string {
 	return []string{
 		"ctdb-set-node",
 		"--hostname=$(HOSTNAME)",
@@ -413,7 +416,7 @@ func (*sharePlanner) ctdbSetNodeArgs() []string {
 	}
 }
 
-func (*sharePlanner) ctdbMustHaveNodeArgs() []string {
+func (*Planner) ctdbMustHaveNodeArgs() []string {
 	return []string{
 		"ctdb-must-have-node",
 		"--hostname=$(HOSTNAME)",
@@ -421,7 +424,7 @@ func (*sharePlanner) ctdbMustHaveNodeArgs() []string {
 	}
 }
 
-func (*sharePlanner) ctdbReadinessProbeArgs() []string {
+func (*Planner) ctdbReadinessProbeArgs() []string {
 	return []string{
 		"samba-container",
 		"check",
@@ -429,29 +432,29 @@ func (*sharePlanner) ctdbReadinessProbeArgs() []string {
 	}
 }
 
-func (sp *sharePlanner) serviceType() string {
+func (sp *Planner) serviceType() string {
 	if sp.CommonConfig != nil && sp.CommonConfig.Spec.Network.Publish == "external" {
 		return "LoadBalancer"
 	}
 	return "ClusterIP"
 }
 
-func (sp *sharePlanner) sambaContainerDebugLevel() string {
+func (sp *Planner) sambaContainerDebugLevel() string {
 	return sp.GlobalConfig.SambaDebugLevel
 }
 
-func (sp *sharePlanner) mayCluster() bool {
+func (sp *Planner) mayCluster() bool {
 	return sp.GlobalConfig.ClusterSupport == "ctdb-is-experimental"
 }
 
-func (sp *sharePlanner) isClustered() bool {
+func (sp *Planner) isClustered() bool {
 	if sp.SmbShare.Spec.Scaling == nil {
 		return false
 	}
 	return sp.SmbShare.Spec.Scaling.AvailabilityMode == "clustered"
 }
 
-func (sp *sharePlanner) clusterSize() int32 {
+func (sp *Planner) clusterSize() int32 {
 	if sp.SmbShare.Spec.Scaling == nil {
 		return 1
 	}
@@ -460,6 +463,6 @@ func (sp *sharePlanner) clusterSize() int32 {
 
 // nodeSpread returns true if pods are required to be spread over multiple
 // nodes.
-func (sp *sharePlanner) nodeSpread() bool {
+func (sp *Planner) nodeSpread() bool {
 	return sp.SmbShare.Annotations[nodeSpreadKey] != nodeSpreadDisable
 }
