@@ -17,7 +17,6 @@ package planner
 
 import (
 	"fmt"
-	"path"
 	"strings"
 
 	api "github.com/samba-in-kubernetes/samba-operator/api/v1alpha1"
@@ -107,43 +106,6 @@ func (sp *Planner) shareName() string {
 	return sp.SmbShare.Name
 }
 
-func (sp *Planner) sharePath() string {
-	return path.Join("/mnt", string(sp.SmbShare.UID))
-}
-
-func (sp *Planner) containerConfigPath() string {
-	cpath := path.Join(sp.containerConfigDir(), "config.json")
-	if sp.userSecuritySource().Configured {
-		upath := path.Join(sp.usersConfigDir(), sp.usersConfigFileName())
-		cpath += ":" + upath
-	}
-	return cpath
-}
-
-func (*Planner) containerConfigDir() string {
-	return "/etc/container-config"
-}
-
-func (*Planner) usersConfigFileName() string {
-	return "users.json"
-}
-
-func (*Planner) usersConfigDir() string {
-	return "/etc/container-users"
-}
-
-func (*Planner) winbindSocketsDir() string {
-	return "/run/samba/winbindd"
-}
-
-func (*Planner) sambaStateDir() string {
-	return "/var/lib/samba"
-}
-
-func (*Planner) osRunDir() string {
-	return "/run"
-}
-
 func (sp *Planner) securityMode() securityMode {
 	if sp.SecurityConfig == nil {
 		return userMode
@@ -169,18 +131,6 @@ func (sp *Planner) workgroup() string {
 
 func (*Planner) joinJSONSuffix(index int) string {
 	return fmt.Sprintf("-%d", index)
-}
-
-func (*Planner) joinJSONSourceDir(index int) string {
-	return fmt.Sprintf("/var/tmp/join/%d", index)
-}
-
-func (*Planner) joinJSONFileName() string {
-	return "join.json"
-}
-
-func (sp *Planner) joinJSONSourcePath(index int) string {
-	return path.Join(sp.joinJSONSourceDir(index), sp.joinJSONFileName())
 }
 
 func (*Planner) joinEnvPaths(p []string) string {
@@ -336,14 +286,6 @@ func (sp *Planner) dnsRegister() dnsRegister {
 		reg = dnsRegisterNever
 	}
 	return reg
-}
-
-func (*Planner) serviceWatchStateDir() string {
-	return "/var/lib/svcwatch"
-}
-
-func (sp *Planner) serviceWatchJSONPath() string {
-	return path.Join(sp.serviceWatchStateDir(), "status.json")
 }
 
 func (sp *Planner) initializerArgs(cmd string) []string {
