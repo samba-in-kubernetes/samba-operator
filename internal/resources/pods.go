@@ -17,36 +17,38 @@ package resources
 
 import (
 	"fmt"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/samba-in-kubernetes/samba-operator/internal/conf"
+	pln "github.com/samba-in-kubernetes/samba-operator/internal/planner"
 )
 
 func buildPodSpec(
-	planner *sharePlanner,
+	planner *pln.Planner,
 	cfg *conf.OperatorConfig,
 	pvcName string) corev1.PodSpec {
 	// ---
-	if planner.securityMode() == adMode {
+	if planner.SecurityMode() == pln.ADMode {
 		return buildADPodSpec(planner, cfg, pvcName)
 	}
 	return buildUserPodSpec(planner, cfg, pvcName)
 }
 
 func buildClusteredPodSpec(
-	planner *sharePlanner,
+	planner *pln.Planner,
 	dataPVCName, statePVCName string) corev1.PodSpec {
 	// ---
-	if planner.securityMode() == adMode {
+	if planner.SecurityMode() == pln.ADMode {
 		return buildClusteredADPodSpec(planner, dataPVCName, statePVCName)
 	}
 	return buildClusteredUserPodSpec(planner, dataPVCName, statePVCName)
 }
 
 func buildADPodSpec(
-	planner *sharePlanner,
+	planner *pln.Planner,
 	_ *conf.OperatorConfig,
 	pvcName string) corev1.PodSpec {
 	// ---
@@ -84,7 +86,7 @@ func buildADPodSpec(
 		podEnv,
 		corev1.EnvVar{
 			Name:  "SAMBACC_JOIN_FILES",
-			Value: planner.joinEnvPaths(jsrc.paths),
+			Value: joinEnvPaths(jsrc.paths),
 		},
 	)
 
@@ -93,9 +95,9 @@ func buildADPodSpec(
 		buildWinbinddCtr(planner, podEnv, smbServerVols),
 	}
 
-	if planner.dnsRegister() != dnsRegisterNever {
+	if planner.DNSRegister() != pln.DNSRegisterNever {
 		watchVol := svcWatchVolumeAndMount(
-			planner.serviceWatchStateDir(),
+			planner.Paths().ServiceWatchStateDir(),
 		)
 		volumes = append(volumes, watchVol)
 		svcWatchVols := []volMount{watchVol}
@@ -119,7 +121,7 @@ func buildADPodSpec(
 }
 
 func buildUserPodSpec(
-	planner *sharePlanner,
+	planner *pln.Planner,
 	_ *conf.OperatorConfig,
 	pvcName string) corev1.PodSpec {
 	// ---
@@ -134,7 +136,7 @@ func buildUserPodSpec(
 	osRunVol := osRunVolumeAndMount(planner)
 	vols = append(vols, osRunVol)
 
-	if planner.userSecuritySource().Configured {
+	if planner.UserSecuritySource().Configured {
 		v := userConfigVolumeAndMount(planner)
 		vols = append(vols, v)
 	}
@@ -148,7 +150,7 @@ func buildUserPodSpec(
 }
 
 func buildClusteredUserPodSpec(
-	planner *sharePlanner,
+	planner *pln.Planner,
 	dataPVCName, statePVCName string) corev1.PodSpec {
 	// ---
 	var (
@@ -183,7 +185,7 @@ func buildClusteredUserPodSpec(
 	ctdbSharedVol := ctdbSharedStateVolumeAndMount(planner, statePVCName)
 	volumes = append(volumes, ctdbSharedVol)
 
-	if planner.userSecuritySource().Configured {
+	if planner.UserSecuritySource().Configured {
 		v := userConfigVolumeAndMount(planner)
 		volumes = append(volumes, v)
 		podCfgVols = append(podCfgVols, v)
@@ -261,7 +263,7 @@ func buildClusteredUserPodSpec(
 }
 
 func buildClusteredADPodSpec(
-	planner *sharePlanner,
+	planner *pln.Planner,
 	dataPVCName, statePVCName string) corev1.PodSpec {
 	// ---
 	var (
@@ -303,7 +305,7 @@ func buildClusteredADPodSpec(
 	jsrc := getJoinSources(planner)
 	joinEnv := []corev1.EnvVar{{
 		Name:  "SAMBACC_JOIN_FILES",
-		Value: planner.joinEnvPaths(jsrc.paths),
+		Value: joinEnvPaths(jsrc.paths),
 	}}
 	volumes = append(volumes, jsrc.volumes...)
 
@@ -396,9 +398,9 @@ func buildClusteredADPodSpec(
 		buildSmbdCtr(planner, podEnv, volumes))
 
 	// dns-register containers
-	if planner.dnsRegister() != dnsRegisterNever {
+	if planner.DNSRegister() != pln.DNSRegisterNever {
 		watchVol := svcWatchVolumeAndMount(
-			planner.serviceWatchStateDir(),
+			planner.Paths().ServiceWatchStateDir(),
 		)
 		volumes = append(volumes, watchVol)
 		svcWatchVols := []volMount{watchVol}
@@ -419,7 +421,7 @@ func buildClusteredADPodSpec(
 }
 
 func buildSmbdCtr(
-	planner *sharePlanner,
+	planner *pln.Planner,
 	env []corev1.EnvVar,
 	vols []volMount) corev1.Container {
 	// ---
@@ -428,7 +430,7 @@ func buildSmbdCtr(
 		Image:   planner.GlobalConfig.SmbdContainerImage,
 		Name:    planner.GlobalConfig.SmbdContainerName,
 		Command: []string{"samba-container"},
-		Args:    planner.runDaemonArgs("smbd"),
+		Args:    planner.Args().Run("smbd"),
 		Env:     env,
 		Ports: []corev1.ContainerPort{{
 			ContainerPort: int32(portnum),
@@ -453,14 +455,14 @@ func buildSmbdCtr(
 }
 
 func buildWinbinddCtr(
-	planner *sharePlanner,
+	planner *pln.Planner,
 	env []corev1.EnvVar,
 	vols []volMount) corev1.Container {
 	// ---
 	return corev1.Container{
 		Image:        planner.GlobalConfig.SmbdContainerImage,
 		Name:         planner.GlobalConfig.WinbindContainerName,
-		Args:         planner.runDaemonArgs("winbindd"),
+		Args:         planner.Args().Run("winbindd"),
 		Env:          env,
 		VolumeMounts: getMounts(vols),
 		LivenessProbe: &corev1.Probe{
@@ -478,20 +480,20 @@ func buildWinbinddCtr(
 }
 
 func buildCTDBDaemonCtr(
-	planner *sharePlanner,
+	planner *pln.Planner,
 	env []corev1.EnvVar,
 	vols []volMount) corev1.Container {
 	// ---
 	return corev1.Container{
 		Image:        planner.GlobalConfig.SmbdContainerImage,
 		Name:         "ctdb",
-		Args:         planner.ctdbDaemonArgs(),
+		Args:         planner.Args().CTDBDaemon(),
 		Env:          env,
 		VolumeMounts: getMounts(vols),
 		ReadinessProbe: &corev1.Probe{
 			Handler: corev1.Handler{
 				Exec: &corev1.ExecAction{
-					Command: planner.ctdbReadinessProbeArgs(),
+					Command: planner.Args().CTDBNodeStatus(),
 				},
 			},
 		},
@@ -499,35 +501,35 @@ func buildCTDBDaemonCtr(
 }
 
 func buildCTDBManageNodesCtr(
-	planner *sharePlanner,
+	planner *pln.Planner,
 	env []corev1.EnvVar,
 	vols []volMount) corev1.Container {
 	// ---
 	return corev1.Container{
 		Image:        planner.GlobalConfig.SmbdContainerImage,
 		Name:         "ctdb-manage-nodes",
-		Args:         planner.ctdbManageNodesArgs(),
+		Args:         planner.Args().CTDBManageNodes(),
 		Env:          env,
 		VolumeMounts: getMounts(vols),
 	}
 }
 
 func buildDNSRegCtr(
-	planner *sharePlanner,
+	planner *pln.Planner,
 	env []corev1.EnvVar,
 	vols []volMount) corev1.Container {
 	// ---
 	return corev1.Container{
 		Image:        planner.GlobalConfig.SmbdContainerImage,
 		Name:         "dns-register",
-		Args:         planner.dnsRegisterArgs(),
+		Args:         planner.Args().DNSRegister(),
 		Env:          env,
 		VolumeMounts: getMounts(vols),
 	}
 }
 
 func buildSvcWatchCtr(
-	planner *sharePlanner,
+	planner *pln.Planner,
 	env []corev1.EnvVar,
 	vols []volMount) corev1.Container {
 	// ---
@@ -540,81 +542,81 @@ func buildSvcWatchCtr(
 }
 
 func buildInitCtr(
-	planner *sharePlanner,
+	planner *pln.Planner,
 	env []corev1.EnvVar,
 	vols []volMount) corev1.Container {
 	// ---
 	return corev1.Container{
 		Image:        planner.GlobalConfig.SmbdContainerImage,
 		Name:         "init",
-		Args:         planner.initializerArgs("init"),
+		Args:         planner.Args().Initializer("init"),
 		Env:          env,
 		VolumeMounts: getMounts(vols),
 	}
 }
 
 func buildMustJoinCtr(
-	planner *sharePlanner,
+	planner *pln.Planner,
 	env []corev1.EnvVar,
 	vols []volMount) corev1.Container {
 	// ---
 	return corev1.Container{
 		Image:        planner.GlobalConfig.SmbdContainerImage,
 		Name:         "must-join",
-		Args:         planner.initializerArgs("must-join"),
+		Args:         planner.Args().Initializer("must-join"),
 		Env:          env,
 		VolumeMounts: getMounts(vols),
 	}
 }
 
 func buildCTDBMigrateCtr(
-	planner *sharePlanner,
+	planner *pln.Planner,
 	env []corev1.EnvVar,
 	vols []volMount) corev1.Container {
 	// ---
 	return corev1.Container{
 		Image:        planner.GlobalConfig.SmbdContainerImage,
 		Name:         "ctdb-migrate",
-		Args:         planner.ctdbMigrateArgs(),
+		Args:         planner.Args().CTDBMigrate(),
 		Env:          env,
 		VolumeMounts: getMounts(vols),
 	}
 }
 
 func buildCTDBSetNodeCtr(
-	planner *sharePlanner,
+	planner *pln.Planner,
 	env []corev1.EnvVar,
 	vols []volMount) corev1.Container {
 	// ---
 	return corev1.Container{
 		Image:        planner.GlobalConfig.SmbdContainerImage,
 		Name:         "ctdb-set-node",
-		Args:         planner.ctdbSetNodeArgs(),
+		Args:         planner.Args().CTDBSetNode(),
 		Env:          env,
 		VolumeMounts: getMounts(vols),
 	}
 }
 
 func buildCTDBMustHaveNodeCtr(
-	planner *sharePlanner,
+	planner *pln.Planner,
 	env []corev1.EnvVar,
 	vols []volMount) corev1.Container {
 	// ---
 	return corev1.Container{
 		Image:        planner.GlobalConfig.SmbdContainerImage,
 		Name:         "ctdb-must-have-node",
-		Args:         planner.ctdbMustHaveNodeArgs(),
+		Args:         planner.Args().CTDBMustHaveNode(),
 		Env:          env,
 		VolumeMounts: getMounts(vols),
 	}
 }
 
-func svcWatchEnv(planner *sharePlanner) []corev1.EnvVar {
+func svcWatchEnv(planner *pln.Planner) []corev1.EnvVar {
 	serviceLabelSel := fmt.Sprintf("metadata.labels['%s']", svcSelectorKey)
 	return []corev1.EnvVar{
 		{
 			Name:  "DESTINATION_PATH",
-			Value: planner.serviceWatchJSONPath(),
+			Value: planner.Paths().ServiceWatchJSON(),
 		},
 		{
 			Name:  "SERVICE_LABEL_KEY",
@@ -639,21 +641,21 @@ func svcWatchEnv(planner *sharePlanner) []corev1.EnvVar {
 	}
 }
 
-func defaultPodEnv(planner *sharePlanner) []corev1.EnvVar {
+func defaultPodEnv(planner *pln.Planner) []corev1.EnvVar {
 	env := []corev1.EnvVar{
 		{
 			Name:  "SAMBA_CONTAINER_ID",
-			Value: string(planner.instanceID()),
+			Value: planner.InstanceName(),
 		},
 		{
 			Name:  "SAMBACC_CONFIG",
-			Value: planner.containerConfigPath(),
+			Value: joinEnvPaths(planner.Paths().ContainerConfigs()),
 		},
 	}
 	// In the future we may want per-container debug levels. The
 	// infrastructure could support that. For the moment we simply have one
 	// debug level for all samba containers in the pod.
-	if lvl := planner.sambaContainerDebugLevel(); lvl != "" {
+	if lvl := planner.SambaContainerDebugLevel(); lvl != "" {
 		env = append(env, corev1.EnvVar{
 			Name:  "SAMBA_DEBUG_LEVEL",
 			Value: lvl,
@@ -662,7 +664,7 @@ func defaultPodEnv(planner *sharePlanner) []corev1.EnvVar {
 	return env
 }
 
-func defaultPodSpec(planner *sharePlanner) corev1.PodSpec {
+func defaultPodSpec(planner *pln.Planner) corev1.PodSpec {
 	shareProcessNamespace := true
 	return corev1.PodSpec{
 		ServiceAccountName:    planner.GlobalConfig.ServiceAccountName,
@@ -670,7 +672,7 @@ func defaultPodSpec(planner *sharePlanner) corev1.PodSpec {
 	}
 }
 
-func ctdbHostnameEnv(_ *sharePlanner) []corev1.EnvVar {
+func ctdbHostnameEnv(_ *pln.Planner) []corev1.EnvVar {
 	return []corev1.EnvVar{
 		{
 			Name: "HOSTNAME",
@@ -692,7 +694,7 @@ type joinSources struct {
 	paths   []string
 }
 
-func getJoinSources(planner *sharePlanner) joinSources {
+func getJoinSources(planner *pln.Planner) joinSources {
 	src := joinSources{
 		volumes: []volMount{},
 		paths:   []string{},
@@ -701,8 +703,12 @@ func getJoinSources(planner *sharePlanner) joinSources {
 		if js.UserJoin != nil {
 			vm := joinJSONFileVolumeAndMount(planner, i)
 			src.volumes = append(src.volumes, vm)
-			src.paths = append(src.paths, planner.joinJSONSourcePath(i))
+			src.paths = append(src.paths, planner.Paths().JoinJSONSource(i))
 		}
 	}
 	return src
+}
+
+func joinEnvPaths(p []string) string {
+	return strings.Join(p, ":")
 }

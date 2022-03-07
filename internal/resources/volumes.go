@@ -16,7 +16,11 @@ limitations under the License.
 package resources
 
 import (
+	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
+
+	pln "github.com/samba-in-kubernetes/samba-operator/internal/planner"
 )
 
 const (
@@ -48,7 +52,7 @@ func getMounts(vols []volMount) []corev1.VolumeMount {
 	return m
 }
 
-func shareVolumeAndMount(planner *sharePlanner, pvcName string) volMount {
+func shareVolumeAndMount(planner *pln.Planner, pvcName string) volMount {
 	var vmnt volMount
 	// volume
 	pvcVolName := pvcName + "-smb"
@@ -62,17 +66,17 @@ func shareVolumeAndMount(planner *sharePlanner, pvcName string) volMount {
 	}
 	// mount
 	vmnt.mount = corev1.VolumeMount{
-		MountPath: planner.sharePath(),
+		MountPath: planner.Paths().Share(),
 		Name:      pvcVolName,
 	}
 	return vmnt
 }
 
-func configVolumeAndMount(planner *sharePlanner) volMount {
+func configVolumeAndMount(planner *pln.Planner) volMount {
 	var vmnt volMount
 	// volume
 	cmSrc := &corev1.ConfigMapVolumeSource{}
-	cmSrc.Name = planner.instanceName()
+	cmSrc.Name = planner.InstanceName()
 	vmnt.volume = corev1.Volume{
 		Name: configMapName,
 		VolumeSource: corev1.VolumeSource{
@@ -81,16 +85,16 @@ func configVolumeAndMount(planner *sharePlanner) volMount {
 	}
 	// mount
 	vmnt.mount = corev1.VolumeMount{
-		MountPath: planner.containerConfigDir(),
+		MountPath: planner.Paths().ContainerConfigDir(),
 		Name:      configMapName,
 	}
 	return vmnt
 }
 
-func userConfigVolumeAndMount(planner *sharePlanner) volMount {
+func userConfigVolumeAndMount(planner *pln.Planner) volMount {
 	var vmnt volMount
 	// volume
-	uss := planner.userSecuritySource()
+	uss := planner.UserSecuritySource()
 	vmnt.volume = corev1.Volume{
 		Name: userSecretVolName,
 		VolumeSource: corev1.VolumeSource{
@@ -98,20 +102,20 @@ func userConfigVolumeAndMount(planner *sharePlanner) volMount {
 				SecretName: uss.Secret,
 				Items: []corev1.KeyToPath{{
 					Key:  uss.Key,
-					Path: planner.usersConfigFileName(),
+					Path: planner.Paths().UsersConfigBaseName(),
 				}},
 			},
 		},
 	}
 	// mount
 	vmnt.mount = corev1.VolumeMount{
-		MountPath: planner.usersConfigDir(),
+		MountPath: planner.Paths().UsersConfigDir(),
 		Name:      userSecretVolName,
 	}
 	return vmnt
 }
 
-func sambaStateVolumeAndMount(planner *sharePlanner) volMount {
+func sambaStateVolumeAndMount(planner *pln.Planner) volMount {
 	var vmnt volMount
 	// todo: should this use a persistent volume?
 	// volume
@@ -125,13 +129,13 @@ func sambaStateVolumeAndMount(planner *sharePlanner) volMount {
 	}
 	// mount
 	vmnt.mount = corev1.VolumeMount{
-		MountPath: planner.sambaStateDir(),
+		MountPath: planner.Paths().SambaStateDir(),
 		Name:      stateVolName,
 	}
 	return vmnt
 }
 
-func osRunVolumeAndMount(planner *sharePlanner) volMount {
+func osRunVolumeAndMount(planner *pln.Planner) volMount {
 	var vmnt volMount
 	// volume
 	vmnt.volume = corev1.Volume{
@@ -144,13 +148,13 @@ func osRunVolumeAndMount(planner *sharePlanner) volMount {
 	}
 	// mount
 	vmnt.mount = corev1.VolumeMount{
-		MountPath: planner.osRunDir(),
+		MountPath: planner.Paths().OSRunDir(),
 		Name:      osRunVolName,
 	}
 	return vmnt
 }
 
-func wbSocketsVolumeAndMount(planner *sharePlanner) volMount {
+func wbSocketsVolumeAndMount(planner *pln.Planner) volMount {
 	var vmnt volMount
 	// volume
 	vmnt.volume = corev1.Volume{
@@ -163,16 +167,16 @@ func wbSocketsVolumeAndMount(planner *sharePlanner) volMount {
 	}
 	// mount
 	vmnt.mount = corev1.VolumeMount{
-		MountPath: planner.winbindSocketsDir(),
+		MountPath: planner.Paths().WinbindSocketsDir(),
 		Name:      wbSocketsVolName,
 	}
 	return vmnt
 }
 
-func joinJSONFileVolumeAndMount(planner *sharePlanner, index int) volMount {
+func joinJSONFileVolumeAndMount(planner *pln.Planner, index int) volMount {
 	var vmnt volMount
 	// volume
-	vname := joinJSONVolName + planner.joinJSONSuffix(index)
+	vname := joinJSONVolumeSuffix(joinJSONVolName, index)
 	j := planner.SecurityConfig.Spec.JoinSources[index]
 	vmnt.volume = corev1.Volume{
 		Name: vname,
@@ -181,14 +185,14 @@ func joinJSONFileVolumeAndMount(planner *sharePlanner, index int) volMount {
 				SecretName: j.UserJoin.Secret,
 				Items: []corev1.KeyToPath{{
 					Key:  j.UserJoin.Key,
-					Path: planner.joinJSONFileName(),
+					Path: planner.Paths().JoinJSONBaseName(),
 				}},
 			},
 		},
 	}
 	// mount
 	vmnt.mount = corev1.VolumeMount{
-		MountPath: planner.joinJSONSourceDir(index),
+		MountPath: planner.Paths().JoinJSONSourceDir(index),
 		Name:      vname,
 	}
 	return vmnt
@@ -214,7 +218,7 @@ func svcWatchVolumeAndMount(dir string) volMount {
 	return vmnt
 }
 
-func ctdbConfigVolumeAndMount(_ *sharePlanner) volMount {
+func ctdbConfigVolumeAndMount(_ *pln.Planner) volMount {
 	var vmnt volMount
 	name := "ctdb-config"
 	vmnt.volume = corev1.Volume{
@@ -232,7 +236,7 @@ func ctdbConfigVolumeAndMount(_ *sharePlanner) volMount {
 	return vmnt
 }
 
-func ctdbPersistentVolumeAndMount(_ *sharePlanner) volMount {
+func ctdbPersistentVolumeAndMount(_ *pln.Planner) volMount {
 	var vmnt volMount
 	// this was an empty dir in my hand-rolled example yaml file
 	// but now I'm looking at this and wondering. Keeping it the same
@@ -253,7 +257,7 @@ func ctdbPersistentVolumeAndMount(_ *sharePlanner) volMount {
 	return vmnt
 }
 
-func ctdbVolatileVolumeAndMount(_ *sharePlanner) volMount {
+func ctdbVolatileVolumeAndMount(_ *pln.Planner) volMount {
 	var vmnt volMount
 	name := "ctdb-volatile"
 	vmnt.volume = corev1.Volume{
@@ -271,7 +275,7 @@ func ctdbVolatileVolumeAndMount(_ *sharePlanner) volMount {
 	return vmnt
 }
 
-func ctdbSocketsVolumeAndMount(_ *sharePlanner) volMount {
+func ctdbSocketsVolumeAndMount(_ *pln.Planner) volMount {
 	var vmnt volMount
 	name := "ctdb-sockets"
 	vmnt.volume = corev1.Volume{
@@ -291,7 +295,7 @@ func ctdbSocketsVolumeAndMount(_ *sharePlanner) volMount {
 }
 
 func ctdbSharedStateVolumeAndMount(
-	_ *sharePlanner, pvcName string) volMount {
+	_ *pln.Planner, pvcName string) volMount {
 	// ---
 	var vmnt volMount
 	// we've discussed the possibility of doing without this rwx pvc to
@@ -312,4 +316,8 @@ func ctdbSharedStateVolumeAndMount(
 		Name:      pvcVolName,
 	}
 	return vmnt
+}
+
+func joinJSONVolumeSuffix(v string, index int) string {
+	return fmt.Sprintf("%s-%d", v, index)
 }
