@@ -19,20 +19,22 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	pln "github.com/samba-in-kubernetes/samba-operator/internal/planner"
 )
 
 var svcSelectorKey = "samba-operator.samba.org/service"
 
-func newServiceForSmb(planner *sharePlanner, ns string) *corev1.Service {
-	labels := labelsForSmbServer(planner.instanceName())
+func newServiceForSmb(planner *pln.Planner, ns string) *corev1.Service {
+	labels := labelsForSmbServer(planner.InstanceName())
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      planner.instanceName(),
+			Name:      planner.InstanceName(),
 			Namespace: ns,
 			Labels:    labels,
 		},
 		Spec: corev1.ServiceSpec{
-			Type: toServiceType(planner.serviceType()),
+			Type: toServiceType(planner.ServiceType()),
 			Ports: []corev1.ServicePort{{
 				Name:       "smb",
 				Protocol:   corev1.ProtocolTCP,

@@ -32,6 +32,7 @@ import (
 
 	sambaoperatorv1alpha1 "github.com/samba-in-kubernetes/samba-operator/api/v1alpha1"
 	"github.com/samba-in-kubernetes/samba-operator/internal/conf"
+	pln "github.com/samba-in-kubernetes/samba-operator/internal/planner"
 )
 
 const shareFinalizer = "samba-operator.samba.org/shareFinalizer"
@@ -168,7 +169,7 @@ func (m *SmbShareManager) Update(
 		if instance.Annotations == nil {
 			instance.Annotations = map[string]string{}
 		}
-		if planner.isClustered() {
+		if planner.IsClustered() {
 			instance.Annotations[serverBackend] = clusteredBackend
 		} else {
 			instance.Annotations[serverBackend] = standardBackend
@@ -198,7 +199,7 @@ func (m *SmbShareManager) Update(
 		// In the future we should certainly revisit this and support
 		// intelligent methods to handle changes like this.
 		b := instance.Annotations[serverBackend]
-		if planner.isClustered() && b != clusteredBackend {
+		if planner.IsClustered() && b != clusteredBackend {
 			err = fmt.Errorf(
 				"Can not convert SmbShare to clustered instance."+
 					" Current backend: %s",
@@ -211,7 +212,7 @@ func (m *SmbShareManager) Update(
 				"SmbShare.UID", instance.UID)
 			return Result{err: err}
 		}
-		if !planner.isClustered() && b != standardBackend {
+		if !planner.IsClustered() && b != standardBackend {
 			err = fmt.Errorf(
 				"Can not convert SmbShare to non-clustered instance."+
 					" Current backend: %s",
@@ -226,8 +227,8 @@ func (m *SmbShareManager) Update(
 		}
 	}
 
-	if planner.isClustered() {
-		if !planner.mayCluster() {
+	if planner.IsClustered() {
+		if !planner.MayCluster() {
 			err = fmt.Errorf(
 				"CTDB clustering not enabled in ClusterSupport: %v",
 				planner.GlobalConfig.ClusterSupport)
@@ -338,11 +339,11 @@ func (m *SmbShareManager) Finalize(
 
 func (m *SmbShareManager) getOrCreateDeployment(
 	ctx context.Context,
-	planner *sharePlanner,
+	planner *pln.Planner,
 	ns string) (*appsv1.Deployment, bool, error) {
 	// Check if the deployment already exists, if not create a new one
 	depKey := types.NamespacedName{
-		Name:      planner.instanceName(),
+		Name:      planner.InstanceName(),
 		Namespace: ns,
 	}
 	found := &appsv1.Deployment{}
@@ -403,7 +404,7 @@ func (m *SmbShareManager) getOrCreateDeployment(
 
 func (m *SmbShareManager) getOrCreateStatePVC(
 	ctx context.Context,
-	planner *sharePlanner,
+	planner *pln.Planner,
 	ns string) (*corev1.PersistentVolumeClaim, bool, error) {
 	// ---
 	name := sharedStatePVCName(planner)
@@ -516,12 +517,12 @@ func (m *SmbShareManager) getOrCreateGenericPVC(
 }
 
 func (m *SmbShareManager) getOrCreateService(
-	ctx context.Context, planner *sharePlanner, ns string) (
+	ctx context.Context, planner *pln.Planner, ns string) (
 	*corev1.Service, bool, error) {
 	// Check if the service already exists, if not create a new one
 	found := &corev1.Service{}
 	svcKey := types.NamespacedName{
-		Name:      planner.instanceName(),
+		Name:      planner.InstanceName(),
 		Namespace: ns,
 	}
 	err := m.client.Get(ctx, svcKey, found)
@@ -583,8 +584,8 @@ func (m *SmbShareManager) getOrCreateConfigMap(
 	*corev1.ConfigMap, bool, error) {
 	// create a temporary planner based solely on the SmbShare
 	// this is used for the name generating function & consistency
-	planner := newSharePlanner(
-		InstanceConfiguration{
+	planner := pln.New(
+		pln.InstanceConfiguration{
 			SmbShare:     smbShare,
 			GlobalConfig: m.cfg,
 		},
@@ -592,7 +593,7 @@ func (m *SmbShareManager) getOrCreateConfigMap(
 	// fetch the existing config, if available
 	found := &corev1.ConfigMap{}
 	cmKey := types.NamespacedName{
-		Name:      planner.instanceName(),
+		Name:      planner.InstanceName(),
 		Namespace: ns,
 	}
 	err := m.client.Get(ctx, cmKey, found)
@@ -653,12 +654,12 @@ func (m *SmbShareManager) getOrCreateConfigMap(
 
 func (m *SmbShareManager) getOrCreateStatefulSet(
 	ctx context.Context,
-	planner *sharePlanner,
+	planner *pln.Planner,
 	ns string) (*appsv1.StatefulSet, bool, error) {
 	// Check if the ss already exists, if not create a new one
 	found := &appsv1.StatefulSet{}
 	ssKey := types.NamespacedName{
-		Name:      planner.instanceName(),
+		Name:      planner.InstanceName(),
 		Namespace: ns,
 	}
 	err := m.client.Get(ctx, ssKey, found)
@@ -769,8 +770,8 @@ func pvcName(s *sambaoperatorv1alpha1.SmbShare) string {
 	return s.Name + "-pvc"
 }
 
-func sharedStatePVCName(planner *sharePlanner) string {
-	return planner.instanceName() + "-state"
+func sharedStatePVCName(planner *pln.Planner) string {
+	return planner.InstanceName() + "-state"
 }
 
 func shareNeedsPvc(s *sambaoperatorv1alpha1.SmbShare) bool {
@@ -780,7 +781,7 @@ func shareNeedsPvc(s *sambaoperatorv1alpha1.SmbShare) bool {
 func (m *SmbShareManager) updateConfiguration(
 	ctx context.Context,
 	cm *corev1.ConfigMap,
-	s *sambaoperatorv1alpha1.SmbShare) (*sharePlanner, bool, error) {
+	s *sambaoperatorv1alpha1.SmbShare) (*pln.Planner, bool, error) {
 	// extract config from map
 	cc, err := getContainerConfig(cm)
 	if err != nil {
@@ -791,8 +792,8 @@ func (m *SmbShareManager) updateConfiguration(
 	if isDeleting {
 		m.logger.Info(
 			"ConfigMap is being deleted - returning minimal planner")
-		planner := newSharePlanner(
-			InstanceConfiguration{
+		planner := pln.New(
+			pln.InstanceConfiguration{
 				SmbShare:     s,
 				GlobalConfig: m.cfg,
 			},
@@ -812,15 +813,15 @@ func (m *SmbShareManager) updateConfiguration(
 
 	// extract config from map
 	var changed bool
-	planner := newSharePlanner(
-		InstanceConfiguration{
+	planner := pln.New(
+		pln.InstanceConfiguration{
 			SmbShare:       s,
 			SecurityConfig: security,
 			CommonConfig:   common,
 			GlobalConfig:   m.cfg,
 		},
 		cc)
-	changed, err = planner.update()
+	changed, err = planner.Update()
 	if err != nil {
 		m.logger.Error(err, "unable to update samba container config")
 		return nil, false, err
@@ -908,8 +909,8 @@ func (m *SmbShareManager) getConfigMap(
 	*corev1.ConfigMap, error) {
 	// create a temporary planner based solely on the SmbShare
 	// this is used for the name generating function & consistency
-	planner := newSharePlanner(
-		InstanceConfiguration{
+	planner := pln.New(
+		pln.InstanceConfiguration{
 			SmbShare:     smbShare,
 			GlobalConfig: m.cfg,
 		},
@@ -917,7 +918,7 @@ func (m *SmbShareManager) getConfigMap(
 	// fetch the existing config, if available
 	found := &corev1.ConfigMap{}
 	cmKey := types.NamespacedName{
-		Name:      planner.instanceName(),
+		Name:      planner.InstanceName(),
 		Namespace: ns,
 	}
 	err := m.client.Get(ctx, cmKey, found)

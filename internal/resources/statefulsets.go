@@ -19,21 +19,23 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	pln "github.com/samba-in-kubernetes/samba-operator/internal/planner"
 )
 
 func buildStatefulSet(
-	planner *sharePlanner,
+	planner *pln.Planner,
 	dataPVCName, statePVCName, ns string) *appsv1.StatefulSet {
 	// ---
-	labels := labelsForSmbServer(planner.instanceName())
-	size := planner.clusterSize()
+	labels := labelsForSmbServer(planner.InstanceName())
+	size := planner.ClusterSize()
 	podSpec := buildClusteredPodSpec(planner, dataPVCName, statePVCName)
-	if planner.nodeSpread() {
+	if planner.NodeSpread() {
 		podSpec.Affinity = buildOneSmbdPerNodeAffinity(labels, serviceLabel)
 	}
 	statefulSet := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      planner.instanceName(),
+			Name:      planner.InstanceName(),
 			Namespace: ns,
 			Labels:    labels,
 		},
