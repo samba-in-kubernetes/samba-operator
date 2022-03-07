@@ -203,7 +203,7 @@ func (s *SmbShareWithDNSSuite) TestShareAccessByDomainName() {
 	// test that the IP in ad dns matches the service
 	ctx, cancel := context.WithDeadline(
 		context.TODO(),
-		time.Now().Add(30*time.Second))
+		time.Now().Add(waitForIpTime))
 	defer cancel()
 	hc := dnsclient.MustPodExec(s.tc, testNamespace, "smbclient", "")
 	s.Require().NoError(poll.TryUntil(ctx, &poll.Prober{
