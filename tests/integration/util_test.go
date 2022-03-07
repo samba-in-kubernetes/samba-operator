@@ -10,6 +10,7 @@ import (
 )
 
 var (
+	waitForIpTime    = 120 * time.Second
 	waitForPodsTime  = 120 * time.Second
 	waitForReadyTime = 200 * time.Second
 	waitForClearTime = 200 * time.Millisecond
