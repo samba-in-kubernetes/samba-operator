@@ -15,9 +15,22 @@ limitations under the License.
 
 package planner
 
-func (sp *Planner) initializerArgs(cmd string) []string {
+// SambaContainerArgs generates sets for arguments for samba-container
+// instances.
+type SambaContainerArgs struct {
+	planner *Planner
+}
+
+// Args returns a SambaContainerArgs type for starting containers in
+// this instance.
+func (p *Planner) Args() *SambaContainerArgs {
+	return &SambaContainerArgs{p}
+}
+
+// Initializer container arguments generator.
+func (s *SambaContainerArgs) Initializer(cmd string) []string {
 	args := []string{}
-	if sp.IsClustered() {
+	if s.planner.IsClustered() {
 		// if this is a ctdb enabled setup, this "initializer"
 		// container-command will be skipped if certain things have already
 		// been "initialized"
@@ -27,22 +40,24 @@ func (sp *Planner) initializerArgs(cmd string) []string {
 	return args
 }
 
-func (sp *Planner) dnsRegisterArgs() []string {
+// DNSRegister container arguments generator.
+func (s *SambaContainerArgs) DNSRegister() []string {
 	args := []string{
 		"dns-register",
 		"--watch",
 	}
-	if sp.DNSRegister() == DNSRegisterClusterIP {
+	if s.planner.DNSRegister() == DNSRegisterClusterIP {
 		args = append(args, "--target=internal")
 	}
-	args = append(args, sp.Paths().ServiceWatchJSON())
+	args = append(args, s.planner.Paths().ServiceWatchJSON())
 	return args
 }
 
-func (sp *Planner) runDaemonArgs(name string) []string {
+// Run container arguments generator.
+func (s *SambaContainerArgs) Run(name string) []string {
 	args := []string{"run", name}
-	if sp.IsClustered() {
-		if sp.SecurityMode() == ADMode {
+	if s.planner.IsClustered() {
+		if s.planner.SecurityMode() == ADMode {
 			args = append(args, "--setup=nsswitch", "--setup=smb_ctdb")
 		} else if name == "smbd" {
 			args = append(args, "--setup=users", "--setup=smb_ctdb")
@@ -51,7 +66,8 @@ func (sp *Planner) runDaemonArgs(name string) []string {
 	return args
 }
 
-func (*Planner) ctdbDaemonArgs() []string {
+// CTDBDaemon container arguments generator.
+func (*SambaContainerArgs) CTDBDaemon() []string {
 	return []string{
 		"run",
 		"ctdbd",
@@ -62,7 +78,8 @@ func (*Planner) ctdbDaemonArgs() []string {
 	}
 }
 
-func (*Planner) ctdbManageNodesArgs() []string {
+// CTDBManageNodes container arguments generator.
+func (*SambaContainerArgs) CTDBManageNodes() []string {
 	return []string{
 		"ctdb-manage-nodes",
 		"--hostname=$(HOSTNAME)",
@@ -70,14 +87,16 @@ func (*Planner) ctdbManageNodesArgs() []string {
 	}
 }
 
-func (*Planner) ctdbMigrateArgs() []string {
+// CTDBMigrate container arguments generator.
+func (*SambaContainerArgs) CTDBMigrate() []string {
 	return []string{
 		"ctdb-migrate",
 		"--dest-dir=/var/lib/ctdb/persistent",
 	}
 }
 
-func (*Planner) ctdbSetNodeArgs() []string {
+// CTDBSetNode container arguments generator.
+func (*SambaContainerArgs) CTDBSetNode() []string {
 	return []string{
 		"ctdb-set-node",
 		"--hostname=$(HOSTNAME)",
@@ -85,7 +104,8 @@ func (*Planner) ctdbSetNodeArgs() []string {
 	}
 }
 
-func (*Planner) ctdbMustHaveNodeArgs() []string {
+// CTDBMustHaveNode container arguments generator.
+func (*SambaContainerArgs) CTDBMustHaveNode() []string {
 	return []string{
 		"ctdb-must-have-node",
 		"--hostname=$(HOSTNAME)",
@@ -93,7 +113,8 @@ func (*Planner) ctdbMustHaveNodeArgs() []string {
 	}
 }
 
-func (*Planner) ctdbReadinessProbeArgs() []string {
+// CTDBNodeStatus container arguments generator.
+func (*SambaContainerArgs) CTDBNodeStatus() []string {
 	return []string{
 		"samba-container",
 		"check",
