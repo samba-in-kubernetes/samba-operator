@@ -55,6 +55,9 @@ GOARCH?=$(shell $(GO_CMD) env GOARCH)
 # Local (alternative) GOBIN for auxiliary build tools
 GOBIN_ALT:=$(CURDIR)/.bin
 
+# Common link-flags for go programs
+GOLDFLAGS="-X main.Version=$(GIT_VERSION) -X main.CommitID=$(COMMIT_ID)"
+
 
 CONTAINER_BUILD_OPTS?=
 CONTAINER_CMD?=
@@ -96,7 +99,10 @@ coverage.html: cover.out
 manager: generate build vet
 
 build:
-	CGO_ENABLED=0 $(GO_CMD) build -o bin/manager -ldflags "-X main.Version=$(GIT_VERSION) -X main.CommitID=$(COMMIT_ID)"  main.go
+	CGO_ENABLED=0 $(GO_CMD) build -o bin/manager \
+		-ldflags $(GOLDFLAGS) main.go
+	CGO_ENABLED=0 $(GO_CMD) build -o bin/smbmetrics \
+		-ldflags $(GOLDFLAGS) cmd/smbmetrics/main.go
 .PHONY: build
 
 build-integration-tests:
