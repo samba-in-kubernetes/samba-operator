@@ -26,7 +26,7 @@ func (sp *Planner) sharePath() string {
 
 func (sp *Planner) containerConfigPath() string {
 	cpath := path.Join(sp.containerConfigDir(), "config.json")
-	if sp.userSecuritySource().Configured {
+	if sp.UserSecuritySource().Configured {
 		upath := path.Join(sp.usersConfigDir(), sp.usersConfigFileName())
 		cpath += ":" + upath
 	}
