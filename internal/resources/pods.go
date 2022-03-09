@@ -90,10 +90,9 @@ func buildADPodSpec(
 		},
 	)
 
-	containers := []corev1.Container{
-		buildSmbdCtr(planner, podEnv, smbdVols),
-		buildWinbinddCtr(planner, podEnv, smbServerVols),
-	}
+	containers := buildSmbdCtrs(planner, podEnv, smbdVols)
+	containers = append(containers,
+		buildWinbinddCtr(planner, podEnv, smbServerVols))
 
 	if planner.DNSRegister() != pln.DNSRegisterNever {
 		watchVol := svcWatchVolumeAndMount(
@@ -146,9 +145,7 @@ func buildUserPodSpec(
 	podEnv := defaultPodEnv(planner)
 	podSpec := defaultPodSpec(planner)
 	podSpec.Volumes = getVolumes(vols)
-	podSpec.Containers = []corev1.Container{
-		buildSmbdCtr(planner, podEnv, vols),
-	}
+	podSpec.Containers = buildSmbdCtrs(planner, podEnv, vols)
 	return podSpec
 }
 
@@ -256,7 +253,7 @@ func buildClusteredUserPodSpec(
 	// smbd
 	containers = append(
 		containers,
-		buildSmbdCtr(planner, podEnv, volumes))
+		buildSmbdCtrs(planner, podEnv, volumes)...)
 
 	podSpec := defaultPodSpec(planner)
 	podSpec.Volumes = getVolumes(volumes)
@@ -398,7 +395,7 @@ func buildClusteredADPodSpec(
 	// smbd
 	containers = append(
 		containers,
-		buildSmbdCtr(planner, podEnv, volumes))
+		buildSmbdCtrs(planner, podEnv, volumes)...)
 
 	// dns-register containers
 	if planner.DNSRegister() != pln.DNSRegisterNever {
@@ -421,6 +418,19 @@ func buildClusteredADPodSpec(
 	podSpec.InitContainers = initContainers
 	podSpec.Containers = containers
 	return podSpec
+}
+
+func buildSmbdCtrs(
+	planner *pln.Planner,
+	env []corev1.EnvVar,
+	vols []volMount) []corev1.Container {
+	// ---
+	ctrs := []corev1.Container{}
+	ctrs = append(ctrs, buildSmbdCtr(planner, env, vols))
+	if withMetricsExporter(planner.GlobalConfig) {
+		ctrs = append(ctrs, buildSmbdMetricsCtr(planner, vols))
+	}
+	return ctrs
 }
 
 func buildSmbdCtr(
@@ -455,6 +465,14 @@ func buildSmbdCtr(
 			},
 		},
 	}
+}
+
+func buildSmbdMetricsCtr(
+	planner *pln.Planner,
+	vols []volMount) corev1.Container {
+	// ---
+	return buildSmbMetricsContainer(
+		planner.GlobalConfig.SmbdMetricsContainerImage, getMounts(vols))
 }
 
 func buildWinbinddCtr(
