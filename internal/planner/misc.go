@@ -21,15 +21,19 @@ const (
 	nodeSpreadDisable = "false"
 )
 
-type userSecuritySource struct {
+// UserSecuritySource describes the location of user security configuration
+// metadata.
+type UserSecuritySource struct {
 	Configured bool
 	Namespace  string
 	Secret     string
 	Key        string
 }
 
-func (sp *Planner) userSecuritySource() userSecuritySource {
-	s := userSecuritySource{}
+// UserSecuritySource returns the UserSecuritySource type for the
+// particular instance.
+func (sp *Planner) UserSecuritySource() UserSecuritySource {
+	s := UserSecuritySource{}
 	if sp.SecurityMode() != UserMode {
 		return s
 	}
@@ -43,48 +47,62 @@ func (sp *Planner) userSecuritySource() userSecuritySource {
 	return s
 }
 
-type dnsRegister string
+// DNSRegister describes how an instance should register itself with
+// a DNS system (typically AD).
+type DNSRegister string
 
 const (
-	dnsRegisterNever      = dnsRegister("never")
-	dnsRegisterExternalIP = dnsRegister("external-ip")
-	dnsRegisterClusterIP  = dnsRegister("cluster-ip")
+	// DNSRegisterNever means the system should never register itself.
+	DNSRegisterNever = DNSRegister("never")
+	// DNSRegisterExternalIP means the system should register its
+	// external IP address.
+	DNSRegisterExternalIP = DNSRegister("external-ip")
+	// DNSRegisterClusterIP means the system should register its
+	// in-cluster IP address.
+	DNSRegisterClusterIP = DNSRegister("cluster-ip")
 )
 
-func (sp *Planner) dnsRegister() dnsRegister {
-	reg := dnsRegisterNever
+// DNSRegister returns a DNSRegister type for this instance.
+func (sp *Planner) DNSRegister() DNSRegister {
+	reg := DNSRegisterNever
 	if sp.SecurityMode() == ADMode && sp.SecurityConfig.Spec.DNS != nil {
-		reg = dnsRegister(sp.SecurityConfig.Spec.DNS.Register)
+		reg = DNSRegister(sp.SecurityConfig.Spec.DNS.Register)
 	}
 	switch reg {
 	// allowed values
-	case dnsRegisterExternalIP, dnsRegisterClusterIP:
+	case DNSRegisterExternalIP, DNSRegisterClusterIP:
 	// anything else is reverted to "never"
-	case dnsRegisterNever:
+	case DNSRegisterNever:
 		fallthrough
 	default:
-		reg = dnsRegisterNever
+		reg = DNSRegisterNever
 	}
 	return reg
 }
 
-func (sp *Planner) serviceType() string {
+// ServiceType returns the value that should be used for a Service fronting
+// the SMB port for this instance.
+func (sp *Planner) ServiceType() string {
 	if sp.CommonConfig != nil && sp.CommonConfig.Spec.Network.Publish == "external" {
 		return "LoadBalancer"
 	}
 	return "ClusterIP"
 }
 
-func (sp *Planner) sambaContainerDebugLevel() string {
+// SambaContainerDebugLevel returns a string that can be passed to Samba
+// tools for debugging.
+func (sp *Planner) SambaContainerDebugLevel() string {
 	return sp.GlobalConfig.SambaDebugLevel
 }
 
-func (sp *Planner) mayCluster() bool {
+// MayCluster returns true if the operator is permitted to create clustered
+// instances.
+func (sp *Planner) MayCluster() bool {
 	return sp.GlobalConfig.ClusterSupport == "ctdb-is-experimental"
 }
 
-// nodeSpread returns true if pods are required to be spread over multiple
+// NodeSpread returns true if pods are required to be spread over multiple
 // nodes.
-func (sp *Planner) nodeSpread() bool {
+func (sp *Planner) NodeSpread() bool {
 	return sp.SmbShare.Annotations[nodeSpreadKey] != nodeSpreadDisable
 }
