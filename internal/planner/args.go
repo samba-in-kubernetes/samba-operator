@@ -35,7 +35,7 @@ func (sp *Planner) dnsRegisterArgs() []string {
 	if sp.DNSRegister() == DNSRegisterClusterIP {
 		args = append(args, "--target=internal")
 	}
-	args = append(args, sp.serviceWatchJSONPath())
+	args = append(args, sp.Paths().ServiceWatchJSON())
 	return args
 }
 
