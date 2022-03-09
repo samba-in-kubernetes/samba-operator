@@ -28,49 +28,61 @@ import (
 // * pvc (storage)
 // * networking
 
-type securityMode string
+// SecurityMode describes the high level user-authentication
+// used by a share or instance.
+type SecurityMode string
 
 const (
-	userMode = securityMode("user")
-	adMode   = securityMode("active-directory")
+	// UserMode means users and groups are locally configured
+	UserMode = SecurityMode("user")
+	// ADMode means users and groups are sourced from an Active Directory
+	// domain.
+	ADMode = SecurityMode("active-directory")
 )
 
-func (sp *Planner) instanceName() string {
+// InstanceName returns the instance's name.
+func (sp *Planner) InstanceName() string {
 	// for now, its the name of the Server Group
 	return sp.SmbShare.Status.ServerGroup
 }
 
-func (sp *Planner) securityMode() securityMode {
+// SecurityMode returns the high level security mode to be used.
+func (sp *Planner) SecurityMode() SecurityMode {
 	if sp.SecurityConfig == nil {
-		return userMode
+		return UserMode
 	}
-	m := securityMode(sp.SecurityConfig.Spec.Mode)
-	if m != userMode && m != adMode {
+	m := SecurityMode(sp.SecurityConfig.Spec.Mode)
+	if m != UserMode && m != ADMode {
 		// this shouldn't normally be possible unless kube validation
 		// fails or is out of sync.
-		m = userMode
+		m = UserMode
 	}
 	return m
 }
 
-func (sp *Planner) realm() string {
+// Realm returns the name of the realm (domain).
+func (sp *Planner) Realm() string {
 	return strings.ToUpper(sp.SecurityConfig.Spec.Realm)
 }
 
-func (sp *Planner) workgroup() string {
+// Workgroup returns the name of the workgroup. This may be automatically
+// derived from the realm.
+func (sp *Planner) Workgroup() string {
 	// todo: this is a big hack. needs thought and cleanup
-	parts := strings.SplitN(sp.realm(), ".", 2)
+	parts := strings.SplitN(sp.Realm(), ".", 2)
 	return parts[0]
 }
 
-func (sp *Planner) isClustered() bool {
+// IsClustered returns true if the instance is configured for clustering.
+func (sp *Planner) IsClustered() bool {
 	if sp.SmbShare.Spec.Scaling == nil {
 		return false
 	}
 	return sp.SmbShare.Spec.Scaling.AvailabilityMode == "clustered"
 }
 
-func (sp *Planner) clusterSize() int32 {
+// ClusterSize returns the (minimum) size of the cluster.
+func (sp *Planner) ClusterSize() int32 {
 	if sp.SmbShare.Spec.Scaling == nil {
 		return 1
 	}

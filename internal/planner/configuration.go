@@ -23,7 +23,7 @@ import (
 )
 
 func (sp *Planner) instanceID() smbcc.Key {
-	return smbcc.Key(sp.instanceName())
+	return smbcc.Key(sp.InstanceName())
 }
 
 func (sp *Planner) shareName() string {
@@ -106,13 +106,13 @@ func (sp *Planner) update() (changed bool, err error) {
 		cfg = smbcc.ConfigSection{
 			Shares:       []smbcc.Key{shareKey},
 			Globals:      []smbcc.Key{smbcc.Globals},
-			InstanceName: sp.instanceName(),
+			InstanceName: sp.InstanceName(),
 		}
-		if sp.securityMode() == adMode {
-			realmKey := smbcc.Key(sp.realm())
+		if sp.SecurityMode() == ADMode {
+			realmKey := smbcc.Key(sp.Realm())
 			cfg.Globals = append(cfg.Globals, realmKey)
 		}
-		if sp.isClustered() {
+		if sp.IsClustered() {
 			cfg.InstanceFeatures = []smbcc.FeatureFlag{smbcc.CTDB}
 		}
 		sp.ConfigState.Configs[cfgKey] = cfg
@@ -122,16 +122,16 @@ func (sp *Planner) update() (changed bool, err error) {
 		sp.ConfigState.Users = smbcc.NewDefaultUsers()
 		changed = true
 	}
-	if sp.securityMode() == adMode {
-		realmKey := smbcc.Key(sp.realm())
+	if sp.SecurityMode() == ADMode {
+		realmKey := smbcc.Key(sp.Realm())
 		_, found := sp.ConfigState.Globals[realmKey]
 		if !found {
 			opts := sp.idmapOptions()
 			// security mode
 			opts["security"] = "ads"
 			// workgroup and realm
-			opts["workgroup"] = sp.workgroup()
-			opts["realm"] = sp.realm()
+			opts["workgroup"] = sp.Workgroup()
+			opts["realm"] = sp.Realm()
 			sp.ConfigState.Globals[realmKey] = smbcc.GlobalConfig{
 				Options: opts,
 			}
