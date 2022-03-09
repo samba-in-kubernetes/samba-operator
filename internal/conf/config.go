@@ -10,16 +10,18 @@ import (
 
 // DefaultOperatorConfig holds the default values of OperatorConfig.
 var DefaultOperatorConfig = OperatorConfig{
-	SmbdContainerImage:     "quay.io/samba.org/samba-server:latest",
-	SvcWatchContainerImage: "quay.io/samba.org/svcwatch:latest",
-	SmbdContainerName:      "samba",
-	WinbindContainerName:   "wb",
-	WorkingNamespace:       "",
-	SambaDebugLevel:        "",
-	StatePVCSize:           "1Gi",
-	ClusterSupport:         "",
-	SmbServicePort:         445,
-	SmbdPort:               445,
+	SmbdContainerImage:        "quay.io/samba.org/samba-server:latest",
+	SmbdMetricsContainerImage: "quay.io/samba.org/samba-metrics:latest",
+	SvcWatchContainerImage:    "quay.io/samba.org/svcwatch:latest",
+	SmbdContainerName:         "samba",
+	WinbindContainerName:      "wb",
+	WorkingNamespace:          "",
+	SambaDebugLevel:           "",
+	StatePVCSize:              "1Gi",
+	ClusterSupport:            "",
+	SmbServicePort:            445,
+	SmbdPort:                  445,
+	MetricsExporterMode:       "disabled",
 }
 
 // OperatorConfig is a type holding general configuration values.
@@ -28,6 +30,9 @@ var DefaultOperatorConfig = OperatorConfig{
 type OperatorConfig struct {
 	// SmbdContainerImage can be used to select alternate container sources.
 	SmbdContainerImage string `mapstructure:"smbd-container-image"`
+	// SmbdMetricsContainerImage can be used to select alternate
+	// metrics-exporter container sources.
+	SmbdMetricsContainerImage string `mapstructure:"smbd-metrics-container-image"`
 	// SvcWatchContainerImage can be used to select alternate container image
 	// for the service watch utility.
 	SvcWatchContainerImage string `mapstructure:"svc-watch-container-image"`
@@ -58,6 +63,10 @@ type OperatorConfig struct {
 	// ServiceAccountName is a (string) which overrides the default service
 	// account associated with child pods. Required in OpenShift.
 	ServiceAccountName string `mapstructure:"service-account-name"`
+	// MetricsExporterMode is a (string) flag which indicates if and how the
+	// operator should run metrics-exporter container within samba-server pod.
+	// Valid values are "enabled", "disabled" or empty string (default).
+	MetricsExporterMode string `mapstructure:"metrics-exporter-mode"`
 }
 
 // Validate the OperatorConfig returning an error if the config is not
@@ -92,6 +101,7 @@ func NewSource() *Source {
 	d := DefaultOperatorConfig
 	v := viper.New()
 	v.SetDefault("smbd-container-image", d.SmbdContainerImage)
+	v.SetDefault("smbd-metrics-container-image", d.SmbdMetricsContainerImage)
 	v.SetDefault("smbd-container-name", d.SmbdContainerName)
 	v.SetDefault("winbind-container-name", d.WinbindContainerName)
 	v.SetDefault("working-namespace", d.WorkingNamespace)
@@ -102,6 +112,7 @@ func NewSource() *Source {
 	v.SetDefault("smb-service-port", d.SmbServicePort)
 	v.SetDefault("smbd-port", d.SmbdPort)
 	v.SetDefault("service-account-name", d.ServiceAccountName)
+	v.SetDefault("metrics-exporter-mode", d.MetricsExporterMode)
 	return &Source{v: v}
 }
 
