@@ -20,59 +20,93 @@ import (
 	"path"
 )
 
-func (sp *Planner) sharePath() string {
-	return path.Join("/mnt", string(sp.SmbShare.UID))
+// Paths for relevant files and dirs within the containers.
+type Paths struct {
+	planner *Planner
 }
 
-func (sp *Planner) containerConfigPath() string {
-	cpath := path.Join(sp.containerConfigDir(), "config.json")
-	if sp.UserSecuritySource().Configured {
-		upath := path.Join(sp.usersConfigDir(), sp.usersConfigFileName())
-		cpath += ":" + upath
+// Paths returns an instance of the Paths type for our intended configuration.
+func (planner *Planner) Paths() *Paths {
+	return &Paths{planner}
+}
+
+// Share path.
+func (p *Paths) Share() string {
+	return path.Join("/mnt", string(p.planner.SmbShare.UID))
+}
+
+// ContainerConfigs returns a slice containing all configuration
+// files that the samba-container should process.
+func (p *Paths) ContainerConfigs() []string {
+	paths := []string{p.containerConfig()}
+	if uc := p.usersConfig(); uc != "" {
+		paths = append(paths, uc)
 	}
-	return cpath
+	return paths
 }
 
-func (*Planner) containerConfigDir() string {
+func (p *Paths) containerConfig() string {
+	return path.Join(p.ContainerConfigDir(), "config.json")
+}
+
+func (p *Paths) usersConfig() string {
+	if !p.planner.UserSecuritySource().Configured {
+		return ""
+	}
+	return path.Join(p.UsersConfigDir(), p.UsersConfigBaseName())
+}
+
+// ContainerConfigDir absolute path.
+func (*Paths) ContainerConfigDir() string {
 	return "/etc/container-config"
 }
 
-func (*Planner) usersConfigFileName() string {
+// UsersConfigBaseName file name component.
+func (*Paths) UsersConfigBaseName() string {
 	return "users.json"
 }
 
-func (*Planner) usersConfigDir() string {
+// UsersConfigDir absolute path.
+func (*Paths) UsersConfigDir() string {
 	return "/etc/container-users"
 }
 
-func (*Planner) winbindSocketsDir() string {
+// WinbindSocketsDir absolute path.
+func (*Paths) WinbindSocketsDir() string {
 	return "/run/samba/winbindd"
 }
 
-func (*Planner) sambaStateDir() string {
+// SambaStateDir absolute path.
+func (*Paths) SambaStateDir() string {
 	return "/var/lib/samba"
 }
 
-func (*Planner) osRunDir() string {
+// OSRunDir absolute path.
+func (*Paths) OSRunDir() string {
 	return "/run"
 }
 
-func (*Planner) joinJSONSourceDir(index int) string {
+// JoinJSONSourceDir absolute path based on the given index value.
+func (*Paths) JoinJSONSourceDir(index int) string {
 	return fmt.Sprintf("/var/tmp/join/%d", index)
 }
 
-func (*Planner) joinJSONFileName() string {
+// JoinJSONBaseName file name component.
+func (*Paths) JoinJSONBaseName() string {
 	return "join.json"
 }
 
-func (sp *Planner) joinJSONSourcePath(index int) string {
-	return path.Join(sp.joinJSONSourceDir(index), sp.joinJSONFileName())
+// JoinJSONSource absolute path based on the given index value.
+func (p *Paths) JoinJSONSource(index int) string {
+	return path.Join(p.JoinJSONSourceDir(index), p.JoinJSONBaseName())
 }
 
-func (*Planner) serviceWatchStateDir() string {
+// ServiceWatchStateDir absolute path.
+func (*Paths) ServiceWatchStateDir() string {
 	return "/var/lib/svcwatch"
 }
 
-func (sp *Planner) serviceWatchJSONPath() string {
-	return path.Join(sp.serviceWatchStateDir(), "status.json")
+// ServiceWatchJSON file absolute path.
+func (p *Paths) ServiceWatchJSON() string {
+	return path.Join(p.ServiceWatchStateDir(), "status.json")
 }

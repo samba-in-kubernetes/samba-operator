@@ -92,7 +92,7 @@ func (sp *Planner) Update() (changed bool, err error) {
 	shareKey := smbcc.Key(sp.shareName())
 	share, found := sp.ConfigState.Shares[shareKey]
 	if !found {
-		share = smbcc.NewSimpleShare(sp.sharePath())
+		share = smbcc.NewSimpleShare(sp.Paths().Share())
 		if !sp.SmbShare.Spec.Browseable {
 			share.Options[smbcc.BrowseableParam] = smbcc.No
 		}
