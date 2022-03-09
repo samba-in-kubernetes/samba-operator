@@ -36,6 +36,7 @@ YAMLLINT_CMD:=yamllint
 # Image URL to use all building/pushing image targets
 TAG?=latest
 IMG?=quay.io/samba.org/samba-operator:$(TAG)
+IMG_METRICS?=quay.io/samba.org/samba-metrics:$(TAG)
 
 # Produce CRDs that work on Kubernetes 1.16 or later
 CRD_OPTIONS?="crd:trivialVersions=true,crdVersions=v1"
@@ -184,6 +185,13 @@ image-build:
 		--build-arg=COMMIT_ID="$(COMMIT_ID)" \
 		--build-arg=ARCH="$(GOARCH)" \
 		$(CONTAINER_BUILD_OPTS) . -t $(IMG)
+
+image-metrics-build: Dockerfile.smbmetrics
+	$(CONTAINER_CMD) build \
+		--build-arg=GIT_VERSION="$(GIT_VERSION)" \
+		--build-arg=COMMIT_ID="$(COMMIT_ID)" \
+		--build-arg=ARCH="$(GOARCH)" \
+		$(CONTAINER_BUILD_OPTS) -f $< -t $(IMG_METRICS)
 
 .PHONY: image-build-buildah
 image-build-buildah: build
