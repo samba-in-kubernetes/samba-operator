@@ -16,18 +16,9 @@ limitations under the License.
 package planner
 
 import (
-	"strings"
-
 	api "github.com/samba-in-kubernetes/samba-operator/api/v1alpha1"
 	"github.com/samba-in-kubernetes/samba-operator/internal/conf"
 	"github.com/samba-in-kubernetes/samba-operator/internal/smbcc"
-)
-
-type securityMode string
-
-const (
-	userMode = securityMode("user")
-	adMode   = securityMode("active-directory")
 )
 
 type dnsRegister string
@@ -85,34 +76,6 @@ func New(
 	}
 }
 
-func (sp *Planner) instanceName() string {
-	// for now, its the name of the Server Group
-	return sp.SmbShare.Status.ServerGroup
-}
-
-func (sp *Planner) securityMode() securityMode {
-	if sp.SecurityConfig == nil {
-		return userMode
-	}
-	m := securityMode(sp.SecurityConfig.Spec.Mode)
-	if m != userMode && m != adMode {
-		// this shouldn't normally be possible unless kube validation
-		// fails or is out of sync.
-		m = userMode
-	}
-	return m
-}
-
-func (sp *Planner) realm() string {
-	return strings.ToUpper(sp.SecurityConfig.Spec.Realm)
-}
-
-func (sp *Planner) workgroup() string {
-	// todo: this is a big hack. needs thought and cleanup
-	parts := strings.SplitN(sp.realm(), ".", 2)
-	return parts[0]
-}
-
 func (sp *Planner) userSecuritySource() userSecuritySource {
 	s := userSecuritySource{}
 	if sp.securityMode() != userMode {
@@ -158,20 +121,6 @@ func (sp *Planner) sambaContainerDebugLevel() string {
 
 func (sp *Planner) mayCluster() bool {
 	return sp.GlobalConfig.ClusterSupport == "ctdb-is-experimental"
-}
-
-func (sp *Planner) isClustered() bool {
-	if sp.SmbShare.Spec.Scaling == nil {
-		return false
-	}
-	return sp.SmbShare.Spec.Scaling.AvailabilityMode == "clustered"
-}
-
-func (sp *Planner) clusterSize() int32 {
-	if sp.SmbShare.Spec.Scaling == nil {
-		return 1
-	}
-	return int32(sp.SmbShare.Spec.Scaling.MinClusterSize)
 }
 
 // nodeSpread returns true if pods are required to be spread over multiple
