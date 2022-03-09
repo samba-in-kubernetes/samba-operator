@@ -128,6 +128,9 @@ func buildUserPodSpec(
 	shareVol := shareVolumeAndMount(planner, pvcName)
 	vols = append(vols, shareVol)
 
+	stateVol := sambaStateVolumeAndMount(planner)
+	vols = append(vols, stateVol)
+
 	configVol := configVolumeAndMount(planner)
 	vols = append(vols, configVol)
 
