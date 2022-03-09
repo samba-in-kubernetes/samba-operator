@@ -248,21 +248,6 @@ func (sp *Planner) update() (changed bool, err error) {
 	return
 }
 
-// nolint:unused
-func (sp *Planner) prune() (changed bool, err error) {
-	cfgKey := sp.instanceID()
-	if _, found := sp.ConfigState.Configs[cfgKey]; found {
-		delete(sp.ConfigState.Configs, cfgKey)
-		changed = true
-	}
-	shareKey := smbcc.Key(sp.shareName())
-	if _, found := sp.ConfigState.Shares[shareKey]; found {
-		delete(sp.ConfigState.Shares, shareKey)
-		changed = true
-	}
-	return
-}
-
 func (sp *Planner) dnsRegister() dnsRegister {
 	reg := dnsRegisterNever
 	if sp.securityMode() == adMode && sp.SecurityConfig.Spec.DNS != nil {
