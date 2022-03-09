@@ -45,7 +45,7 @@ func buildStatefulSet(
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      labels,
-					Annotations: annotationsForSmbPod(planner.GlobalConfig.SmbdContainerName),
+					Annotations: annotationsForSmbPod(planner.GlobalConfig),
 				},
 				Spec: podSpec,
 			},

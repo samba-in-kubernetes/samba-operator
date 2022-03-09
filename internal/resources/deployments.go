@@ -23,6 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/samba-in-kubernetes/samba-operator/internal/conf"
+	"github.com/samba-in-kubernetes/samba-operator/internal/metrics"
 )
 
 var (
@@ -50,7 +51,7 @@ func buildDeployment(cfg *conf.OperatorConfig,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      labels,
-					Annotations: annotationsForSmbPod(cfg.SmbdContainerName),
+					Annotations: annotationsForSmbPod(cfg),
 				},
 				Spec: buildPodSpec(planner, cfg, pvcName),
 			},
@@ -85,9 +86,16 @@ func labelValue(s ...string) string {
 	return out
 }
 
-func annotationsForSmbPod(name string) map[string]string {
-	return map[string]string{
+func annotationsForSmbPod(cfg *conf.OperatorConfig) map[string]string {
+	name := cfg.SmbdContainerName
+	annotations := map[string]string{
 		"kubectl.kubernetes.io/default-logs-container": name,
 		"kubectl.kubernetes.io/default-container":      name,
 	}
+	if cfg.WithMetricsExporter {
+		for k, v := range metrics.AnnotationsForSmbMetricsPod() {
+			annotations[k] = v
+		}
+	}
+	return annotations
 }
