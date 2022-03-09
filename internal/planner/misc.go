@@ -30,7 +30,7 @@ type userSecuritySource struct {
 
 func (sp *Planner) userSecuritySource() userSecuritySource {
 	s := userSecuritySource{}
-	if sp.securityMode() != userMode {
+	if sp.SecurityMode() != UserMode {
 		return s
 	}
 	if sp.SecurityConfig == nil || sp.SecurityConfig.Spec.Users == nil {
@@ -53,7 +53,7 @@ const (
 
 func (sp *Planner) dnsRegister() dnsRegister {
 	reg := dnsRegisterNever
-	if sp.securityMode() == adMode && sp.SecurityConfig.Spec.DNS != nil {
+	if sp.SecurityMode() == ADMode && sp.SecurityConfig.Spec.DNS != nil {
 		reg = dnsRegister(sp.SecurityConfig.Spec.DNS.Register)
 	}
 	switch reg {

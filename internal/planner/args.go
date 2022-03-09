@@ -17,7 +17,7 @@ package planner
 
 func (sp *Planner) initializerArgs(cmd string) []string {
 	args := []string{}
-	if sp.isClustered() {
+	if sp.IsClustered() {
 		// if this is a ctdb enabled setup, this "initializer"
 		// container-command will be skipped if certain things have already
 		// been "initialized"
@@ -41,8 +41,8 @@ func (sp *Planner) dnsRegisterArgs() []string {
 
 func (sp *Planner) runDaemonArgs(name string) []string {
 	args := []string{"run", name}
-	if sp.isClustered() {
-		if sp.securityMode() == adMode {
+	if sp.IsClustered() {
+		if sp.SecurityMode() == ADMode {
 			args = append(args, "--setup=nsswitch", "--setup=smb_ctdb")
 		} else if name == "smbd" {
 			args = append(args, "--setup=users", "--setup=smb_ctdb")
