@@ -78,7 +78,9 @@ func (sp *Planner) idmapOptions() smbcc.SmbOptions {
 	return o
 }
 
-func (sp *Planner) update() (changed bool, err error) {
+// Update the held configuration based on the state of the instance
+// configuration.
+func (sp *Planner) Update() (changed bool, err error) {
 	globals, found := sp.ConfigState.Globals[smbcc.Globals]
 	if !found {
 		globalOptions := smbcc.NewGlobalOptions()
