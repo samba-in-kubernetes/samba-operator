@@ -1,0 +1,15 @@
+---
+apiVersion: samba-operator.samba.org/v1alpha1
+kind: SmbShare
+metadata:
+  name: tshare1-pvc
+  labels:
+    app: samba-operator-test-smbshare-withpvc
+spec:
+  readOnly: false
+  browseable: false
+  securityConfig: sharesec1
+  storage:
+    pvc:
+      name: "userpvc"
+      path: "testmnt1"
