@@ -205,10 +205,10 @@ func allReconcileSuites() map[string]suite.TestingSuite {
 				{
 					Path:       path.Join(testFilesDir, "smbshare_ctdb1.yaml"),
 					Namespace:  testNamespace,
-					NameSuffix: "-bk",
+					NameSuffix: "-soc",
 				},
 			},
-			smbShareResource: types.NamespacedName{testNamespace, "cshare1-bk"},
+			smbShareResource: types.NamespacedName{testNamespace, "cshare1-soc"},
 		}
 	}
 	return m
