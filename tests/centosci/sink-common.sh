@@ -5,7 +5,7 @@
 # REGISTRY_AUTH_FILE: Credentials in json for authenticating to CI_IMG_REGISTRY
 
 ROOK_VERSION=${ROOK_VERSION:-"latest"}
-ROOK_DEPLOY_TIMEOUT=${ROOK_DEPLOY_TIMEOUT:-900}
+ROOK_DEPLOY_TIMEOUT=${ROOK_DEPLOY_TIMEOUT:-1200}
 ROOK_TEMP_DIR=${ROOK_TEMP_DIR:-""}
 
 KUBE_VERSION=${KUBE_VERSION:-"latest"}
@@ -69,6 +69,16 @@ kubectl_retry() {
 	return ${ret}
 }
 
+minikube_load() {
+	for n in ${1}; do
+		${CONTAINER_CMD} image save ${2} | ssh \
+			-o UserKnownHostsFile=/dev/null \
+			-o StrictHostKeyChecking=no \
+			-i "$(minikube ssh-key -n "$n")" \
+			-l docker "$(minikube ip -n "$n")" "docker image load"
+	done
+}
+
 setup_minikube() {
 	install_binaries
 	image_pull "${CI_IMG_REGISTRY}" "docker.io" "kindest/kindnetd:v20210326-1e038dc5"
@@ -79,7 +89,10 @@ setup_minikube() {
 		--delete-on-failure --install-addons=false -b kubeadm \
 		--kubernetes-version="${KUBE_VERSION}" ${EXTRA_CONFIG}
 
-	minikube image load docker.io/kindest/kindnetd:v20210326-1e038dc5
+	nodes=$(kubectl get nodes \
+			-o jsonpath='{range.items[*].metadata}{.name} {end}')
+
+	minikube_load "${nodes}" "docker.io/kindest/kindnetd:v20210326-1e038dc5"
 
 	echo "Wait for k8s cluster..."
 	for ((retry = 0; retry <= 20; retry = retry + 2)); do
@@ -102,8 +115,6 @@ setup_minikube() {
 	kubectl cluster-info
 
 	# Configure nodes to authenticate to CI registry(copy config.json)
-	nodes=$(kubectl get nodes \
-			-o jsonpath='{range.items[*].metadata}{.name} {end}')
 	for n in $nodes; do
 		cat < "${REGISTRY_AUTH_FILE}" | ssh \
 			-o UserKnownHostsFile=/dev/null \
