@@ -32,18 +32,18 @@ type UserSecuritySource struct {
 
 // UserSecuritySource returns the UserSecuritySource type for the
 // particular instance.
-func (sp *Planner) UserSecuritySource() UserSecuritySource {
+func (pl *Planner) UserSecuritySource() UserSecuritySource {
 	s := UserSecuritySource{}
-	if sp.SecurityMode() != UserMode {
+	if pl.SecurityMode() != UserMode {
 		return s
 	}
-	if sp.SecurityConfig == nil || sp.SecurityConfig.Spec.Users == nil {
+	if pl.SecurityConfig == nil || pl.SecurityConfig.Spec.Users == nil {
 		return s
 	}
 	s.Configured = true
-	s.Namespace = sp.SecurityConfig.Namespace
-	s.Secret = sp.SecurityConfig.Spec.Users.Secret
-	s.Key = sp.SecurityConfig.Spec.Users.Key
+	s.Namespace = pl.SecurityConfig.Namespace
+	s.Secret = pl.SecurityConfig.Spec.Users.Secret
+	s.Key = pl.SecurityConfig.Spec.Users.Key
 	return s
 }
 
@@ -63,10 +63,10 @@ const (
 )
 
 // DNSRegister returns a DNSRegister type for this instance.
-func (sp *Planner) DNSRegister() DNSRegister {
+func (pl *Planner) DNSRegister() DNSRegister {
 	reg := DNSRegisterNever
-	if sp.SecurityMode() == ADMode && sp.SecurityConfig.Spec.DNS != nil {
-		reg = DNSRegister(sp.SecurityConfig.Spec.DNS.Register)
+	if pl.SecurityMode() == ADMode && pl.SecurityConfig.Spec.DNS != nil {
+		reg = DNSRegister(pl.SecurityConfig.Spec.DNS.Register)
 	}
 	switch reg {
 	// allowed values
@@ -82,8 +82,8 @@ func (sp *Planner) DNSRegister() DNSRegister {
 
 // ServiceType returns the value that should be used for a Service fronting
 // the SMB port for this instance.
-func (sp *Planner) ServiceType() string {
-	if sp.CommonConfig != nil && sp.CommonConfig.Spec.Network.Publish == "external" {
+func (pl *Planner) ServiceType() string {
+	if pl.CommonConfig != nil && pl.CommonConfig.Spec.Network.Publish == "external" {
 		return "LoadBalancer"
 	}
 	return "ClusterIP"
@@ -91,18 +91,18 @@ func (sp *Planner) ServiceType() string {
 
 // SambaContainerDebugLevel returns a string that can be passed to Samba
 // tools for debugging.
-func (sp *Planner) SambaContainerDebugLevel() string {
-	return sp.GlobalConfig.SambaDebugLevel
+func (pl *Planner) SambaContainerDebugLevel() string {
+	return pl.GlobalConfig.SambaDebugLevel
 }
 
 // MayCluster returns true if the operator is permitted to create clustered
 // instances.
-func (sp *Planner) MayCluster() bool {
-	return sp.GlobalConfig.ClusterSupport == "ctdb-is-experimental"
+func (pl *Planner) MayCluster() bool {
+	return pl.GlobalConfig.ClusterSupport == "ctdb-is-experimental"
 }
 
 // NodeSpread returns true if pods are required to be spread over multiple
 // nodes.
-func (sp *Planner) NodeSpread() bool {
-	return sp.SmbShare.Annotations[nodeSpreadKey] != nodeSpreadDisable
+func (pl *Planner) NodeSpread() bool {
+	return pl.SmbShare.Annotations[nodeSpreadKey] != nodeSpreadDisable
 }
