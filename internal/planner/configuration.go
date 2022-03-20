@@ -22,23 +22,23 @@ import (
 	"github.com/samba-in-kubernetes/samba-operator/internal/smbcc"
 )
 
-func (sp *Planner) instanceID() smbcc.Key {
-	return smbcc.Key(sp.InstanceName())
+func (pl *Planner) instanceID() smbcc.Key {
+	return smbcc.Key(pl.InstanceName())
 }
 
-func (sp *Planner) shareName() string {
+func (pl *Planner) shareName() string {
 	// todo: make sure this is smb-conf clean, otherwise we need to
 	// fix up the name value(s).
-	if sp.SmbShare.Spec.ShareName != "" {
-		return sp.SmbShare.Spec.ShareName
+	if pl.SmbShare.Spec.ShareName != "" {
+		return pl.SmbShare.Spec.ShareName
 	}
 	// It was not named explicitly. Name it after the CR.
 	// todo: may need massaging too.
-	return sp.SmbShare.Name
+	return pl.SmbShare.Name
 }
 
-func (sp *Planner) idmapOptions() smbcc.SmbOptions {
-	if sp.SecurityConfig == nil || len(sp.SecurityConfig.Spec.Domains) == 0 {
+func (pl *Planner) idmapOptions() smbcc.SmbOptions {
+	if pl.SecurityConfig == nil || len(pl.SecurityConfig.Spec.Domains) == 0 {
 		// default idmap config
 		return smbcc.SmbOptions{
 			"idmap config * : backend": "autorid",
@@ -51,7 +51,7 @@ func (sp *Planner) idmapOptions() smbcc.SmbOptions {
 	o := smbcc.SmbOptions{}
 	doms := []api.SmbSecurityDomainSpec{}
 	userDefault := false
-	for _, d := range sp.SecurityConfig.Spec.Domains {
+	for _, d := range pl.SecurityConfig.Spec.Domains {
 		doms = append(doms, d)
 		if d.Name == "*" {
 			userDefault = true
@@ -80,61 +80,61 @@ func (sp *Planner) idmapOptions() smbcc.SmbOptions {
 
 // Update the held configuration based on the state of the instance
 // configuration.
-func (sp *Planner) Update() (changed bool, err error) {
-	globals, found := sp.ConfigState.Globals[smbcc.Globals]
+func (pl *Planner) Update() (changed bool, err error) {
+	globals, found := pl.ConfigState.Globals[smbcc.Globals]
 	if !found {
 		globalOptions := smbcc.NewGlobalOptions()
-		globalOptions.SmbPort = sp.GlobalConfig.SmbdPort
+		globalOptions.SmbPort = pl.GlobalConfig.SmbdPort
 		globals = smbcc.NewGlobals(globalOptions)
-		sp.ConfigState.Globals[smbcc.Globals] = globals
+		pl.ConfigState.Globals[smbcc.Globals] = globals
 		changed = true
 	}
-	shareKey := smbcc.Key(sp.shareName())
-	share, found := sp.ConfigState.Shares[shareKey]
+	shareKey := smbcc.Key(pl.shareName())
+	share, found := pl.ConfigState.Shares[shareKey]
 	if !found {
-		share = smbcc.NewSimpleShare(sp.Paths().Share())
-		if !sp.SmbShare.Spec.Browseable {
+		share = smbcc.NewSimpleShare(pl.Paths().Share())
+		if !pl.SmbShare.Spec.Browseable {
 			share.Options[smbcc.BrowseableParam] = smbcc.No
 		}
-		if sp.SmbShare.Spec.ReadOnly {
+		if pl.SmbShare.Spec.ReadOnly {
 			share.Options[smbcc.ReadOnlyParam] = smbcc.Yes
 		}
-		sp.ConfigState.Shares[shareKey] = share
+		pl.ConfigState.Shares[shareKey] = share
 		changed = true
 	}
-	cfgKey := sp.instanceID()
-	cfg, found := sp.ConfigState.Configs[cfgKey]
+	cfgKey := pl.instanceID()
+	cfg, found := pl.ConfigState.Configs[cfgKey]
 	if !found || cfg.Shares[0] != shareKey {
 		cfg = smbcc.ConfigSection{
 			Shares:       []smbcc.Key{shareKey},
 			Globals:      []smbcc.Key{smbcc.Globals},
-			InstanceName: sp.InstanceName(),
+			InstanceName: pl.InstanceName(),
 		}
-		if sp.SecurityMode() == ADMode {
-			realmKey := smbcc.Key(sp.Realm())
+		if pl.SecurityMode() == ADMode {
+			realmKey := smbcc.Key(pl.Realm())
 			cfg.Globals = append(cfg.Globals, realmKey)
 		}
-		if sp.IsClustered() {
+		if pl.IsClustered() {
 			cfg.InstanceFeatures = []smbcc.FeatureFlag{smbcc.CTDB}
 		}
-		sp.ConfigState.Configs[cfgKey] = cfg
+		pl.ConfigState.Configs[cfgKey] = cfg
 		changed = true
 	}
-	if len(sp.ConfigState.Users) == 0 {
-		sp.ConfigState.Users = smbcc.NewDefaultUsers()
+	if len(pl.ConfigState.Users) == 0 {
+		pl.ConfigState.Users = smbcc.NewDefaultUsers()
 		changed = true
 	}
-	if sp.SecurityMode() == ADMode {
-		realmKey := smbcc.Key(sp.Realm())
-		_, found := sp.ConfigState.Globals[realmKey]
+	if pl.SecurityMode() == ADMode {
+		realmKey := smbcc.Key(pl.Realm())
+		_, found := pl.ConfigState.Globals[realmKey]
 		if !found {
-			opts := sp.idmapOptions()
+			opts := pl.idmapOptions()
 			// security mode
 			opts["security"] = "ads"
 			// workgroup and realm
-			opts["workgroup"] = sp.Workgroup()
-			opts["realm"] = sp.Realm()
-			sp.ConfigState.Globals[realmKey] = smbcc.GlobalConfig{
+			opts["workgroup"] = pl.Workgroup()
+			opts["realm"] = pl.Realm()
+			pl.ConfigState.Globals[realmKey] = smbcc.GlobalConfig{
 				Options: opts,
 			}
 			changed = true

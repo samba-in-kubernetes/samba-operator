@@ -41,17 +41,17 @@ const (
 )
 
 // InstanceName returns the instance's name.
-func (sp *Planner) InstanceName() string {
+func (pl *Planner) InstanceName() string {
 	// for now, its the name of the Server Group
-	return sp.SmbShare.Status.ServerGroup
+	return pl.SmbShare.Status.ServerGroup
 }
 
 // SecurityMode returns the high level security mode to be used.
-func (sp *Planner) SecurityMode() SecurityMode {
-	if sp.SecurityConfig == nil {
+func (pl *Planner) SecurityMode() SecurityMode {
+	if pl.SecurityConfig == nil {
 		return UserMode
 	}
-	m := SecurityMode(sp.SecurityConfig.Spec.Mode)
+	m := SecurityMode(pl.SecurityConfig.Spec.Mode)
 	if m != UserMode && m != ADMode {
 		// this shouldn't normally be possible unless kube validation
 		// fails or is out of sync.
@@ -61,30 +61,30 @@ func (sp *Planner) SecurityMode() SecurityMode {
 }
 
 // Realm returns the name of the realm (domain).
-func (sp *Planner) Realm() string {
-	return strings.ToUpper(sp.SecurityConfig.Spec.Realm)
+func (pl *Planner) Realm() string {
+	return strings.ToUpper(pl.SecurityConfig.Spec.Realm)
 }
 
 // Workgroup returns the name of the workgroup. This may be automatically
 // derived from the realm.
-func (sp *Planner) Workgroup() string {
+func (pl *Planner) Workgroup() string {
 	// todo: this is a big hack. needs thought and cleanup
-	parts := strings.SplitN(sp.Realm(), ".", 2)
+	parts := strings.SplitN(pl.Realm(), ".", 2)
 	return parts[0]
 }
 
 // IsClustered returns true if the instance is configured for clustering.
-func (sp *Planner) IsClustered() bool {
-	if sp.SmbShare.Spec.Scaling == nil {
+func (pl *Planner) IsClustered() bool {
+	if pl.SmbShare.Spec.Scaling == nil {
 		return false
 	}
-	return sp.SmbShare.Spec.Scaling.AvailabilityMode == "clustered"
+	return pl.SmbShare.Spec.Scaling.AvailabilityMode == "clustered"
 }
 
 // ClusterSize returns the (minimum) size of the cluster.
-func (sp *Planner) ClusterSize() int32 {
-	if sp.SmbShare.Spec.Scaling == nil {
+func (pl *Planner) ClusterSize() int32 {
+	if pl.SmbShare.Spec.Scaling == nil {
 		return 1
 	}
-	return int32(sp.SmbShare.Spec.Scaling.MinClusterSize)
+	return int32(pl.SmbShare.Spec.Scaling.MinClusterSize)
 }
