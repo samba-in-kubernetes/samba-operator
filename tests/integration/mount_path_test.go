@@ -28,25 +28,6 @@ type MountPathSuite struct {
 	tc                      *kube.TestClient
 }
 
-func (s *MountPathSuite) getPodIP(labelPattern string) (string, error) {
-	pods, err := s.tc.FetchPods(
-		context.TODO(),
-		kube.PodFetchOptions{
-			Namespace:     testNamespace,
-			LabelSelector: labelPattern,
-			MaxFound:      1,
-		})
-	if err != nil {
-		return "", err
-	}
-	for _, pod := range pods {
-		if kube.PodIsReady(&pod) {
-			return pod.Status.PodIP, nil
-		}
-	}
-	return "", fmt.Errorf("no pods ready when fetching IP")
-}
-
 func (s *MountPathSuite) waitForPods(labelPattern string) {
 	require := s.Require()
 	ctx, cancel := context.WithDeadline(
@@ -73,17 +54,19 @@ func (s *MountPathSuite) SetupSuite() {
 	createFromFiles(require, s.tc, append(s.commonSources, s.smbshareSetupSources...))
 	// ensure the smbserver test pod exists and is ready
 	s.waitForPods(s.setupServerLabelPattern)
-	serverIP, err := s.getPodIP(s.setupServerLabelPattern)
-	require.NoError(err)
+
+	svcname := fmt.Sprintf("%s.%s.svc.cluster.local",
+		s.smbShareSetupResource.Name,
+		s.smbShareSetupResource.Namespace)
 	share := smbclient.Share{
-		Host: smbclient.Host(serverIP),
+		Host: smbclient.Host(svcname),
 		Name: s.smbShareSetupResource.Name,
 	}
 
 	// Create folders over smbclient
 	smbclient := smbclient.MustPodExec(s.tc, testNamespace,
 		"smbclient", "client")
-	err = smbclient.CacheFlush(context.TODO())
+	err := smbclient.CacheFlush(context.TODO())
 	require.NoError(err)
 	auth := s.auths[0]
 	cmds := []string{
@@ -116,17 +99,18 @@ func (s *MountPathSuite) TearDownSuite() {
 func (s *MountPathSuite) TestMountPath() {
 	require := s.Require()
 
-	serverIP, err := s.getPodIP(s.serverLabelPattern)
-	require.NoError(err)
+	svcname := fmt.Sprintf("%s.%s.svc.cluster.local",
+		s.smbShareResource.Name,
+		s.smbShareResource.Namespace)
 	share := smbclient.Share{
-		Host: smbclient.Host(serverIP),
+		Host: smbclient.Host(svcname),
 		Name: s.smbShareResource.Name,
 	}
 
 	// Test if correct path mounted using smbclient
 	smbclient := smbclient.MustPodExec(s.tc, testNamespace,
 		"smbclient", "client")
-	err = smbclient.CacheFlush(context.TODO())
+	err := smbclient.CacheFlush(context.TODO())
 	require.NoError(err)
 	auth := s.auths[0]
 	out, err := smbclient.CommandOutput(
