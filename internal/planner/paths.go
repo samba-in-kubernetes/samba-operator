@@ -30,9 +30,18 @@ func (planner *Planner) Paths() *Paths {
 	return &Paths{planner}
 }
 
+// ShareMountPath returns the mount path.
+func (p *Paths) ShareMountPath() string {
+	return path.Join("/mnt", string(p.planner.SmbShare.UID))
+}
+
 // Share path.
 func (p *Paths) Share() string {
-	return path.Join("/mnt", string(p.planner.SmbShare.UID))
+	sharepath := p.planner.SmbShare.Spec.Storage.Pvc.Path
+	if sharepath != "" {
+		return path.Join(p.ShareMountPath(), "/", sharepath)
+	}
+	return p.ShareMountPath()
 }
 
 // ContainerConfigs returns a slice containing all configuration
