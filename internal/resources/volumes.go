@@ -66,7 +66,7 @@ func shareVolumeAndMount(planner *pln.Planner, pvcName string) volMount {
 	}
 	// mount
 	vmnt.mount = corev1.VolumeMount{
-		MountPath: planner.Paths().Share(),
+		MountPath: planner.Paths().ShareMountPath(),
 		Name:      pvcVolName,
 	}
 	return vmnt
