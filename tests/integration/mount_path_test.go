@@ -51,6 +51,10 @@ func (s *MountPathSuite) waitForPods(labelPattern string) {
 func (s *MountPathSuite) SetupSuite() {
 	s.tc = kube.NewTestClient("")
 	require := s.Require()
+
+	// Ensure smbclient is up and running
+	createSMBClientIfMissing(require, s.tc)
+
 	createFromFiles(require, s.tc, append(s.commonSources, s.smbshareSetupSources...))
 	// ensure the smbserver test pod exists and is ready
 	s.waitForPods(s.setupServerLabelPattern)

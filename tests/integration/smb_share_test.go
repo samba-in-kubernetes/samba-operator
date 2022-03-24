@@ -38,7 +38,6 @@ type SmbShareSuite struct {
 }
 
 func (s *SmbShareSuite) SetupSuite() {
-	// ensure the smbclient test pod exists
 	if s.destNamespace == "" {
 		s.destNamespace = testNamespace
 	}
@@ -46,6 +45,8 @@ func (s *SmbShareSuite) SetupSuite() {
 		s.maxPods = 1
 	}
 	s.tc = kube.NewTestClient("")
+	// ensure the smbclient test pod exists
+	createSMBClientIfMissing(s.Require(), s.tc)
 	createFromFiles(s.Require(), s.tc, s.fileSources)
 }
 
