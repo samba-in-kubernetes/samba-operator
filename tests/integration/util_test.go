@@ -4,9 +4,11 @@ package integration
 
 import (
 	"context"
+	"path"
 	"time"
 
 	"github.com/samba-in-kubernetes/samba-operator/tests/utils/kube"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -86,5 +88,49 @@ func waitForAllPodReady(s podTestClient) error {
 		ctx,
 		s.getTestClient(),
 		s.getPodFetchOptions(),
+	)
+}
+
+func createSMBClientIfMissing(require *require.Assertions, tc *kube.TestClient) {
+	// ---
+	_, err := tc.CreateFromFileIfMissing(
+		context.TODO(),
+		kube.FileSource{
+			Path:      path.Join(testFilesDir, "data1.yaml"),
+			Namespace: testNamespace,
+		})
+	require.NoError(err)
+
+	_, err = tc.CreateFromFileIfMissing(
+		context.TODO(),
+		kube.FileSource{
+			Path:      path.Join(testFilesDir, "client-test-pod.yaml"),
+			Namespace: testNamespace,
+		})
+	require.NoError(err)
+
+	// ensure the smbclient test pod exists and is ready
+	ctx, cancel := context.WithDeadline(
+		context.TODO(),
+		time.Now().Add(120*time.Second))
+	defer cancel()
+	l := "app=samba-operator-test-smbclient"
+	require.NoError(kube.WaitForAnyPodExists(
+		ctx,
+		kube.NewTestClient(""),
+		kube.PodFetchOptions{
+			Namespace:     testNamespace,
+			LabelSelector: l,
+		}),
+		"smbclient pod does not exist",
+	)
+	require.NoError(kube.WaitForAnyPodReady(
+		ctx,
+		kube.NewTestClient(""),
+		kube.PodFetchOptions{
+			Namespace:     testNamespace,
+			LabelSelector: l,
+		}),
+		"smbclient pod not ready",
 	)
 }

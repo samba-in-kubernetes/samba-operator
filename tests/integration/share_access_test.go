@@ -4,8 +4,6 @@ package integration
 
 import (
 	"context"
-	"path"
-	"time"
 
 	"github.com/stretchr/testify/suite"
 
@@ -25,46 +23,7 @@ func (s *ShareAccessSuite) SetupSuite() {
 	s.clientPod = "smbclient"
 
 	// ensure the smbclient test pod is configured
-	tc := kube.NewTestClient("")
-	_, err := tc.CreateFromFileIfMissing(
-		context.TODO(),
-		kube.FileSource{
-			Path:      path.Join(testFilesDir, "data1.yaml"),
-			Namespace: testNamespace,
-		})
-	s.Require().NoError(err)
-	_, err = tc.CreateFromFileIfMissing(
-		context.TODO(),
-		kube.FileSource{
-			Path:      path.Join(testFilesDir, "client-test-pod.yaml"),
-			Namespace: testNamespace,
-		})
-	s.Require().NoError(err)
-
-	// ensure the smbclient test pod exists and is ready
-	ctx, cancel := context.WithDeadline(
-		context.TODO(),
-		time.Now().Add(120*time.Second))
-	defer cancel()
-	l := "app=samba-operator-test-smbclient"
-	s.Require().NoError(kube.WaitForAnyPodExists(
-		ctx,
-		kube.NewTestClient(""),
-		kube.PodFetchOptions{
-			Namespace:     testNamespace,
-			LabelSelector: l,
-		}),
-		"smbclient pod does not exist",
-	)
-	s.Require().NoError(kube.WaitForAnyPodReady(
-		ctx,
-		kube.NewTestClient(""),
-		kube.PodFetchOptions{
-			Namespace:     testNamespace,
-			LabelSelector: l,
-		}),
-		"smbclient pod not ready",
-	)
+	createSMBClientIfMissing(s.Require(), kube.NewTestClient(""))
 }
 
 // TestLogin verifies that users can log into the share.
