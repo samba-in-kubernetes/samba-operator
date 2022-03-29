@@ -9,6 +9,7 @@ apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbShare
 metadata:
   name: myshare
+  namespace mynamespace
 spec:
   readOnly: false
   storage:
@@ -36,6 +37,7 @@ apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbShare
 metadata:
   name: myshare
+  namespace mynamespace
 spec:
   shareName: "My Great Share"
   readOnly: false
@@ -87,6 +89,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: users1
+  namespace mynamespace
 type: Opaque
 stringData:
   demousers: |
@@ -111,6 +114,7 @@ apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbSecurityConfig
 metadata:
   name: myusers
+  namespace mynamespace
 spec:
   mode: user
   users:
@@ -122,6 +126,7 @@ apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbShare
 metadata:
   name: myshare
+  namespace mynamespace
 spec:
   securityConfig: myusers
   readOnly: false
@@ -153,6 +158,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: join1
+  namespace mynamespace
 type: Opaque
 stringData:
   # Change the value below to match the username and password for a user that
@@ -165,6 +171,7 @@ apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbSecurityConfig
 metadata:
   name: mydomain
+  namespace mynamespace
 spec:
   mode: active-directory
   realm: cooldomain.myorg.example.com
@@ -178,6 +185,7 @@ apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbShare
 metadata:
   name: myshare
+  namespace mynamespace
 spec:
   securityConfig: mydomain
   readOnly: false
@@ -198,6 +206,98 @@ future. Do note that by separating the credentials in the secret, the password
 is never directly accessed by the operator itself.
 
 
+# Use a cluster internal share as persistent volume (without auto-provisioning)
+
+Kubernetes does not by default support mounting SMB shares.  For now
+it's neccessary to install the [smb csi
+driver](https://github.com/kubernetes-csi/csi-driver-smb).  Please refer
+to its documentation on how to install the csi driver.
+
+First create a (non provisioning) storage class to differentiate SMB shares
+from other storage.
+
+```
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: smb
+parameters:
+  type: smb
+provisioner: kubernetes.io/no-provisioner
+reclaimPolicy: Retain
+volumeBindingMode: Immediate
+```
+
+When using Active Directory, the username and password to mount the share must match a
+username/password pair that exists in your AD. When using pre-defined users &
+groups the username/password pair must match one that is defined in the JSON
+embedded in the secret associated with your SmbSecurityConfig.
+
+```
+apiVersion: v1
+kind: Secret
+metadata:
+  name: myshare-mount-creds
+  namespace mynamespace
+type: Opaque
+stringData:
+  username: user1
+  password: T0Psecre7
+```
+
+The following persistent volume will allow mounting the share.
+Note the `spec.csi.volumeAttributes.source`: `myshare` is the share's service name, `mynamespace` the namespace the `SmbShare` is in and `My Great Share` is the share's `shareName` as configured or the share's name if not.
+
+```
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-mynamespace-myshare
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  mountOptions:
+    - dir_mode=0777
+    - file_mode=0777
+    - vers=3.0
+  csi:
+    driver: smb.csi.k8s.io
+    readOnly: false
+    volumeHandle: mynamespace-myshare  # make sure it's a unique id in the cluster
+    volumeAttributes:
+      source: "//myshare.mynamespace/My Great Share"
+    nodeStageSecretRef:
+      name: myshare-mount-creds
+      namespace: mynamespace
+  claimRef:
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    name: myshare-smb
+    namespace: mynamespace
+```
+
+Then the volume claim can be created and should bind shorty after to the persistent volume.
+```
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: myshare-smb
+  namespace mynamespace
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: smb
+  volumeMode: Filesystem
+  volumeName: mynamespace-myshare-smb
+```
+
+
 # Create shares that are accessible outside the cluster
 
 Unless you took extra steps on your own, the shares created in the previous
@@ -215,6 +315,7 @@ apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbCommonConfig
 metadata:
   name: mypublished
+  namespace mynamespace
 spec:
   network:
     publish: external
@@ -224,6 +325,7 @@ apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbShare
 metadata:
   name: myshare
+  namespace mynamespace
 spec:
   commonConfig: mypublished
   readOnly: false
@@ -256,6 +358,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: join1
+  namespace mynamespace
 type: Opaque
 stringData:
   # Change the value below to match the username and password for a user that
@@ -268,6 +371,7 @@ apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbSecurityConfig
 metadata:
   name: mydomain
+  namespace mynamespace
 spec:
   mode: active-directory
   realm: cooldomain.myorg.example.com
@@ -283,6 +387,7 @@ apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbCommonConfig
 metadata:
   name: mypublished
+  namespace mynamespace
 spec:
   network:
     publish: external
@@ -292,6 +397,7 @@ apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbShare
 metadata:
   name: myshare
+  namespace mynamespace
 spec:
   securityConfig: mydomain
   commonConfig: mypublished
