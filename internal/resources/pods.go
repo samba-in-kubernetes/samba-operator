@@ -87,9 +87,9 @@ func buildADPodSpec(
 		},
 	)
 
-	containers := buildSmbdCtrs(planner, podEnv, smbdVols.all())
+	containers := buildSmbdCtrs(planner, podEnv, smbdVols)
 	containers = append(containers,
-		buildWinbinddCtr(planner, podEnv, smbServerVols.all()))
+		buildWinbinddCtr(planner, podEnv, smbServerVols))
 
 	if planner.DNSRegister() != pln.DNSRegisterNever {
 		watchVol := svcWatchVolumeAndMount(
@@ -100,17 +100,17 @@ func buildADPodSpec(
 		dnsRegVols := smbServerVols.clone().add(watchVol)
 		containers = append(
 			containers,
-			buildSvcWatchCtr(planner, svcWatchEnv(planner), svcWatchVols.all()),
-			buildDNSRegCtr(planner, podEnv, dnsRegVols.all()),
+			buildSvcWatchCtr(planner, svcWatchEnv(planner), svcWatchVols),
+			buildDNSRegCtr(planner, podEnv, dnsRegVols),
 		)
 	}
 
 	podSpec := defaultPodSpec(planner)
 	podSpec.Volumes = getVolumes(volumes.all())
 	podSpec.InitContainers = []corev1.Container{
-		buildInitCtr(planner, podEnv, smbAllVols.all()),
-		buildEnsureShareCtr(planner, podEnv, smbdVols.all()),
-		buildMustJoinCtr(planner, joinEnv, joinVols.all()),
+		buildInitCtr(planner, podEnv, smbAllVols),
+		buildEnsureShareCtr(planner, podEnv, smbdVols),
+		buildMustJoinCtr(planner, joinEnv, joinVols),
 	}
 	podSpec.Containers = containers
 	return podSpec
@@ -135,7 +135,7 @@ func buildUserPodSpec(
 
 	podEnv := defaultPodEnv(planner)
 	initContainers = append(initContainers,
-		buildEnsureShareCtr(planner, podEnv, vols.all()))
+		buildEnsureShareCtr(planner, podEnv, vols))
 
 	osRunVol := osRunVolumeAndMount(planner)
 	vols.add(osRunVol)
@@ -146,7 +146,7 @@ func buildUserPodSpec(
 	}
 	podSpec := defaultPodSpec(planner)
 	podSpec.Volumes = getVolumes(vols.all())
-	podSpec.Containers = buildSmbdCtrs(planner, podEnv, vols.all())
+	podSpec.Containers = buildSmbdCtrs(planner, podEnv, vols)
 	podSpec.InitContainers = initContainers
 	return podSpec
 }
@@ -203,7 +203,7 @@ func buildClusteredUserPodSpec(
 			planner,
 			podEnv,
 			// ctdbSharedVol is needed to decide if real init or not
-			podCfgVols.clone().add(stateVol).add(ctdbSharedVol).all(),
+			podCfgVols.clone().add(stateVol).add(ctdbSharedVol),
 		))
 
 	initContainers = append(
@@ -211,7 +211,7 @@ func buildClusteredUserPodSpec(
 		buildEnsureShareCtr(
 			planner,
 			podEnv,
-			podCfgVols.clone().add(stateVol).add(shareVol).all(),
+			podCfgVols.clone().add(stateVol).add(shareVol),
 		))
 
 	ctdbMigrateVols := podCfgVols.clone().
@@ -221,7 +221,7 @@ func buildClusteredUserPodSpec(
 		add(ctdbPeristentVol)
 	initContainers = append(
 		initContainers,
-		buildCTDBMigrateCtr(planner, ctdbEnv, ctdbMigrateVols.all()),
+		buildCTDBMigrateCtr(planner, ctdbEnv, ctdbMigrateVols),
 	)
 
 	ctdbInitVols := podCfgVols.clone().
@@ -230,8 +230,8 @@ func buildClusteredUserPodSpec(
 		add(ctdbConfigVol)
 	initContainers = append(
 		initContainers,
-		buildCTDBSetNodeCtr(planner, ctdbEnv, ctdbInitVols.all()),
-		buildCTDBMustHaveNodeCtr(planner, ctdbEnv, ctdbInitVols.all()),
+		buildCTDBSetNodeCtr(planner, ctdbEnv, ctdbInitVols),
+		buildCTDBMustHaveNodeCtr(planner, ctdbEnv, ctdbInitVols),
 	)
 
 	ctdbdVols := podCfgVols.clone().
@@ -242,7 +242,7 @@ func buildClusteredUserPodSpec(
 		add(ctdbSharedVol)
 	containers = append(
 		containers,
-		buildCTDBDaemonCtr(planner, ctdbEnv, ctdbdVols.all()))
+		buildCTDBDaemonCtr(planner, ctdbEnv, ctdbdVols))
 
 	ctdbManageNodesVols := podCfgVols.clone().
 		add(ctdbConfigVol).
@@ -250,12 +250,12 @@ func buildClusteredUserPodSpec(
 		add(ctdbSharedVol)
 	containers = append(
 		containers,
-		buildCTDBManageNodesCtr(planner, ctdbEnv, ctdbManageNodesVols.all()))
+		buildCTDBManageNodesCtr(planner, ctdbEnv, ctdbManageNodesVols))
 
 	// smbd
 	containers = append(
 		containers,
-		buildSmbdCtrs(planner, podEnv, volumes.all())...)
+		buildSmbdCtrs(planner, podEnv, volumes)...)
 
 	podSpec := defaultPodSpec(planner)
 	podSpec.Volumes = getVolumes(volumes.all())
@@ -321,7 +321,7 @@ func buildClusteredADPodSpec(
 			planner,
 			podEnv,
 			// ctdbSharedVol is needed to decide if real init or not
-			podCfgVols.clone().add(stateVol).add(ctdbSharedVol).all(),
+			podCfgVols.clone().add(stateVol).add(ctdbSharedVol),
 		))
 
 	initContainers = append(
@@ -329,7 +329,7 @@ func buildClusteredADPodSpec(
 		buildEnsureShareCtr(
 			planner,
 			podEnv,
-			podCfgVols.clone().add(stateVol).add(shareVol).all(),
+			podCfgVols.clone().add(stateVol).add(shareVol),
 		))
 
 	joinVols := podCfgVols.clone().
@@ -338,7 +338,7 @@ func buildClusteredADPodSpec(
 		extend(jsrc.volumes)
 	initContainers = append(
 		initContainers,
-		buildMustJoinCtr(planner, joinEnv, joinVols.all()),
+		buildMustJoinCtr(planner, joinEnv, joinVols),
 	)
 
 	ctdbMigrateVols := podCfgVols.clone().
@@ -348,7 +348,7 @@ func buildClusteredADPodSpec(
 		add(ctdbPeristentVol)
 	initContainers = append(
 		initContainers,
-		buildCTDBMigrateCtr(planner, ctdbEnv, ctdbMigrateVols.all()),
+		buildCTDBMigrateCtr(planner, ctdbEnv, ctdbMigrateVols),
 	)
 
 	ctdbInitVols := podCfgVols.clone().
@@ -357,8 +357,8 @@ func buildClusteredADPodSpec(
 		add(ctdbConfigVol)
 	initContainers = append(
 		initContainers,
-		buildCTDBSetNodeCtr(planner, ctdbEnv, ctdbInitVols.all()),
-		buildCTDBMustHaveNodeCtr(planner, ctdbEnv, ctdbInitVols.all()),
+		buildCTDBSetNodeCtr(planner, ctdbEnv, ctdbInitVols),
+		buildCTDBMustHaveNodeCtr(planner, ctdbEnv, ctdbInitVols),
 	)
 
 	ctdbdVols := podCfgVols.clone().
@@ -369,7 +369,7 @@ func buildClusteredADPodSpec(
 		add(ctdbSharedVol)
 	containers = append(
 		containers,
-		buildCTDBDaemonCtr(planner, ctdbEnv, ctdbdVols.all()))
+		buildCTDBDaemonCtr(planner, ctdbEnv, ctdbdVols))
 
 	ctdbManageNodesVols := podCfgVols.clone().
 		add(ctdbConfigVol).
@@ -377,7 +377,7 @@ func buildClusteredADPodSpec(
 		add(ctdbSharedVol)
 	containers = append(
 		containers,
-		buildCTDBManageNodesCtr(planner, ctdbEnv, ctdbManageNodesVols.all()))
+		buildCTDBManageNodesCtr(planner, ctdbEnv, ctdbManageNodesVols))
 
 	// winbindd
 	wbVols := podCfgVols.clone().
@@ -390,12 +390,12 @@ func buildClusteredADPodSpec(
 		add(ctdbSharedVol)
 	containers = append(
 		containers,
-		buildWinbinddCtr(planner, podEnv, wbVols.all()))
+		buildWinbinddCtr(planner, podEnv, wbVols))
 
 	// smbd
 	containers = append(
 		containers,
-		buildSmbdCtrs(planner, podEnv, volumes.all())...)
+		buildSmbdCtrs(planner, podEnv, volumes)...)
 
 	// dns-register containers
 	if planner.DNSRegister() != pln.DNSRegisterNever {
@@ -407,8 +407,8 @@ func buildClusteredADPodSpec(
 		dnsRegVols := wbVols.clone().add(watchVol)
 		containers = append(
 			containers,
-			buildSvcWatchCtr(planner, svcWatchEnv(planner), svcWatchVols.all()),
-			buildDNSRegCtr(planner, podEnv, dnsRegVols.all()),
+			buildSvcWatchCtr(planner, svcWatchEnv(planner), svcWatchVols),
+			buildDNSRegCtr(planner, podEnv, dnsRegVols),
 		)
 	}
 
@@ -422,7 +422,7 @@ func buildClusteredADPodSpec(
 func buildSmbdCtrs(
 	planner *pln.Planner,
 	env []corev1.EnvVar,
-	vols []volMount) []corev1.Container {
+	vols *volKeeper) []corev1.Container {
 	// ---
 	ctrs := []corev1.Container{}
 	ctrs = append(ctrs, buildSmbdCtr(planner, env, vols))
@@ -435,9 +435,10 @@ func buildSmbdCtrs(
 func buildSmbdCtr(
 	planner *pln.Planner,
 	env []corev1.EnvVar,
-	vols []volMount) corev1.Container {
+	vols *volKeeper) corev1.Container {
 	// ---
 	portnum := planner.GlobalConfig.SmbdPort
+	mounts := getMounts(vols.all())
 	return corev1.Container{
 		Image:   planner.GlobalConfig.SmbdContainerImage,
 		Name:    planner.GlobalConfig.SmbdContainerName,
@@ -448,7 +449,7 @@ func buildSmbdCtr(
 			ContainerPort: int32(portnum),
 			Name:          "smb",
 		}},
-		VolumeMounts: getMounts(vols),
+		VolumeMounts: mounts,
 		ReadinessProbe: &corev1.Probe{
 			Handler: corev1.Handler{
 				TCPSocket: &corev1.TCPSocketAction{
@@ -469,23 +470,25 @@ func buildSmbdCtr(
 func buildSmbdMetricsCtr(
 	planner *pln.Planner,
 	env []corev1.EnvVar,
-	vols []volMount) corev1.Container {
+	vols *volKeeper) corev1.Container {
 	// ---
+	mounts := getMounts(vols.all())
 	return buildSmbMetricsContainer(
-		planner.GlobalConfig.SmbdMetricsContainerImage, env, getMounts(vols))
+		planner.GlobalConfig.SmbdMetricsContainerImage, env, mounts)
 }
 
 func buildWinbinddCtr(
 	planner *pln.Planner,
 	env []corev1.EnvVar,
-	vols []volMount) corev1.Container {
+	vols *volKeeper) corev1.Container {
 	// ---
+	mounts := getMounts(vols.all())
 	return corev1.Container{
 		Image:        planner.GlobalConfig.SmbdContainerImage,
 		Name:         planner.GlobalConfig.WinbindContainerName,
 		Args:         planner.Args().Run("winbindd"),
 		Env:          env,
-		VolumeMounts: getMounts(vols),
+		VolumeMounts: mounts,
 		LivenessProbe: &corev1.Probe{
 			Handler: corev1.Handler{
 				Exec: &corev1.ExecAction{
@@ -503,14 +506,15 @@ func buildWinbinddCtr(
 func buildCTDBDaemonCtr(
 	planner *pln.Planner,
 	env []corev1.EnvVar,
-	vols []volMount) corev1.Container {
+	vols *volKeeper) corev1.Container {
 	// ---
+	mounts := getMounts(vols.all())
 	return corev1.Container{
 		Image:        planner.GlobalConfig.SmbdContainerImage,
 		Name:         "ctdb",
 		Args:         planner.Args().CTDBDaemon(),
 		Env:          env,
-		VolumeMounts: getMounts(vols),
+		VolumeMounts: mounts,
 		ReadinessProbe: &corev1.Probe{
 			Handler: corev1.Handler{
 				Exec: &corev1.ExecAction{
@@ -524,125 +528,134 @@ func buildCTDBDaemonCtr(
 func buildCTDBManageNodesCtr(
 	planner *pln.Planner,
 	env []corev1.EnvVar,
-	vols []volMount) corev1.Container {
+	vols *volKeeper) corev1.Container {
 	// ---
+	mounts := getMounts(vols.all())
 	return corev1.Container{
 		Image:        planner.GlobalConfig.SmbdContainerImage,
 		Name:         "ctdb-manage-nodes",
 		Args:         planner.Args().CTDBManageNodes(),
 		Env:          env,
-		VolumeMounts: getMounts(vols),
+		VolumeMounts: mounts,
 	}
 }
 
 func buildDNSRegCtr(
 	planner *pln.Planner,
 	env []corev1.EnvVar,
-	vols []volMount) corev1.Container {
+	vols *volKeeper) corev1.Container {
 	// ---
+	mounts := getMounts(vols.all())
 	return corev1.Container{
 		Image:        planner.GlobalConfig.SmbdContainerImage,
 		Name:         "dns-register",
 		Args:         planner.Args().DNSRegister(),
 		Env:          env,
-		VolumeMounts: getMounts(vols),
+		VolumeMounts: mounts,
 	}
 }
 
 func buildSvcWatchCtr(
 	planner *pln.Planner,
 	env []corev1.EnvVar,
-	vols []volMount) corev1.Container {
+	vols *volKeeper) corev1.Container {
 	// ---
+	mounts := getMounts(vols.all())
 	return corev1.Container{
 		Image:        planner.GlobalConfig.SvcWatchContainerImage,
 		Name:         "svc-watch",
 		Env:          env,
-		VolumeMounts: getMounts(vols),
+		VolumeMounts: mounts,
 	}
 }
 
 func buildInitCtr(
 	planner *pln.Planner,
 	env []corev1.EnvVar,
-	vols []volMount) corev1.Container {
+	vols *volKeeper) corev1.Container {
 	// ---
+	mounts := getMounts(vols.all())
 	return corev1.Container{
 		Image:        planner.GlobalConfig.SmbdContainerImage,
 		Name:         "init",
 		Args:         planner.Args().Initializer("init"),
 		Env:          env,
-		VolumeMounts: getMounts(vols),
+		VolumeMounts: mounts,
 	}
 }
 
 func buildEnsureShareCtr(
 	planner *pln.Planner,
 	env []corev1.EnvVar,
-	vols []volMount) corev1.Container {
+	vols *volKeeper) corev1.Container {
 	// ---
+	mounts := getMounts(vols.all())
 	return corev1.Container{
 		Image:        planner.GlobalConfig.SmbdContainerImage,
 		Name:         "ensure-share-paths",
 		Args:         planner.Args().EnsureSharePaths(),
 		Env:          env,
-		VolumeMounts: getMounts(vols),
+		VolumeMounts: mounts,
 	}
 }
 
 func buildMustJoinCtr(
 	planner *pln.Planner,
 	env []corev1.EnvVar,
-	vols []volMount) corev1.Container {
+	vols *volKeeper) corev1.Container {
 	// ---
+	mounts := getMounts(vols.all())
 	return corev1.Container{
 		Image:        planner.GlobalConfig.SmbdContainerImage,
 		Name:         "must-join",
 		Args:         planner.Args().Initializer("must-join"),
 		Env:          env,
-		VolumeMounts: getMounts(vols),
+		VolumeMounts: mounts,
 	}
 }
 
 func buildCTDBMigrateCtr(
 	planner *pln.Planner,
 	env []corev1.EnvVar,
-	vols []volMount) corev1.Container {
+	vols *volKeeper) corev1.Container {
 	// ---
+	mounts := getMounts(vols.all())
 	return corev1.Container{
 		Image:        planner.GlobalConfig.SmbdContainerImage,
 		Name:         "ctdb-migrate",
 		Args:         planner.Args().CTDBMigrate(),
 		Env:          env,
-		VolumeMounts: getMounts(vols),
+		VolumeMounts: mounts,
 	}
 }
 
 func buildCTDBSetNodeCtr(
 	planner *pln.Planner,
 	env []corev1.EnvVar,
-	vols []volMount) corev1.Container {
+	vols *volKeeper) corev1.Container {
 	// ---
+	mounts := getMounts(vols.all())
 	return corev1.Container{
 		Image:        planner.GlobalConfig.SmbdContainerImage,
 		Name:         "ctdb-set-node",
 		Args:         planner.Args().CTDBSetNode(),
 		Env:          env,
-		VolumeMounts: getMounts(vols),
+		VolumeMounts: mounts,
 	}
 }
 
 func buildCTDBMustHaveNodeCtr(
 	planner *pln.Planner,
 	env []corev1.EnvVar,
-	vols []volMount) corev1.Container {
+	vols *volKeeper) corev1.Container {
 	// ---
+	mounts := getMounts(vols.all())
 	return corev1.Container{
 		Image:        planner.GlobalConfig.SmbdContainerImage,
 		Name:         "ctdb-must-have-node",
 		Args:         planner.Args().CTDBMustHaveNode(),
 		Env:          env,
-		VolumeMounts: getMounts(vols),
+		VolumeMounts: mounts,
 	}
 }
 
