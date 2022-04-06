@@ -52,6 +52,72 @@ func getMounts(vols []volMount) []corev1.VolumeMount {
 	return m
 }
 
+type volKeeper struct {
+	vols []volMount
+}
+
+// newVolKeeper returns an empty volKeeper.
+func newVolKeeper() *volKeeper {
+	return &volKeeper{vols: []volMount{}}
+}
+
+// add a single volMount. Returns the current volKeeper.
+func (vk *volKeeper) add(v volMount) *volKeeper {
+	vk.vols = append(vk.vols, v)
+	return vk
+}
+
+// extend the volumes kept. Returns the current volKeeper.
+func (vk *volKeeper) extend(vs []volMount) *volKeeper {
+	vk.vols = append(vk.vols, vs...)
+	return vk
+}
+
+// validate the volume/mounts are in a good state, returning an
+// error describing the issue or nil on no error.
+func (vk *volKeeper) validate() error {
+	vnames := map[string]bool{}
+	for _, vmnt := range vk.vols {
+		if vmnt.volume.Name != vmnt.mount.Name {
+			return fmt.Errorf(
+				"volume/mount name mismatch: %s != %s",
+				vmnt.volume.Name,
+				vmnt.mount.Name)
+		}
+		if vnames[vmnt.volume.Name] {
+			return fmt.Errorf(
+				"duplicate volume name found: %s",
+				vmnt.volume.Name)
+		}
+		vnames[vmnt.volume.Name] = true
+	}
+	return nil
+}
+
+// mustValidate panics if the volKeeper or the contained volume/mounts
+// are in a bad state. See validate for details. Returns the current
+// volkeeper for chaining.
+func (vk *volKeeper) mustValidate() *volKeeper {
+	// call check to validate certain programmer level invariants
+	// are good. Ideally, this is exercised by a unit test.
+	if err := vk.validate(); err != nil {
+		panic(err)
+	}
+	return vk
+}
+
+// all volumes tracked by the volKeeper.
+func (vk *volKeeper) all() []volMount {
+	return vk.mustValidate().vols
+}
+
+// clone an existing volKeeper, returning the new instance.
+func (vk *volKeeper) clone() *volKeeper {
+	vk2 := &volKeeper{vols: make([]volMount, len(vk.vols))}
+	copy(vk2.vols, vk.vols)
+	return vk2
+}
+
 func shareVolumeAndMount(planner *pln.Planner, pvcName string) volMount {
 	var vmnt volMount
 	// volume
