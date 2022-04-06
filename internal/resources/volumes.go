@@ -31,9 +31,23 @@ const (
 	joinJSONVolName   = "join-data"
 )
 
+type volMountTag uint
+
+const (
+	// add `tagUnset  = volMountTag(0)` once needed
+	tagData   = volMountTag(0x1)
+	tagConfig = volMountTag(0x2)
+	tagMeta   = volMountTag(0x4)
+	tagCTDB   = volMountTag(0x8)
+
+	tagCTDBConfig = tagCTDB | tagConfig
+	tagCTDBMeta   = tagCTDB | tagMeta
+)
+
 type volMount struct {
 	volume corev1.Volume
 	mount  corev1.VolumeMount
+	tag    volMountTag
 }
 
 func getVolumes(vols []volMount) []corev1.Volume {
@@ -118,6 +132,19 @@ func (vk *volKeeper) clone() *volKeeper {
 	return vk2
 }
 
+// exclude volume mounts by returning a new volKeeper with all volMounts that
+// match the given tag removed.
+func (vk *volKeeper) exclude(t volMountTag) *volKeeper {
+	vk2 := &volKeeper{vols: []volMount{}}
+	for _, vmnt := range vk.vols {
+		if vmnt.tag&t == t {
+			continue
+		}
+		vk2.vols = append(vk2.vols, vmnt)
+	}
+	return vk2
+}
+
 func shareVolumeAndMount(planner *pln.Planner, pvcName string) volMount {
 	var vmnt volMount
 	// volume
@@ -135,6 +162,7 @@ func shareVolumeAndMount(planner *pln.Planner, pvcName string) volMount {
 		MountPath: planner.Paths().ShareMountPath(),
 		Name:      pvcVolName,
 	}
+	vmnt.tag = tagData
 	return vmnt
 }
 
@@ -154,6 +182,7 @@ func configVolumeAndMount(planner *pln.Planner) volMount {
 		MountPath: planner.Paths().ContainerConfigDir(),
 		Name:      configMapName,
 	}
+	vmnt.tag = tagConfig
 	return vmnt
 }
 
@@ -178,6 +207,7 @@ func userConfigVolumeAndMount(planner *pln.Planner) volMount {
 		MountPath: planner.Paths().UsersConfigDir(),
 		Name:      userSecretVolName,
 	}
+	vmnt.tag = tagConfig
 	return vmnt
 }
 
@@ -198,6 +228,7 @@ func sambaStateVolumeAndMount(planner *pln.Planner) volMount {
 		MountPath: planner.Paths().SambaStateDir(),
 		Name:      stateVolName,
 	}
+	vmnt.tag = tagMeta
 	return vmnt
 }
 
@@ -217,6 +248,7 @@ func osRunVolumeAndMount(planner *pln.Planner) volMount {
 		MountPath: planner.Paths().OSRunDir(),
 		Name:      osRunVolName,
 	}
+	vmnt.tag = tagMeta
 	return vmnt
 }
 
@@ -236,6 +268,7 @@ func wbSocketsVolumeAndMount(planner *pln.Planner) volMount {
 		MountPath: planner.Paths().WinbindSocketsDir(),
 		Name:      wbSocketsVolName,
 	}
+	vmnt.tag = tagMeta
 	return vmnt
 }
 
@@ -261,6 +294,7 @@ func joinJSONFileVolumeAndMount(planner *pln.Planner, index int) volMount {
 		MountPath: planner.Paths().JoinJSONSourceDir(index),
 		Name:      vname,
 	}
+	vmnt.tag = tagConfig
 	return vmnt
 }
 
@@ -281,6 +315,7 @@ func svcWatchVolumeAndMount(dir string) volMount {
 		MountPath: dir,
 		Name:      name,
 	}
+	vmnt.tag = tagMeta
 	return vmnt
 }
 
@@ -299,6 +334,7 @@ func ctdbConfigVolumeAndMount(_ *pln.Planner) volMount {
 		MountPath: "/etc/ctdb",
 		Name:      name,
 	}
+	vmnt.tag = tagCTDBConfig
 	return vmnt
 }
 
@@ -320,6 +356,7 @@ func ctdbPersistentVolumeAndMount(_ *pln.Planner) volMount {
 		MountPath: "/var/lib/ctdb/persistent",
 		Name:      name,
 	}
+	vmnt.tag = tagCTDBMeta
 	return vmnt
 }
 
@@ -338,6 +375,7 @@ func ctdbVolatileVolumeAndMount(_ *pln.Planner) volMount {
 		MountPath: "/var/lib/ctdb/volatile",
 		Name:      name,
 	}
+	vmnt.tag = tagCTDBMeta
 	return vmnt
 }
 
@@ -357,6 +395,7 @@ func ctdbSocketsVolumeAndMount(_ *pln.Planner) volMount {
 		MountPath: "/var/run/ctdb",
 		Name:      name,
 	}
+	vmnt.tag = tagCTDBMeta
 	return vmnt
 }
 
@@ -381,6 +420,7 @@ func ctdbSharedStateVolumeAndMount(
 		MountPath: "/var/lib/ctdb/shared",
 		Name:      pvcVolName,
 	}
+	vmnt.tag = tagCTDBMeta
 	return vmnt
 }
 
