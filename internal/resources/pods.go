@@ -426,9 +426,14 @@ func buildSmbdCtrs(
 	// ---
 	ctrs := []corev1.Container{}
 	ctrs = append(ctrs, buildSmbdCtr(planner, env, vols))
+	metaOnlyVols := vols.exclude(tagData)
+	// insert a container to watch for changes to the config json
+	// and apply those changes to samba
+	ctrs = append(ctrs, buildUpdateConfigWatchCtr(
+		planner, env, metaOnlyVols))
 	if withMetricsExporter(planner.GlobalConfig) {
-		mmVols := vols.exclude(tagData)
-		ctrs = append(ctrs, buildSmbdMetricsCtr(planner, metaPodEnv(), mmVols))
+		ctrs = append(ctrs, buildSmbdMetricsCtr(
+			planner, metaPodEnv(), metaOnlyVols))
 	}
 	return ctrs
 }
@@ -655,6 +660,21 @@ func buildCTDBMustHaveNodeCtr(
 		Image:        planner.GlobalConfig.SmbdContainerImage,
 		Name:         "ctdb-must-have-node",
 		Args:         planner.Args().CTDBMustHaveNode(),
+		Env:          env,
+		VolumeMounts: mounts,
+	}
+}
+
+func buildUpdateConfigWatchCtr(
+	planner *pln.Planner,
+	env []corev1.EnvVar,
+	vols *volKeeper) corev1.Container {
+	// ---
+	mounts := getMounts(vols.all())
+	return corev1.Container{
+		Image:        planner.GlobalConfig.SmbdContainerImage,
+		Name:         "watch-update-config",
+		Args:         planner.Args().UpdateConfigWatch(),
 		Env:          env,
 		VolumeMounts: mounts,
 	}
