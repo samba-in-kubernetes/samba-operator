@@ -54,6 +54,24 @@ Note that this only changes the name of the share in the SMB protocol.
 Resources created by the operator and other networking aspects may continue to
 reflect the name of the SmbShare resource.
 
+# Export a path within a pre-existing PVC.
+
+Given a pre-existing PVC `mypvc` containing a directory `exports` which is to be exported as a share.
+
+```yaml
+apiVersion: samba-operator.samba.org/v1alpha1
+kind: SmbShare
+metadata:
+  name: smbshare1
+spec:
+  storage:
+    pvc:
+      name: "mypvc"
+      path: "exports"
+  readOnly: false
+```
+
+The `path` directive only supports the export of top level directories within the PVC.
 
 # Configure a share with custom users
 
