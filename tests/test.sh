@@ -1,7 +1,12 @@
 #!/bin/sh
 
 set -e
-cd "$(dirname "${0}")/.."
+SELFDIR="$(dirname "${0}")"
+ROOTDIR="$(realpath "${SELFDIR}/../")"
+LOCAL_BINDIR="${ROOTDIR}/.bin"
+
+cd "${ROOTDIR}"
+export PATH=${PATH}:${LOCAL_BINDIR}
 
 gtest() {
     if [ "$SMBOP_TEST_CLUSTERED" ]; then
