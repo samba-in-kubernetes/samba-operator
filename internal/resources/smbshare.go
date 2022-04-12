@@ -324,7 +324,7 @@ func (m *SmbShareManager) Finalize(
 			m.logger.Info("Updated config map during Finalize")
 			return Requeue
 		}
-	} else if err != nil && !errors.IsNotFound(err) {
+	} else if !errors.IsNotFound(err) {
 		return Result{err: err}
 	}
 
