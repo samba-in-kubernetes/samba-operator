@@ -72,6 +72,8 @@ container image you used this variable should also be set. Example:
 ```bash
 # configure the tests to check for a given container
 export SMBOP_TEST_EXPECT_MANAGER_IMG="${IMG}"
+# deploy AD on cluster (required if not using external AD)
+./tests/test-deploy-ad-server.sh
 # Run the tests
 ./tests/test.sh
 ```
