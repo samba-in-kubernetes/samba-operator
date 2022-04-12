@@ -43,6 +43,12 @@ linters-settings:
   funlen:
     lines: 188
     statements: 60
+  govet:
+    check-shadowing: true
+    enable-all: true
+    disable:
+      - fieldalignment
+      - shadow
   lll:
     line-length: 98
   revive:
