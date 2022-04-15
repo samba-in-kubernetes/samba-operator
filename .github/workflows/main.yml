@@ -131,6 +131,9 @@ jobs:
         run: make set-image
       - name: run tests
         run: ./tests/test.sh
+      - name: dump logging on failure
+        if: ${{ failure() }}
+        run: ./tests/post-test-info.sh
   # push the container to quay.io - only for pushes, not PRs
   push:
     needs: [build, check]
