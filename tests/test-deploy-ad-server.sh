@@ -6,12 +6,21 @@ BASE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 DEPLOYMENT_YAML="${BASE_DIR}/tests/files/samba-ad-server-deployment.yml"
 DEPLOYMENT_NAME="samba-ad-server"
 COREDNS_SNIPPET="${BASE_DIR}/tests/files/coredns-snippet.template"
+OPENSHIFT_DNS_SNIPPET="${BASE_DIR}/tests/files/openshift-dns-snippet.template"
 KUBECTL_CMD=${KUBECTL_CMD:-kubectl}
+JQ_CMD=${JQ_CMD:-jq}
 
 _error() {
 	echo "$@"
 	exit 1
 }
+
+_require_command() {
+	command -v "${1}" > /dev/null || _error "Can not find ${1}"
+}
+_require_command "${KUBECTL_CMD}"
+_require_command "${JQ_CMD}"
+
 
 echo "Creating ad server deployment..."
 ERROR_MSG=$(${KUBECTL_CMD} create -f "${DEPLOYMENT_YAML}" 2>&1 1>/dev/null)
@@ -65,11 +74,30 @@ echo
 [ $rc -eq 0 ] || _error "Error: samba ad did not become reachable"
 
 
-
-AD_POD_IP=$(${KUBECTL_CMD} get pod -o jsonpath='{ .items[*].status.podIP }')
+AD_POD_IP=$(${KUBECTL_CMD}  get pod -o json \
+	| ${JQ_CMD} -c -M '.items[] | .metadata.name + " " + .status.podIP' \
+	| grep samba-ad-server \
+	| tr -d "\"" \
+	| awk '{print $2}')
 [ $? -eq 0 ] || _error "Error getting ad server pod IP"
-
 echo "AD pod IP: ${AD_POD_IP}"
+
+# when running over OpenShift need to patch dns-operator
+${KUBECTL_CMD} get deployment dns-operator \
+	-n openshift-dns-operator > /dev/null 2>&1
+OPENSHIFT_DNS="$?"
+if [ ${OPENSHIFT_DNS} -eq 0 ]; then
+	PATCHFILE=$(mktemp).json
+	sed -e "s/AD_SERVER_IP/${AD_POD_IP}/g" \
+		${OPENSHIFT_DNS_SNIPPET} > "${PATCHFILE}"
+
+	${KUBECTL_CMD} patch dns.operator default \
+		--type=merge --patch-file "${PATCHFILE}"
+
+	[ $? -eq 0 ] || _error "Failed patching dns-operator with $PATCHFILE"
+	unlink "${PATCHFILE}"
+	exit 0
+fi
 
 TMPFILE=$(mktemp)
 

@@ -1,0 +1,18 @@
+{
+	"spec": {
+		"nodePlacement": {},
+		"servers": [
+			{
+				"forwardPlugin": {
+					"upstreams": [
+						"AD_SERVER_IP:53"
+					]
+				},
+				"name": "samba-ad",
+				"zones": [
+					"domain1.sink.test"
+				]
+	 		}
+		]
+	}
+}
