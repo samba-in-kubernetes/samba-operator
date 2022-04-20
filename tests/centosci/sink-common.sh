@@ -71,7 +71,7 @@ kubectl_retry() {
 
 minikube_load() {
 	for n in ${1}; do
-		${CONTAINER_CMD} image save ${2} | ssh \
+		${CONTAINER_CMD} image save "${2}" | ssh \
 			-o UserKnownHostsFile=/dev/null \
 			-o StrictHostKeyChecking=no \
 			-i "$(minikube ssh-key -n "$n")" \
@@ -84,6 +84,7 @@ setup_minikube() {
 	image_pull "${CI_IMG_REGISTRY}" "docker.io" "kindest/kindnetd:v20210326-1e038dc5"
 
 	# Start a kuberentes cluster using minikube
+	# shellcheck disable=SC2086
 	minikube start --force --driver="${VM_DRIVER}" --nodes="${NODE_COUNT}" \
 		--memory="${MEMORY}" --cpus="${CPUS}" ${DISK_CONFIG} \
 		--delete-on-failure --install-addons=false -b kubeadm \
