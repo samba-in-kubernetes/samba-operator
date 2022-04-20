@@ -34,7 +34,7 @@ IMG="${CI_IMG_OP}" make test
 
 # Run integration tests
 SMBOP_TEST_CLUSTERED=1 SMBOP_TEST_EXPECT_MANAGER_IMG="${CI_IMG_OP}" \
-	./tests/test.sh
+	./tests/test.sh || (./tests/post-test-info.sh; exit 1)
 
 teardown_op
 
