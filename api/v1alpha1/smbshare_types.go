@@ -99,6 +99,7 @@ type SmbShareScalingSpec struct {
 	// for (high-)availability purposes.
 	// +optional
 	// +kubebuilder:validation:Enum:=standard;clustered
+	// +kubebuilder:default:=standard
 	AvailabilityMode string `json:"availabilityMode,omitempty"`
 	// MinClusterSize specifies the minimum number of smb server instances
 	// to establish when availabilityMode is "clustered".
