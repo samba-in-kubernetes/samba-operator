@@ -114,8 +114,15 @@ type SmbShareStatus struct {
 	ServerGroup string `json:"serverGroup,omitempty"`
 }
 
+// revive:disable:line-length-limit kubebuilder markers
+
+// nolint:lll
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:JSONPath=`.spec.shareName`,description="Name of the Samba share",name="Share-name",type=string
+// +kubebuilder:printcolumn:JSONPath=`.spec.storage.pvc.path`,description="Path for the share within PVC",name="Share-path",type=string
+// +kubebuilder:printcolumn:JSONPath=`.spec.scaling.availabilityMode`,description="Samba availability mode",name="Availability",type=string
+// +kubebuilder:printcolumn:JSONPath=`.metadata.creationTimestamp`,name="Age",type=date
 
 // SmbShare is the Schema for the smbshares API
 type SmbShare struct {
@@ -125,6 +132,8 @@ type SmbShare struct {
 	Spec   SmbShareSpec   `json:"spec,omitempty"`
 	Status SmbShareStatus `json:"status,omitempty"`
 }
+
+// revive:enable:line-length-limit
 
 // +kubebuilder:object:root=true
 

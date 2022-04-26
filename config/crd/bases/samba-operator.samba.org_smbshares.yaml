@@ -14,7 +14,23 @@ spec:
     singular: smbshare
   scope: Namespaced
   versions:
-    - name: v1alpha1
+    - additionalPrinterColumns:
+        - description: Name of the Samba share
+          jsonPath: .spec.shareName
+          name: Share-name
+          type: string
+        - description: Path for the share within PVC
+          jsonPath: .spec.storage.pvc.path
+          name: Share-path
+          type: string
+        - description: Samba availability mode
+          jsonPath: .spec.scaling.availabilityMode
+          name: Availability
+          type: string
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
+      name: v1alpha1
       schema:
         openAPIV3Schema:
           description: SmbShare is the Schema for the smbshares API
@@ -46,6 +62,7 @@ spec:
                   description: Scaling specifies parameters relating to how share resources can and should be scaled.
                   properties:
                     availabilityMode:
+                      default: standard
                       description: AvailabilityMode specifies how the operator is to scale share resources for (high-)availability purposes.
                       enum:
                         - standard
