@@ -91,6 +91,11 @@ type SmbSharePvcSpec struct {
 	// +kubebuilder:validation:Pattern=`^[^\/]+$`
 	// +optional
 	Path string `json:"path,omitempty"`
+
+	// Permissions octal representation of permissions to be set on share.
+	// +kubebuilder:validation:Pattern=`^[01234567]?[01234567][01234567][01234567]$`
+	// +optional
+	Permissions string `json:"permissions,omitempty"`
 }
 
 // SmbShareScalingSpec defines scaling parameters for a share.
