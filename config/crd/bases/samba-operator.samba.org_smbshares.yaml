@@ -92,6 +92,10 @@ spec:
                           description: Path within the PVC which should be exported.
                           pattern: ^[^\/]+$
                           type: string
+                        permissions:
+                          description: Permissions octal representation of permissions to be set on share.
+                          pattern: ^[01234567]?[01234567][01234567][01234567]$
+                          type: string
                         spec:
                           description: Spec defines a new, temporary, PVC to use for the share. Behaves similar to the embedded PVC spec for pods.
                           properties:
