@@ -450,7 +450,7 @@ func buildSmbdCtrs(
 	ctrs := []corev1.Container{}
 	ctrs = append(ctrs, buildSmbdCtr(planner, env, vols))
 	if withMetricsExporter(planner.GlobalConfig) {
-		ctrs = append(ctrs, buildSmbdMetricsCtr(planner, vols))
+		ctrs = append(ctrs, buildSmbdMetricsCtr(planner, metaPodEnv(), vols))
 	}
 	return ctrs
 }
@@ -491,10 +491,11 @@ func buildSmbdCtr(
 
 func buildSmbdMetricsCtr(
 	planner *pln.Planner,
+	env []corev1.EnvVar,
 	vols []volMount) corev1.Container {
 	// ---
 	return buildSmbMetricsContainer(
-		planner.GlobalConfig.SmbdMetricsContainerImage, getMounts(vols))
+		planner.GlobalConfig.SmbdMetricsContainerImage, env, getMounts(vols))
 }
 
 func buildWinbinddCtr(
@@ -718,7 +719,29 @@ func defaultPodEnv(planner *pln.Planner) []corev1.EnvVar {
 			Value: lvl,
 		})
 	}
+	env = append(env, metaPodEnv()...)
 	return env
+}
+
+func metaPodEnv() []corev1.EnvVar {
+	return []corev1.EnvVar{
+		{
+			Name: "SAMBA_POD_NAME",
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					FieldPath: "metadata.name",
+				},
+			},
+		},
+		{
+			Name: "SAMBA_POD_NAMESPACE",
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					FieldPath: "metadata.namespace",
+				},
+			},
+		},
+	}
 }
 
 func defaultPodSpec(planner *pln.Planner) corev1.PodSpec {
