@@ -101,9 +101,6 @@ func (pl *Planner) Update() (changed bool, err error) {
 		}
 		pl.ConfigState.Shares[shareKey] = share
 		changed = true
-	} else if share.Options["path"] != pl.Paths().Share() {
-		// Update path if changed
-		share.Options["path"] = pl.Paths().Share()
 	}
 	cfgKey := pl.instanceID()
 	cfg, found := pl.ConfigState.Configs[cfgKey]
