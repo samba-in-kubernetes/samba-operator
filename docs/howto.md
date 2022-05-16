@@ -75,6 +75,23 @@ spec:
 
 The `path` directive only supports the export of top level directories within the PVC.
 
+# Set permissions on the exported path.
+
+The exported path may not have the required permissions for users to make use of the share. In that case, you can explicitly set the permissions on the exported path.
+
+```yaml
+apiVersion: samba-operator.samba.org/v1alpha1
+kind: SmbShare
+metadata:
+  name: smbshare1
+spec:
+  storage:
+    pvc:
+      name: "mypvc"
+      permissions: "0777"
+  readOnly: false
+```
+
 # Configure a share with custom users
 
 This example updates the share from the previous example by adding a reference
