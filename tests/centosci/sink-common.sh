@@ -88,7 +88,8 @@ setup_minikube() {
 	minikube start --force --driver="${VM_DRIVER}" --nodes="${NODE_COUNT}" \
 		--memory="${MEMORY}" --cpus="${CPUS}" ${DISK_CONFIG} \
 		--delete-on-failure --install-addons=false -b kubeadm \
-		--kubernetes-version="${KUBE_VERSION}" ${EXTRA_CONFIG}
+		--kubernetes-version="${KUBE_VERSION}" --cache-images=false \
+		${EXTRA_CONFIG}
 
 	nodes=$(kubectl get nodes \
 			-o jsonpath='{range.items[*].metadata}{.name} {end}')
