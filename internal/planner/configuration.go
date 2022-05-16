@@ -117,6 +117,10 @@ func (pl *Planner) Update() (changed bool, err error) {
 		if pl.IsClustered() {
 			cfg.InstanceFeatures = []smbcc.FeatureFlag{smbcc.CTDB}
 		}
+		if pl.SmbShare.Spec.Storage.Pvc.Permissions != "" {
+			cfg.Permissions.Mode = pl.SmbShare.Spec.Storage.Pvc.Permissions
+			cfg.Permissions.Method = "initialize-share-perms"
+		}
 		pl.ConfigState.Configs[cfgKey] = cfg
 		changed = true
 	}

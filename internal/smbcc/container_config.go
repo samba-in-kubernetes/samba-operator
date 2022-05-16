@@ -54,10 +54,11 @@ type SambaContainerConfig struct {
 // ConfigSection identifies the shares, globals, and instance name of
 // a single configuration.
 type ConfigSection struct {
-	Shares           []Key         `json:"shares,omitempty"`
-	Globals          []Key         `json:"globals,omitempty"`
-	InstanceName     string        `json:"instance_name,omitempty"`
-	InstanceFeatures []FeatureFlag `json:"instance_features,omitempty"`
+	Shares           []Key              `json:"shares,omitempty"`
+	Globals          []Key              `json:"globals,omitempty"`
+	InstanceName     string             `json:"instance_name,omitempty"`
+	InstanceFeatures []FeatureFlag      `json:"instance_features,omitempty"`
+	Permissions      PermissionsOptions `json:"permissions,omitempty"`
 }
 
 // ShareConfig holds configuration values for one share.
@@ -93,6 +94,13 @@ type GroupEntries []GroupEntry
 
 // SmbOptions is a common type for storing smb.conf parameters.
 type SmbOptions map[string]string
+
+// PermissionsOptions sets the permissions on a share mount
+type PermissionsOptions struct {
+	Method      string `json:"method,omitempty"`
+	StatusXattr string `json:"status_xattr,omitempty"`
+	Mode        string `json:"mode,omitempty"`
+}
 
 const version0 = "v0"
 
