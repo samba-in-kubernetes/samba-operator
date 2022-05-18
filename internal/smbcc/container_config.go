@@ -54,10 +54,11 @@ type SambaContainerConfig struct {
 // ConfigSection identifies the shares, globals, and instance name of
 // a single configuration.
 type ConfigSection struct {
-	Shares           []Key         `json:"shares,omitempty"`
-	Globals          []Key         `json:"globals,omitempty"`
-	InstanceName     string        `json:"instance_name,omitempty"`
-	InstanceFeatures []FeatureFlag `json:"instance_features,omitempty"`
+	Shares           []Key             `json:"shares,omitempty"`
+	Globals          []Key             `json:"globals,omitempty"`
+	InstanceName     string            `json:"instance_name,omitempty"`
+	InstanceFeatures []FeatureFlag     `json:"instance_features,omitempty"`
+	Permissions      PermissionsConfig `json:"permissions,omitempty"`
 }
 
 // ShareConfig holds configuration values for one share.
@@ -93,6 +94,13 @@ type GroupEntries []GroupEntry
 
 // SmbOptions is a common type for storing smb.conf parameters.
 type SmbOptions map[string]string
+
+// PermissionsConfig indicates the permissions to be set on the share mountpoint
+type PermissionsConfig struct {
+	Method      string `json:"method,omitempty"`
+	StatusXAttr string `json:"status_xattr,omitempty"`
+	Mode        string `json:"mode,omitempty"`
+}
 
 const version0 = "v0"
 
@@ -173,6 +181,15 @@ func NewConfigSection(name string) ConfigSection {
 		Shares:       []Key{},
 		Globals:      []Key{},
 		InstanceName: name,
+	}
+}
+
+// NewPermissionsConfig returns a new PermissionsConfig.
+func NewPermissionsConfig() PermissionsConfig {
+	return PermissionsConfig{
+		Method:      "initialize-share-perms",
+		StatusXAttr: "user.share-perms-status",
+		Mode:        "0777",
 	}
 }
 
