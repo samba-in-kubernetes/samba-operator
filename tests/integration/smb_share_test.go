@@ -475,6 +475,27 @@ func allSmbShareSuites() map[string]suite.TestingSuite {
 		serverLabelPattern:      "samba-operator.samba.org/service=tshare1-pvc",
 	}
 
+	m["mountPathPermissions"] = &MountPathPermissionsSuite{
+		commonSources: []kube.FileSource{
+			{
+				Path:      path.Join(testFilesDir, "userssecret1.yaml"),
+				Namespace: testNamespace,
+			},
+			{
+				Path:      path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
+				Namespace: testNamespace,
+			},
+		},
+		smbshareSources: []kube.FileSource{
+			{
+				Path:      path.Join(testFilesDir, "smbshare1.yaml"),
+				Namespace: testNamespace,
+			},
+		},
+		smbShareResource:   types.NamespacedName{testNamespace, "tshare1"},
+		serverLabelPattern: "samba-operator.samba.org/service=tshare1",
+	}
+
 	if testClusteredShares {
 		m["smbShareClustered1"] = &SmbShareSuite{
 			fileSources: []kube.FileSource{
