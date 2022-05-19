@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/stretchr/testify/suite"
@@ -76,6 +77,14 @@ func (s *SmbShareSuite) getPodFetchOptions() kube.PodFetchOptions {
 }
 
 func (s *SmbShareSuite) getPodIP() (string, error) {
+	pod, err := s.getReadyPod()
+	if err != nil {
+		return "", err
+	}
+	return pod.Status.PodIP, nil
+}
+
+func (s *SmbShareSuite) getReadyPod() (*corev1.Pod, error) {
 	l := fmt.Sprintf(
 		"samba-operator.samba.org/service=%s", s.smbShareResource.Name)
 	pods, err := s.tc.FetchPods(
@@ -86,14 +95,14 @@ func (s *SmbShareSuite) getPodIP() (string, error) {
 			MaxFound:      s.maxPods,
 		})
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	for _, pod := range pods {
 		if kube.PodIsReady(&pod) {
-			return pod.Status.PodIP, nil
+			return &pod, nil
 		}
 	}
-	return "", fmt.Errorf("no pods ready when fetching IP")
+	return nil, fmt.Errorf("no pods ready")
 }
 
 func (s *SmbShareSuite) TestPodsReady() {
@@ -271,6 +280,57 @@ func (s *SmbShareWithExternalNetSuite) TestServiceIsLoadBalancer() {
 		corev1.ServiceTypeLoadBalancer,
 		svc.Spec.Type,
 	)
+}
+
+func (s *SmbShareSuite) TestMetricsOnPod() {
+	pod, cont, err := s.getMetricsContainer()
+	s.Require().NoError(err)
+	if cont == nil {
+		s.T().Skipf("no metrics container present")
+	}
+	// Issue a curl command from samba container to samba-metrics container
+	// within smbd pod.
+	curl := fmt.Sprintf("curl -s http://%s:8080/metrics", pod.GetName())
+	pc := kube.PodCommand{
+		Command:       []string{"sh", "-c", curl},
+		Namespace:     pod.GetNamespace(),
+		PodName:       pod.GetName(),
+		ContainerName: "samba",
+	}
+	bch := kube.NewBufferedCommandHandler()
+	err = kube.NewTestExec(s.tc).Call(pc, bch)
+	s.Require().NoError(err)
+	out := strings.TrimSpace(string(bch.GetStdout()))
+	s.Require().NotEmpty(out)
+
+	// Ensure that we get at least minimal output
+	hasLocksTotal := false
+	hasSharesTotal := false
+	for _, line := range strings.Split(out, "\n") {
+		if !strings.HasPrefix(line, "#") {
+			if strings.HasPrefix(line, "smb_locks_total ") {
+				hasLocksTotal = true
+			} else if strings.HasPrefix(line, "smb_shares_total ") {
+				hasSharesTotal = true
+			}
+		}
+	}
+	s.Require().True(hasLocksTotal)
+	s.Require().True(hasSharesTotal)
+}
+
+func (s *SmbShareSuite) getMetricsContainer() (
+	*corev1.Pod, *corev1.Container, error) {
+	pod, err := s.getReadyPod()
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, cont := range pod.Spec.Containers {
+		if strings.Contains(cont.Name, "metrics") {
+			return pod, &cont, nil
+		}
+	}
+	return nil, nil, nil // Case running without metrics
 }
 
 func allSmbShareSuites() map[string]suite.TestingSuite {
