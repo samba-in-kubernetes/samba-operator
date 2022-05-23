@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM docker.io/golang:1.17 as builder
+FROM docker.io/golang:1.18 as builder
 ARG GIT_VERSION="(unset)"
 ARG COMMIT_ID="(unset)"
 ARG ARCH=""
