@@ -113,6 +113,7 @@ func buildADPodSpec(
 	podSpec.Volumes = getVolumes(volumes)
 	podSpec.InitContainers = []corev1.Container{
 		buildInitCtr(planner, podEnv, smbAllVols),
+		buildEnsureShareCtr(planner, podEnv, smbAllVols),
 		buildMustJoinCtr(planner, joinEnv, joinVols),
 	}
 	podSpec.Containers = containers
@@ -125,6 +126,7 @@ func buildUserPodSpec(
 	pvcName string) corev1.PodSpec {
 	// ---
 	vols := []volMount{}
+	initContainers := []corev1.Container{}
 
 	shareVol := shareVolumeAndMount(planner, pvcName)
 	vols = append(vols, shareVol)
@@ -135,6 +137,10 @@ func buildUserPodSpec(
 	configVol := configVolumeAndMount(planner)
 	vols = append(vols, configVol)
 
+	podEnv := defaultPodEnv(planner)
+	initContainers = append(initContainers,
+		buildEnsureShareCtr(planner, podEnv, vols))
+
 	osRunVol := osRunVolumeAndMount(planner)
 	vols = append(vols, osRunVol)
 
@@ -142,10 +148,10 @@ func buildUserPodSpec(
 		v := userConfigVolumeAndMount(planner)
 		vols = append(vols, v)
 	}
-	podEnv := defaultPodEnv(planner)
 	podSpec := defaultPodSpec(planner)
 	podSpec.Volumes = getVolumes(vols)
 	podSpec.Containers = buildSmbdCtrs(planner, podEnv, vols)
+	podSpec.InitContainers = initContainers
 	return podSpec
 }
 
@@ -201,6 +207,14 @@ func buildClusteredUserPodSpec(
 			podCfgVols,
 			stateVol,
 			ctdbSharedVol, // needed to decide if real init or not
+		)))
+
+	initContainers = append(
+		initContainers,
+		buildEnsureShareCtr(planner, podEnv, append(
+			podCfgVols,
+			stateVol,
+			shareVol,
 		)))
 
 	initContainers = append(
@@ -319,6 +333,14 @@ func buildClusteredADPodSpec(
 			podCfgVols,
 			stateVol,
 			ctdbSharedVol, // needed to decide if real init or not
+		)))
+
+	initContainers = append(
+		initContainers,
+		buildEnsureShareCtr(planner, podEnv, append(
+			podCfgVols,
+			stateVol,
+			shareVol,
 		)))
 
 	joinVols := append(
@@ -572,6 +594,20 @@ func buildInitCtr(
 		Image:        planner.GlobalConfig.SmbdContainerImage,
 		Name:         "init",
 		Args:         planner.Args().Initializer("init"),
+		Env:          env,
+		VolumeMounts: getMounts(vols),
+	}
+}
+
+func buildEnsureShareCtr(
+	planner *pln.Planner,
+	env []corev1.EnvVar,
+	vols []volMount) corev1.Container {
+	// ---
+	return corev1.Container{
+		Image:        planner.GlobalConfig.SmbdContainerImage,
+		Name:         "ensure-share-paths",
+		Args:         planner.Args().EnsureSharePaths(),
 		Env:          env,
 		VolumeMounts: getMounts(vols),
 	}

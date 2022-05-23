@@ -121,3 +121,8 @@ func (*SambaContainerArgs) CTDBNodeStatus() []string {
 		"ctdb-nodestatus",
 	}
 }
+
+// EnsureSharePaths container arguments generator.
+func (*SambaContainerArgs) EnsureSharePaths() []string {
+	return []string{"ensure-share-paths"}
+}
