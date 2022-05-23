@@ -109,6 +109,7 @@ func (pl *Planner) Update() (changed bool, err error) {
 			Shares:       []smbcc.Key{shareKey},
 			Globals:      []smbcc.Key{smbcc.Globals},
 			InstanceName: pl.InstanceName(),
+			Permissions:  smbcc.NewPermissionsConfig(),
 		}
 		if pl.SecurityMode() == ADMode {
 			realmKey := smbcc.Key(pl.Realm())
