@@ -30,6 +30,7 @@ func annotationsForSmbMetricsPod() map[string]string {
 // buildSmbMetricsContainer returns the appropriate Container definition for
 // smbmetrics exporter.
 func buildSmbMetricsContainer(image string,
+	env []corev1.EnvVar,
 	volmnts []corev1.VolumeMount) corev1.Container {
 	portnum := defaultMetricsPort
 	return corev1.Container{
@@ -41,6 +42,7 @@ func buildSmbMetricsContainer(image string,
 			Name:          "smbmetrics",
 		}},
 		VolumeMounts: volmnts,
+		Env:          env,
 		ReadinessProbe: &corev1.Probe{
 			Handler: corev1.Handler{
 				TCPSocket: &corev1.TCPSocketAction{
