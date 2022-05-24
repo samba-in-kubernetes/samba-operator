@@ -119,7 +119,7 @@ func WaitForAnyPodReady(
 		tc:        tc,
 		fetchOpts: fo,
 	}
-	pp.Cond = func() (bool, error) { return pp.checkReady(ctx) }
+	pp.Prober.Cond = func() (bool, error) { return pp.checkReady(ctx) }
 	return poll.TryUntil(ctx, pp)
 }
 
@@ -133,7 +133,7 @@ func WaitForAllPodReady(
 		tc:        tc,
 		fetchOpts: fo,
 	}
-	pp.Cond = func() (bool, error) { return pp.checkAllReady(ctx) }
+	pp.Prober.Cond = func() (bool, error) { return pp.checkAllReady(ctx) }
 	return poll.TryUntil(ctx, pp)
 }
 
@@ -147,6 +147,6 @@ func WaitForAnyPodExists(
 		tc:        tc,
 		fetchOpts: fo,
 	}
-	pp.Cond = func() (bool, error) { return pp.checkExists(ctx) }
+	pp.Prober.Cond = func() (bool, error) { return pp.checkExists(ctx) }
 	return poll.TryUntil(ctx, pp)
 }
