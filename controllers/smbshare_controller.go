@@ -62,7 +62,8 @@ func (r *SmbShareReconciler) Reconcile(
 	reqLogger.Info("Reconciling SmbShare")
 
 	smbShareManager := resources.NewSmbShareManager(
-		r, r.Scheme(), r.recorder, reqLogger)
+		r, r.Scheme(), r.recorder, reqLogger) // nolint:typecheck
+
 	res := smbShareManager.Process(ctx, req.NamespacedName)
 	err := res.Err()
 	if res.Requeue() {
@@ -72,9 +73,7 @@ func (r *SmbShareReconciler) Reconcile(
 }
 
 func (r *SmbShareReconciler) setRecorder(mgr ctrl.Manager) {
-	if r.recorder == nil {
-		r.recorder = mgr.GetEventRecorderFor("smbshare-controller")
-	}
+	r.recorder = mgr.GetEventRecorderFor("smbshare-controller")
 }
 
 // SetupWithManager sets up resource management.
