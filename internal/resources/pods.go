@@ -446,11 +446,12 @@ func buildSmbdCtr(
 	portnum := planner.GlobalConfig.SmbdPort
 	mounts := getMounts(vols.all())
 	return corev1.Container{
-		Image:   planner.GlobalConfig.SmbdContainerImage,
-		Name:    planner.GlobalConfig.SmbdContainerName,
-		Command: []string{"samba-container"},
-		Args:    planner.Args().Run("smbd"),
-		Env:     env,
+		Image:           planner.GlobalConfig.SmbdContainerImage,
+		ImagePullPolicy: imagePullPolicy(planner),
+		Name:            planner.GlobalConfig.SmbdContainerName,
+		Command:         []string{"samba-container"},
+		Args:            planner.Args().Run("smbd"),
+		Env:             env,
 		Ports: []corev1.ContainerPort{{
 			ContainerPort: int32(portnum),
 			Name:          "smb",
@@ -490,11 +491,12 @@ func buildWinbinddCtr(
 	// ---
 	mounts := getMounts(vols.all())
 	return corev1.Container{
-		Image:        planner.GlobalConfig.SmbdContainerImage,
-		Name:         planner.GlobalConfig.WinbindContainerName,
-		Args:         planner.Args().Run("winbindd"),
-		Env:          env,
-		VolumeMounts: mounts,
+		Image:           planner.GlobalConfig.SmbdContainerImage,
+		ImagePullPolicy: imagePullPolicy(planner),
+		Name:            planner.GlobalConfig.WinbindContainerName,
+		Args:            planner.Args().Run("winbindd"),
+		Env:             env,
+		VolumeMounts:    mounts,
 		LivenessProbe: &corev1.Probe{
 			Handler: corev1.Handler{
 				Exec: &corev1.ExecAction{
@@ -516,11 +518,12 @@ func buildCTDBDaemonCtr(
 	// ---
 	mounts := getMounts(vols.all())
 	return corev1.Container{
-		Image:        planner.GlobalConfig.SmbdContainerImage,
-		Name:         "ctdb",
-		Args:         planner.Args().CTDBDaemon(),
-		Env:          env,
-		VolumeMounts: mounts,
+		Image:           planner.GlobalConfig.SmbdContainerImage,
+		ImagePullPolicy: imagePullPolicy(planner),
+		Name:            "ctdb",
+		Args:            planner.Args().CTDBDaemon(),
+		Env:             env,
+		VolumeMounts:    mounts,
 		ReadinessProbe: &corev1.Probe{
 			Handler: corev1.Handler{
 				Exec: &corev1.ExecAction{
@@ -538,11 +541,12 @@ func buildCTDBManageNodesCtr(
 	// ---
 	mounts := getMounts(vols.all())
 	return corev1.Container{
-		Image:        planner.GlobalConfig.SmbdContainerImage,
-		Name:         "ctdb-manage-nodes",
-		Args:         planner.Args().CTDBManageNodes(),
-		Env:          env,
-		VolumeMounts: mounts,
+		Image:           planner.GlobalConfig.SmbdContainerImage,
+		ImagePullPolicy: imagePullPolicy(planner),
+		Name:            "ctdb-manage-nodes",
+		Args:            planner.Args().CTDBManageNodes(),
+		Env:             env,
+		VolumeMounts:    mounts,
 	}
 }
 
@@ -553,11 +557,12 @@ func buildDNSRegCtr(
 	// ---
 	mounts := getMounts(vols.all())
 	return corev1.Container{
-		Image:        planner.GlobalConfig.SmbdContainerImage,
-		Name:         "dns-register",
-		Args:         planner.Args().DNSRegister(),
-		Env:          env,
-		VolumeMounts: mounts,
+		Image:           planner.GlobalConfig.SmbdContainerImage,
+		ImagePullPolicy: imagePullPolicy(planner),
+		Name:            "dns-register",
+		Args:            planner.Args().DNSRegister(),
+		Env:             env,
+		VolumeMounts:    mounts,
 	}
 }
 
@@ -568,10 +573,11 @@ func buildSvcWatchCtr(
 	// ---
 	mounts := getMounts(vols.all())
 	return corev1.Container{
-		Image:        planner.GlobalConfig.SvcWatchContainerImage,
-		Name:         "svc-watch",
-		Env:          env,
-		VolumeMounts: mounts,
+		Image:           planner.GlobalConfig.SvcWatchContainerImage,
+		ImagePullPolicy: imagePullPolicy(planner),
+		Name:            "svc-watch",
+		Env:             env,
+		VolumeMounts:    mounts,
 	}
 }
 
@@ -582,11 +588,12 @@ func buildInitCtr(
 	// ---
 	mounts := getMounts(vols.all())
 	return corev1.Container{
-		Image:        planner.GlobalConfig.SmbdContainerImage,
-		Name:         "init",
-		Args:         planner.Args().Initializer("init"),
-		Env:          env,
-		VolumeMounts: mounts,
+		Image:           planner.GlobalConfig.SmbdContainerImage,
+		ImagePullPolicy: imagePullPolicy(planner),
+		Name:            "init",
+		Args:            planner.Args().Initializer("init"),
+		Env:             env,
+		VolumeMounts:    mounts,
 	}
 }
 
@@ -597,11 +604,12 @@ func buildEnsureShareCtr(
 	// ---
 	mounts := getMounts(vols.all())
 	return corev1.Container{
-		Image:        planner.GlobalConfig.SmbdContainerImage,
-		Name:         "ensure-share-paths",
-		Args:         planner.Args().EnsureSharePaths(),
-		Env:          env,
-		VolumeMounts: mounts,
+		Image:           planner.GlobalConfig.SmbdContainerImage,
+		ImagePullPolicy: imagePullPolicy(planner),
+		Name:            "ensure-share-paths",
+		Args:            planner.Args().EnsureSharePaths(),
+		Env:             env,
+		VolumeMounts:    mounts,
 	}
 }
 
@@ -612,11 +620,12 @@ func buildMustJoinCtr(
 	// ---
 	mounts := getMounts(vols.all())
 	return corev1.Container{
-		Image:        planner.GlobalConfig.SmbdContainerImage,
-		Name:         "must-join",
-		Args:         planner.Args().Initializer("must-join"),
-		Env:          env,
-		VolumeMounts: mounts,
+		Image:           planner.GlobalConfig.SmbdContainerImage,
+		ImagePullPolicy: imagePullPolicy(planner),
+		Name:            "must-join",
+		Args:            planner.Args().Initializer("must-join"),
+		Env:             env,
+		VolumeMounts:    mounts,
 	}
 }
 
@@ -627,11 +636,12 @@ func buildCTDBMigrateCtr(
 	// ---
 	mounts := getMounts(vols.all())
 	return corev1.Container{
-		Image:        planner.GlobalConfig.SmbdContainerImage,
-		Name:         "ctdb-migrate",
-		Args:         planner.Args().CTDBMigrate(),
-		Env:          env,
-		VolumeMounts: mounts,
+		Image:           planner.GlobalConfig.SmbdContainerImage,
+		ImagePullPolicy: imagePullPolicy(planner),
+		Name:            "ctdb-migrate",
+		Args:            planner.Args().CTDBMigrate(),
+		Env:             env,
+		VolumeMounts:    mounts,
 	}
 }
 
@@ -642,11 +652,12 @@ func buildCTDBSetNodeCtr(
 	// ---
 	mounts := getMounts(vols.all())
 	return corev1.Container{
-		Image:        planner.GlobalConfig.SmbdContainerImage,
-		Name:         "ctdb-set-node",
-		Args:         planner.Args().CTDBSetNode(),
-		Env:          env,
-		VolumeMounts: mounts,
+		Image:           planner.GlobalConfig.SmbdContainerImage,
+		ImagePullPolicy: imagePullPolicy(planner),
+		Name:            "ctdb-set-node",
+		Args:            planner.Args().CTDBSetNode(),
+		Env:             env,
+		VolumeMounts:    mounts,
 	}
 }
 
@@ -657,11 +668,12 @@ func buildCTDBMustHaveNodeCtr(
 	// ---
 	mounts := getMounts(vols.all())
 	return corev1.Container{
-		Image:        planner.GlobalConfig.SmbdContainerImage,
-		Name:         "ctdb-must-have-node",
-		Args:         planner.Args().CTDBMustHaveNode(),
-		Env:          env,
-		VolumeMounts: mounts,
+		Image:           planner.GlobalConfig.SmbdContainerImage,
+		ImagePullPolicy: imagePullPolicy(planner),
+		Name:            "ctdb-must-have-node",
+		Args:            planner.Args().CTDBMustHaveNode(),
+		Env:             env,
+		VolumeMounts:    mounts,
 	}
 }
 
@@ -802,4 +814,16 @@ func getJoinSources(planner *pln.Planner) joinSources {
 
 func joinEnvPaths(p []string) string {
 	return strings.Join(p, ":")
+}
+
+func imagePullPolicy(pl *pln.Planner) corev1.PullPolicy {
+	pullPolicy := corev1.PullPolicy(pl.GlobalConfig.ImagePullPolicy)
+	switch {
+	case pullPolicy == corev1.PullAlways:
+	case pullPolicy == corev1.PullNever:
+	case pullPolicy == corev1.PullIfNotPresent:
+	default:
+		pullPolicy = corev1.PullIfNotPresent
+	}
+	return pullPolicy
 }
