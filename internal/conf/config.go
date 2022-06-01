@@ -22,6 +22,7 @@ var DefaultOperatorConfig = OperatorConfig{
 	SmbServicePort:            445,
 	SmbdPort:                  445,
 	MetricsExporterMode:       "disabled",
+	ImagePullPolicy:           "IfNotPresent",
 }
 
 // OperatorConfig is a type holding general configuration values.
@@ -73,6 +74,9 @@ type OperatorConfig struct {
 	PodNamespace string `mapstructure:"pod-namespace"`
 	// PodIP is a (string) which defines the currnt pod cluster-ip.
 	PodIP string `mapstructure:"pod-ip"`
+	// ImagePullPolicy is a (string) value which defines the image-download
+	// strategy of samba containers.
+	ImagePullPolicy string `mapstructure:"image-pull-policy"`
 }
 
 // Validate the OperatorConfig returning an error if the config is not
@@ -122,6 +126,7 @@ func NewSource() *Source {
 	v.SetDefault("pod-name", d.PodName)
 	v.SetDefault("pod-namespace", d.PodNamespace)
 	v.SetDefault("pod-ip", d.PodIP)
+	v.SetDefault("image-pull-policy", d.ImagePullPolicy)
 	return &Source{v: v}
 }
 
