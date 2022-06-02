@@ -284,6 +284,8 @@ func (s *SmbShareWithExternalNetSuite) TestServiceIsLoadBalancer() {
 }
 
 func (s *SmbShareSuite) TestMetricsOnPod() {
+	s.Require().NoError(waitForPodReady(s))
+
 	pod, cont, err := s.getMetricsContainer()
 	s.Require().NoError(err)
 	if cont == nil {
