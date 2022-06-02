@@ -13,7 +13,7 @@ setup_minikube
 
 deploy_rook
 
-image_pull "${CI_IMG_REGISTRY}" "docker.io" "golang:1.17"
+image_pull "${CI_IMG_REGISTRY}" "docker.io" "golang:1.18"
 
 # Build and push operator image to local CI registry
 IMG="${CI_IMG_OP}" make image-build
