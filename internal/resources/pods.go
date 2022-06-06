@@ -113,7 +113,7 @@ func buildADPodSpec(
 	podSpec.Volumes = getVolumes(volumes)
 	podSpec.InitContainers = []corev1.Container{
 		buildInitCtr(planner, podEnv, smbAllVols),
-		buildEnsureShareCtr(planner, podEnv, smbAllVols),
+		buildEnsureShareCtr(planner, podEnv, smbdVols),
 		buildMustJoinCtr(planner, joinEnv, joinVols),
 	}
 	podSpec.Containers = containers
