@@ -144,7 +144,7 @@ endif
 .PHONY: developer-dir
 
 set-image: kustomize $(MGR_KUST_DIR)/kustomization.yaml
-	cd $(MGR_KUST_DIR) && $(KUSTOMIZE) edit set image controller=$(IMG)
+	cd $(MGR_KUST_DIR) && $(KUSTOMIZE) edit set image quay.io/samba.org/samba-operator=$(IMG)
 .PHONY: set-image
 
 # Generate manifests e.g. CRD, RBAC etc.
