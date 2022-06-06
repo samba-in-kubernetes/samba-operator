@@ -10,9 +10,9 @@ import (
 
 // DefaultOperatorConfig holds the default values of OperatorConfig.
 var DefaultOperatorConfig = OperatorConfig{
-	SmbdContainerImage:        "quay.io/samba.org/samba-server:latest",
-	SmbdMetricsContainerImage: "quay.io/samba.org/samba-metrics:latest",
-	SvcWatchContainerImage:    "quay.io/samba.org/svcwatch:latest",
+	SmbdContainerImage:        "quay.io/samba.org/samba-server:v0.2",
+	SmbdMetricsContainerImage: "quay.io/samba.org/samba-metrics:v0.2",
+	SvcWatchContainerImage:    "quay.io/samba.org/svcwatch:v0.2",
 	SmbdContainerName:         "samba",
 	WinbindContainerName:      "wb",
 	WorkingNamespace:          "",
