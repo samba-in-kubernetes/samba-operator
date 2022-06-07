@@ -32,7 +32,6 @@ must support Services with type `LoadBalancer`.
 
 In order to install the CRDs, other resources, and start the operator,
 invoke:
-
 ```
 make deploy
 ```
@@ -45,6 +44,16 @@ make deploy IMG=<my-registry/and/image:tag>
 To delete the operator and CRDs from the cluster, run:
 ```
 make delete-deploy
+```
+
+Alternatively, if you do not wish to use make tools to deploy the operator, you can also use the kubectl command in the following manner.
+```
+kubectl apply -k config/default
+```
+
+To remove the operator and all related resources, use:
+```
+kubectl delete -k config/default
 ```
 
 ### Creating new Shares
