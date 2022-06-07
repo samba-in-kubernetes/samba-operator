@@ -66,19 +66,19 @@ func buildADPodSpec(
 	// for smb server containers (not init containers)
 	wbSockVol := wbSocketsVolumeAndMount(planner)
 	volumes = append(volumes, wbSockVol)
-	// nolint:gocritic
-	smbServerVols := append(smbAllVols, wbSockVol)
+	smbServerVols := dupVolMounts(smbAllVols)
+	smbServerVols = append(smbServerVols, wbSockVol)
 
 	// for smbd only
 	shareVol := shareVolumeAndMount(planner, pvcName)
 	volumes = append(volumes, shareVol)
-	// nolint:gocritic
-	smbdVols := append(smbServerVols, shareVol)
+	smbdVols := dupVolMounts(smbServerVols)
+	smbdVols = append(smbdVols, shareVol)
 
 	jsrc := getJoinSources(planner)
 	volumes = append(volumes, jsrc.volumes...)
-	// nolint:gocritic
-	joinVols := append(smbAllVols, jsrc.volumes...)
+	joinVols := dupVolMounts(smbAllVols)
+	joinVols = append(joinVols, jsrc.volumes...)
 
 	podEnv := defaultPodEnv(planner)
 	// nolint:gocritic
@@ -100,8 +100,8 @@ func buildADPodSpec(
 		)
 		volumes = append(volumes, watchVol)
 		svcWatchVols := []volMount{watchVol}
-		// nolint:gocritic
-		dnsRegVols := append(smbServerVols, watchVol)
+		dnsRegVols := dupVolMounts(smbServerVols)
+		dnsRegVols = append(dnsRegVols, watchVol)
 		containers = append(
 			containers,
 			buildSvcWatchCtr(planner, svcWatchEnv(planner), svcWatchVols),
@@ -227,9 +227,9 @@ func buildClusteredUserPodSpec(
 			ctdbPeristentVol,
 		)))
 
-	// nolint:gocritic
-	ctdbInitVols := append(
-		podCfgVols,
+	ctdbInitVols := dupVolMounts(podCfgVols)
+	ctdbInitVols = append(
+		ctdbInitVols,
 		stateVol,
 		ctdbSharedVol,
 		ctdbConfigVol,
@@ -240,9 +240,9 @@ func buildClusteredUserPodSpec(
 		buildCTDBMustHaveNodeCtr(planner, ctdbEnv, ctdbInitVols),
 	)
 
-	// nolint:gocritic
-	ctdbdVols := append(
-		podCfgVols,
+	ctdbdVols := dupVolMounts(podCfgVols)
+	ctdbdVols = append(
+		ctdbdVols,
 		ctdbConfigVol,
 		ctdbPeristentVol,
 		ctdbVolatileVol,
@@ -253,9 +253,9 @@ func buildClusteredUserPodSpec(
 		containers,
 		buildCTDBDaemonCtr(planner, ctdbEnv, ctdbdVols))
 
-	// nolint:gocritic
-	ctdbManageNodesVols := append(
-		podCfgVols,
+	ctdbManageNodesVols := dupVolMounts(podCfgVols)
+	ctdbManageNodesVols = append(
+		ctdbManageNodesVols,
 		ctdbConfigVol,
 		ctdbSocketsVol,
 		ctdbSharedVol,
@@ -361,9 +361,9 @@ func buildClusteredADPodSpec(
 			ctdbPeristentVol,
 		)))
 
-	// nolint:gocritic
-	ctdbInitVols := append(
-		podCfgVols,
+	ctdbInitVols := dupVolMounts(podCfgVols)
+	ctdbInitVols = append(
+		ctdbInitVols,
 		stateVol,
 		ctdbSharedVol,
 		ctdbConfigVol,
@@ -374,9 +374,9 @@ func buildClusteredADPodSpec(
 		buildCTDBMustHaveNodeCtr(planner, ctdbEnv, ctdbInitVols),
 	)
 
-	// nolint:gocritic
-	ctdbdVols := append(
-		podCfgVols,
+	ctdbdVols := dupVolMounts(podCfgVols)
+	ctdbdVols = append(
+		ctdbdVols,
 		ctdbConfigVol,
 		ctdbPeristentVol,
 		ctdbVolatileVol,
@@ -387,9 +387,9 @@ func buildClusteredADPodSpec(
 		containers,
 		buildCTDBDaemonCtr(planner, ctdbEnv, ctdbdVols))
 
-	// nolint:gocritic
-	ctdbManageNodesVols := append(
-		podCfgVols,
+	ctdbManageNodesVols := dupVolMounts(podCfgVols)
+	ctdbManageNodesVols = append(
+		ctdbManageNodesVols,
 		ctdbConfigVol,
 		ctdbSocketsVol,
 		ctdbSharedVol,
@@ -399,9 +399,9 @@ func buildClusteredADPodSpec(
 		buildCTDBManageNodesCtr(planner, ctdbEnv, ctdbManageNodesVols))
 
 	// winbindd
-	// nolint:gocritic
-	wbVols := append(
-		podCfgVols,
+	wbVols := dupVolMounts(podCfgVols)
+	wbVols = append(
+		wbVols,
 		stateVol,
 		wbSockVol,
 		ctdbConfigVol,
@@ -426,8 +426,8 @@ func buildClusteredADPodSpec(
 		)
 		volumes = append(volumes, watchVol)
 		svcWatchVols := []volMount{watchVol}
-		// nolint:gocritic
-		dnsRegVols := append(wbVols, watchVol)
+		dnsRegVols := dupVolMounts(wbVols)
+		dnsRegVols = append(dnsRegVols, watchVol)
 		containers = append(
 			containers,
 			buildSvcWatchCtr(planner, svcWatchEnv(planner), svcWatchVols),
@@ -791,4 +791,8 @@ func getJoinSources(planner *pln.Planner) joinSources {
 
 func joinEnvPaths(p []string) string {
 	return strings.Join(p, ":")
+}
+
+func dupVolMounts(vols []volMount) []volMount {
+	return append(make([]volMount, 0, len(vols)), vols...)
 }
