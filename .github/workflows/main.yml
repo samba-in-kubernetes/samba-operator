@@ -3,7 +3,7 @@ name: CI
 # committed to master.
 on:
   push:
-    branches: [master]
+    branches: [master, release]
   pull_request:
     branches: [master]
 jobs:
