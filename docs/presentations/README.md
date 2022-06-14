@@ -19,3 +19,10 @@ The Next Phase" at the virtual sambaXP 2021.
 * [Slides](<./samba in kubernetes - sambaXP 2021.pdf>)
 * [Recording (on youtube)](https://www.youtube.com/watch?v=mG-Jxaf8_gw)
 
+## sambaXP 2022
+
+[John](https://github.com/phlogistonjohn) presented "The SINK Report - Updates on Samba in Containers & Kubernetes" at the virtual sambaXP 2022.
+
+* [Slides](<./samba in kubernetes - sambaXP 2022.pdf>)
+* [Recording (on youtube)](https://www.youtube.com/watch?v=aPcw8f0vsqw)
+* Supplemental [Screencast Demonstrating a Share with Clustered Server](https://asciinema.org/a/498381)
