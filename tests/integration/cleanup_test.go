@@ -212,11 +212,11 @@ func (s *ShareCreateDeleteSuite) TestCreateAndDelete() {
 		len(rs2.statefulSets.Items), len(existing.statefulSets.Items))
 }
 
-func allShareCreateDeleteSuites() map[string]suite.TestingSuite {
-	m := map[string]suite.TestingSuite{}
+func init() {
 	ns := testNamespace
+	createDeleteTests := testRoot.Child("createDelete")
 
-	m["simple"] = &ShareCreateDeleteSuite{
+	createDeleteTests.AddSuite("simple", &ShareCreateDeleteSuite{
 		fileSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "userssecret1.yaml"),
@@ -235,8 +235,10 @@ func allShareCreateDeleteSuites() map[string]suite.TestingSuite {
 		smbShareResource: types.NamespacedName{ns, "tshare1"},
 		maxPods:          1,
 		minPods:          1,
-	}
-	m["domainMember"] = &ShareCreateDeleteSuite{
+	},
+	)
+
+	createDeleteTests.AddSuite("domainMember", &ShareCreateDeleteSuite{
 		fileSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "joinsecret1.yaml"),
@@ -255,10 +257,11 @@ func allShareCreateDeleteSuites() map[string]suite.TestingSuite {
 		smbShareResource: types.NamespacedName{testNamespace, "tshare2"},
 		maxPods:          1,
 		minPods:          1,
-	}
+	},
+	)
 
 	// should we use a namespace other than default for this test?
-	m["altNamespace"] = &ShareCreateDeleteSuite{
+	createDeleteTests.AddSuite("altNamespace", &ShareCreateDeleteSuite{
 		fileSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "userssecret1.yaml"),
@@ -277,10 +280,11 @@ func allShareCreateDeleteSuites() map[string]suite.TestingSuite {
 		smbShareResource: types.NamespacedName{"default", "tshare3"},
 		maxPods:          1,
 		minPods:          1,
-	}
+	},
+	)
 
 	if testClusteredShares {
-		m["clustered"] = &ShareCreateDeleteSuite{
+		createDeleteTests.AddSuite("clustered", &ShareCreateDeleteSuite{
 			fileSources: []kube.FileSource{
 				{
 					Path:      path.Join(testFilesDir, "userssecret1.yaml"),
@@ -300,8 +304,10 @@ func allShareCreateDeleteSuites() map[string]suite.TestingSuite {
 			smbShareResource: types.NamespacedName{ns, "cshare1-cleanme"},
 			maxPods:          3,
 			minPods:          2,
-		}
-		m["clusteredDomainMember"] = &ShareCreateDeleteSuite{
+		},
+		)
+
+		createDeleteTests.AddSuite("clusteredDomainMember", &ShareCreateDeleteSuite{
 			fileSources: []kube.FileSource{
 				{
 					Path:      path.Join(testFilesDir, "joinsecret1.yaml"),
@@ -321,8 +327,7 @@ func allShareCreateDeleteSuites() map[string]suite.TestingSuite {
 			smbShareResource: types.NamespacedName{ns, "cshare2-cleanme"},
 			maxPods:          3,
 			minPods:          2,
-		}
+		},
+		)
 	}
-
-	return m
 }

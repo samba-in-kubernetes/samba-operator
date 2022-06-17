@@ -151,67 +151,73 @@ func (s *scaleoutClusterSuite) TestScaleoutClusterSuite() {
 	require.Equal(int32(newClusterSize), *l.Items[0].Spec.Replicas, "Clustersize not as expected")
 }
 
-func allReconcileSuites() map[string]suite.TestingSuite {
-	m := map[string]suite.TestingSuite{}
-	if testClusteredShares {
-		m["limitAvailModeChangeStandard"] = &limitAvailModeChangeSuite{
-			fileSources: []kube.FileSource{
-				{
-					Path:      path.Join(testFilesDir, "userssecret1.yaml"),
-					Namespace: testNamespace,
-				},
-				{
-					Path:      path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
-					Namespace: testNamespace,
-				},
-				{
-					Path:       path.Join(testFilesDir, "smbshare1.yaml"),
-					Namespace:  testNamespace,
-					NameSuffix: "-bk",
-				},
-			},
-			smbShareResource: types.NamespacedName{testNamespace, "tshare1-bk"},
-			expectBackend:    "standard",
-			nextMode:         "clustered",
-		}
-		m["limitAvailModeChangeClustered"] = &limitAvailModeChangeSuite{
-			fileSources: []kube.FileSource{
-				{
-					Path:      path.Join(testFilesDir, "userssecret1.yaml"),
-					Namespace: testNamespace,
-				},
-				{
-					Path:      path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
-					Namespace: testNamespace,
-				},
-				{
-					Path:       path.Join(testFilesDir, "smbshare_ctdb1.yaml"),
-					Namespace:  testNamespace,
-					NameSuffix: "-bk",
-				},
-			},
-			smbShareResource: types.NamespacedName{testNamespace, "cshare1-bk"},
-			expectBackend:    "clustered",
-			nextMode:         "standard",
-		}
-		m["scaleoutCluster"] = &scaleoutClusterSuite{
-			fileSources: []kube.FileSource{
-				{
-					Path:      path.Join(testFilesDir, "userssecret1.yaml"),
-					Namespace: testNamespace,
-				},
-				{
-					Path:      path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
-					Namespace: testNamespace,
-				},
-				{
-					Path:       path.Join(testFilesDir, "smbshare_ctdb1.yaml"),
-					Namespace:  testNamespace,
-					NameSuffix: "-soc",
-				},
-			},
-			smbShareResource: types.NamespacedName{testNamespace, "cshare1-soc"},
-		}
+func init() {
+	if !testClusteredShares {
+		return
 	}
-	return m
+
+	reconTests := testRoot.Child("reconciliation")
+	reconTests.AddSuite("limitAvailModeChangeStandard", &limitAvailModeChangeSuite{
+		fileSources: []kube.FileSource{
+			{
+				Path:      path.Join(testFilesDir, "userssecret1.yaml"),
+				Namespace: testNamespace,
+			},
+			{
+				Path:      path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
+				Namespace: testNamespace,
+			},
+			{
+				Path:       path.Join(testFilesDir, "smbshare1.yaml"),
+				Namespace:  testNamespace,
+				NameSuffix: "-bk",
+			},
+		},
+		smbShareResource: types.NamespacedName{testNamespace, "tshare1-bk"},
+		expectBackend:    "standard",
+		nextMode:         "clustered",
+	},
+	)
+
+	reconTests.AddSuite("limitAvailModeChangeClustered", &limitAvailModeChangeSuite{
+		fileSources: []kube.FileSource{
+			{
+				Path:      path.Join(testFilesDir, "userssecret1.yaml"),
+				Namespace: testNamespace,
+			},
+			{
+				Path:      path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
+				Namespace: testNamespace,
+			},
+			{
+				Path:       path.Join(testFilesDir, "smbshare_ctdb1.yaml"),
+				Namespace:  testNamespace,
+				NameSuffix: "-bk",
+			},
+		},
+		smbShareResource: types.NamespacedName{testNamespace, "cshare1-bk"},
+		expectBackend:    "clustered",
+		nextMode:         "standard",
+	},
+	)
+
+	reconTests.AddSuite("scaleoutCluster", &scaleoutClusterSuite{
+		fileSources: []kube.FileSource{
+			{
+				Path:      path.Join(testFilesDir, "userssecret1.yaml"),
+				Namespace: testNamespace,
+			},
+			{
+				Path:      path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
+				Namespace: testNamespace,
+			},
+			{
+				Path:       path.Join(testFilesDir, "smbshare_ctdb1.yaml"),
+				Namespace:  testNamespace,
+				NameSuffix: "-soc",
+			},
+		},
+		smbShareResource: types.NamespacedName{testNamespace, "cshare1-soc"},
+	},
+	)
 }

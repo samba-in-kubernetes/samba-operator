@@ -98,10 +98,8 @@ func (s DeploySuite) TestImageAndTag() {
 	require.Equal(testExpectedImage, ctrImage)
 }
 
-func allDeploySuites() map[string]suite.TestingSuite {
-	m := map[string]suite.TestingSuite{}
-	m["default"] = &DeploySuite{
+func init() {
+	testRoot.AddSuite("deploy", &DeploySuite{
 		sharedConfigDir: path.Join(operatorConfigDir, "default"),
-	}
-	return m
+	})
 }

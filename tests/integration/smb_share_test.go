@@ -336,9 +336,11 @@ func (s *SmbShareSuite) getMetricsContainer() (
 	return nil, nil, nil // Case running without metrics
 }
 
-func allSmbShareSuites() map[string]suite.TestingSuite {
-	m := map[string]suite.TestingSuite{}
-	m["users1"] = &SmbShareSuite{
+func init() {
+	utilruntime.Must(sambaoperatorv1alpha1.AddToScheme(kube.TypedClientScheme))
+
+	smbShareTests := testRoot.Child("smbShares")
+	smbShareTests.AddSuite("users1", &SmbShareSuite{
 		fileSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "userssecret1.yaml"),
@@ -359,9 +361,10 @@ func allSmbShareSuites() map[string]suite.TestingSuite {
 			Username: "sambauser",
 			Password: "1nsecurely",
 		}},
-	}
+	},
+	)
 
-	m["domainMember1"] = &SmbShareWithDNSSuite{SmbShareSuite{
+	smbShareTests.AddSuite("domainMember1", &SmbShareWithDNSSuite{SmbShareSuite{
 		fileSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "joinsecret1.yaml"),
@@ -382,12 +385,13 @@ func allSmbShareSuites() map[string]suite.TestingSuite {
 			Username: "DOMAIN1\\bwayne",
 			Password: "1115Rose.",
 		}},
-	}}
+	}},
+	)
 
 	// Test that the operator functions when the SmbShare resources are created
 	// in a different ns (for example, "default").
 	// IMPORTANT: the secrets MUST be in the same namespace as the pods.
-	m["smbSharesInDefault"] = &SmbShareSuite{
+	smbShareTests.AddSuite("smbSharesInDefault", &SmbShareSuite{
 		fileSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "userssecret1.yaml"),
@@ -409,9 +413,10 @@ func allSmbShareSuites() map[string]suite.TestingSuite {
 			Username: "sambauser",
 			Password: "1nsecurely",
 		}},
-	}
+	},
+	)
 
-	m["smbSharesExternal"] = &SmbShareWithExternalNetSuite{SmbShareSuite{
+	smbShareTests.AddSuite("smbSharesExternal", &SmbShareWithExternalNetSuite{SmbShareSuite{
 		fileSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "userssecret1.yaml"),
@@ -436,70 +441,12 @@ func allSmbShareSuites() map[string]suite.TestingSuite {
 			Username: "sambauser",
 			Password: "1nsecurely",
 		}},
-	}}
-
-	m["mountPath"] = &MountPathSuite{
-		auths: []smbclient.Auth{
-			{
-				Username: "sambauser",
-				Password: "1nsecurely",
-			},
-		},
-		commonSources: []kube.FileSource{
-			{
-				Path:      path.Join(testFilesDir, "userpvc.yaml"),
-				Namespace: testNamespace,
-			},
-			{
-				Path:      path.Join(testFilesDir, "userssecret1.yaml"),
-				Namespace: testNamespace,
-			},
-			{
-				Path:      path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
-				Namespace: testNamespace,
-			},
-		},
-		smbshareSetupSources: []kube.FileSource{
-			{
-				Path:      path.Join(testFilesDir, "smbsharepvc1.yaml"),
-				Namespace: testNamespace,
-			},
-		},
-		smbshareSources: []kube.FileSource{
-			{
-				Path:      path.Join(testFilesDir, "smbsharepvc2.yaml"),
-				Namespace: testNamespace,
-			},
-		},
-		smbShareSetupResource:   types.NamespacedName{testNamespace, "tshare1-setup-pvc"},
-		setupServerLabelPattern: "samba-operator.samba.org/service=tshare1-setup-pvc",
-		smbShareResource:        types.NamespacedName{testNamespace, "tshare1-pvc"},
-		serverLabelPattern:      "samba-operator.samba.org/service=tshare1-pvc",
-	}
-
-	m["mountPathPermissions"] = &MountPathPermissionsSuite{
-		commonSources: []kube.FileSource{
-			{
-				Path:      path.Join(testFilesDir, "userssecret1.yaml"),
-				Namespace: testNamespace,
-			},
-			{
-				Path:      path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
-				Namespace: testNamespace,
-			},
-		},
-		smbshareSources: []kube.FileSource{
-			{
-				Path:      path.Join(testFilesDir, "smbshare1.yaml"),
-				Namespace: testNamespace,
-			},
-		},
-		smbShareResource:   types.NamespacedName{testNamespace, "tshare1"},
-		serverLabelPattern: "samba-operator.samba.org/service=tshare1",
-	}
+	}},
+	)
 
 	if testClusteredShares {
-		m["smbShareClustered1"] = &SmbShareSuite{
+		clusteredTests := testRoot.Child("smbSharesClustered")
+		clusteredTests.AddSuite("default", &SmbShareSuite{
 			fileSources: []kube.FileSource{
 				{
 					Path:      path.Join(testFilesDir, "userssecret1.yaml"),
@@ -521,8 +468,10 @@ func allSmbShareSuites() map[string]suite.TestingSuite {
 				Username: "bob",
 				Password: "r0b0t",
 			}},
-		}
-		m["smbShareClusteredDMNoDNS"] = &SmbShareSuite{
+		},
+		)
+
+		clusteredTests.AddSuite("noDNS", &SmbShareSuite{
 			fileSources: []kube.FileSource{
 				{
 					Path:      path.Join(testFilesDir, "joinsecret1.yaml"),
@@ -545,8 +494,10 @@ func allSmbShareSuites() map[string]suite.TestingSuite {
 				Username: "DOMAIN1\\ckent",
 				Password: "1115Rose.",
 			}},
-		}
-		m["smbShareClusteredDMDNS"] = &SmbShareWithDNSSuite{SmbShareSuite{
+		},
+		)
+
+		clusteredTests.AddSuite("withDNS", &SmbShareWithDNSSuite{SmbShareSuite{
 			fileSources: []kube.FileSource{
 				{
 					Path:      path.Join(testFilesDir, "joinsecret1.yaml"),
@@ -570,8 +521,10 @@ func allSmbShareSuites() map[string]suite.TestingSuite {
 				Username: "DOMAIN1\\ckent",
 				Password: "1115Rose.",
 			}},
-		}}
-		m["smbSharesClusteredExternal"] = &SmbShareWithExternalNetSuite{SmbShareSuite{
+		}},
+		)
+
+		clusteredTests.AddSuite("external", &SmbShareWithExternalNetSuite{SmbShareSuite{
 			fileSources: []kube.FileSource{
 				{
 					Path:      path.Join(testFilesDir, "joinsecret1.yaml"),
@@ -599,12 +552,7 @@ func allSmbShareSuites() map[string]suite.TestingSuite {
 				Username: "DOMAIN1\\bwayne",
 				Password: "1115Rose.",
 			}},
-		}}
+		}},
+		)
 	}
-
-	return m
-}
-
-func init() {
-	utilruntime.Must(sambaoperatorv1alpha1.AddToScheme(kube.TypedClientScheme))
 }
