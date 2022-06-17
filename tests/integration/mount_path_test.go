@@ -129,7 +129,7 @@ func (s *MountPathSuite) TestMountPath() {
 }
 
 func init() {
-	mountPathTests := testRoot.Child("mountPath")
+	mountPathTests := testRoot.ChildPriority("mountPath", 3)
 	mountPathTests.AddSuite("default", &MountPathSuite{
 		auths: []smbclient.Auth{
 			{

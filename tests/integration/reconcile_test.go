@@ -156,7 +156,7 @@ func init() {
 		return
 	}
 
-	reconTests := testRoot.Child("reconciliation")
+	reconTests := testRoot.ChildPriority("reconciliation", 4)
 	reconTests.AddSuite("limitAvailModeChangeStandard", &limitAvailModeChangeSuite{
 		fileSources: []kube.FileSource{
 			{
