@@ -6,6 +6,7 @@ package integration
 import (
 	"context"
 	"fmt"
+	"path"
 	"time"
 
 	"github.com/stretchr/testify/suite"
@@ -125,4 +126,69 @@ func (s *MountPathSuite) TestMountPath() {
 		[]string{"ls"})
 	require.NoError(err)
 	require.Contains(string(out), "mnt1")
+}
+
+func init() {
+	mountPathTests := testRoot.Child("mountPath")
+	mountPathTests.AddSuite("default", &MountPathSuite{
+		auths: []smbclient.Auth{
+			{
+				Username: "sambauser",
+				Password: "1nsecurely",
+			},
+		},
+		commonSources: []kube.FileSource{
+			{
+				Path:      path.Join(testFilesDir, "userpvc.yaml"),
+				Namespace: testNamespace,
+			},
+			{
+				Path:      path.Join(testFilesDir, "userssecret1.yaml"),
+				Namespace: testNamespace,
+			},
+			{
+				Path:      path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
+				Namespace: testNamespace,
+			},
+		},
+		smbshareSetupSources: []kube.FileSource{
+			{
+				Path:      path.Join(testFilesDir, "smbsharepvc1.yaml"),
+				Namespace: testNamespace,
+			},
+		},
+		smbshareSources: []kube.FileSource{
+			{
+				Path:      path.Join(testFilesDir, "smbsharepvc2.yaml"),
+				Namespace: testNamespace,
+			},
+		},
+		smbShareSetupResource:   types.NamespacedName{testNamespace, "tshare1-setup-pvc"},
+		setupServerLabelPattern: "samba-operator.samba.org/service=tshare1-setup-pvc",
+		smbShareResource:        types.NamespacedName{testNamespace, "tshare1-pvc"},
+		serverLabelPattern:      "samba-operator.samba.org/service=tshare1-pvc",
+	},
+	)
+
+	mountPathTests.AddSuite("permissions", &MountPathPermissionsSuite{
+		commonSources: []kube.FileSource{
+			{
+				Path:      path.Join(testFilesDir, "userssecret1.yaml"),
+				Namespace: testNamespace,
+			},
+			{
+				Path:      path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
+				Namespace: testNamespace,
+			},
+		},
+		smbshareSources: []kube.FileSource{
+			{
+				Path:      path.Join(testFilesDir, "smbshare1.yaml"),
+				Namespace: testNamespace,
+			},
+		},
+		smbShareResource:   types.NamespacedName{testNamespace, "tshare1"},
+		serverLabelPattern: "samba-operator.samba.org/service=tshare1",
+	},
+	)
 }

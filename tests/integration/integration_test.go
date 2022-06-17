@@ -63,8 +63,5 @@ func (tg *TestGroup) AddSuite(n string, s suite.TestingSuite) {
 var testRoot *TestGroup = &TestGroup{}
 
 func TestIntegration(t *testing.T) {
-	t.Run("deploy", runSuiteTests(allDeploySuites()))
-	t.Run("smbShares", runSuiteTests(allSmbShareSuites()))
-	t.Run("createDelete", runSuiteTests(allShareCreateDeleteSuites()))
-	t.Run("reconciliation", runSuiteTests(allReconcileSuites()))
+	testRoot.Run(t)
 }
