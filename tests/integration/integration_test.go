@@ -4,6 +4,7 @@
 package integration
 
 import (
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -29,8 +30,13 @@ type TestingGroup interface {
 	Run(*testing.T)
 }
 
+type Prioritized interface {
+	Priority() int
+}
+
 type TestGroup struct {
 	name     string
+	prio     int
 	children []TestingGroup
 	suites   []namedSuite
 }
@@ -50,9 +56,28 @@ func (tg *TestGroup) Name() string {
 	return tg.name
 }
 
+func (tg *TestGroup) Priority() int {
+	return tg.prio
+}
+
 func (tg *TestGroup) Child(name string) *TestGroup {
-	child := &TestGroup{name: name}
+	return tg.ChildPriority(name, 1)
+}
+
+func (tg *TestGroup) ChildPriority(name string, prio int) *TestGroup {
+	child := &TestGroup{name: name, prio: prio}
 	tg.children = append(tg.children, child)
+	sort.SliceStable(tg.children, func(i, j int) bool {
+		pi := 0
+		pj := 0
+		if p, ok := tg.children[i].(Prioritized); ok {
+			pi = p.Priority()
+		}
+		if p, ok := tg.children[j].(Prioritized); ok {
+			pj = p.Priority()
+		}
+		return pi < pj
+	})
 	return child
 }
 
