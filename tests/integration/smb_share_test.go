@@ -339,7 +339,7 @@ func (s *SmbShareSuite) getMetricsContainer() (
 func init() {
 	utilruntime.Must(sambaoperatorv1alpha1.AddToScheme(kube.TypedClientScheme))
 
-	smbShareTests := testRoot.Child("smbShares")
+	smbShareTests := testRoot.ChildPriority("smbShares", 1)
 	smbShareTests.AddSuite("users1", &SmbShareSuite{
 		fileSources: []kube.FileSource{
 			{
@@ -445,7 +445,7 @@ func init() {
 	)
 
 	if testClusteredShares {
-		clusteredTests := testRoot.Child("smbSharesClustered")
+		clusteredTests := testRoot.ChildPriority("smbSharesClustered", 1)
 		clusteredTests.AddSuite("default", &SmbShareSuite{
 			fileSources: []kube.FileSource{
 				{

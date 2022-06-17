@@ -214,7 +214,7 @@ func (s *ShareCreateDeleteSuite) TestCreateAndDelete() {
 
 func init() {
 	ns := testNamespace
-	createDeleteTests := testRoot.Child("createDelete")
+	createDeleteTests := testRoot.ChildPriority("createDelete", 2)
 
 	createDeleteTests.AddSuite("simple", &ShareCreateDeleteSuite{
 		fileSources: []kube.FileSource{
