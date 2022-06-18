@@ -17,19 +17,24 @@ type namedSuite struct {
 	testSuite suite.TestingSuite
 }
 
+// TestingGroup provides an interface to run groups of tests.
 type TestingGroup interface {
 	Name() string
 	Run(*testing.T)
 }
 
+// Prioritized is an interface for checking a type's priority.
 type Prioritized interface {
 	Priority() int
 }
 
+// Shuffler is an interface for shuffling an object's contents.
 type Shuffler interface {
 	Shuffle()
 }
 
+// TestGroup contains other tests to run.
+// Tests can be testify test suites or other child TestingGroups.
 type TestGroup struct {
 	name     string
 	prio     int
@@ -37,6 +42,7 @@ type TestGroup struct {
 	suites   []namedSuite
 }
 
+// Run all contained tests.
 func (tg *TestGroup) Run(t *testing.T) {
 	for _, s := range tg.suites {
 		t.Run(s.name, func(t *testing.T) {
@@ -48,18 +54,23 @@ func (tg *TestGroup) Run(t *testing.T) {
 	}
 }
 
+// Name of the test group.
 func (tg *TestGroup) Name() string {
 	return tg.name
 }
 
+// Priority of the test group. Lower value is higher priority.
 func (tg *TestGroup) Priority() int {
 	return tg.prio
 }
 
+// Child returns an new child test group with the provided name.
 func (tg *TestGroup) Child(name string) *TestGroup {
 	return tg.ChildPriority(name, 1)
 }
 
+// ChildPriority returns a new child test group with the provided
+// name and priority value.
 func (tg *TestGroup) ChildPriority(name string, prio int) *TestGroup {
 	child := &TestGroup{name: name, prio: prio}
 	tg.children = append(tg.children, child)
@@ -77,6 +88,7 @@ func (tg *TestGroup) ChildPriority(name string, prio int) *TestGroup {
 	return child
 }
 
+// AddSuite adds a test suite to the group.
 func (tg *TestGroup) AddSuite(n string, s suite.TestingSuite) {
 	tg.suites = append(tg.suites, namedSuite{name: n, testSuite: s})
 }
@@ -106,6 +118,8 @@ func (tg *TestGroup) Shuffle() {
 
 var testRoot *TestGroup = &TestGroup{}
 
+// TestIntegration is the base test to start running our hierarchical
+// integration test "super-suite".
 func TestIntegration(t *testing.T) {
 	if testShuffleOrder {
 		t.Log("shuffling test order")
