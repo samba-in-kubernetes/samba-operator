@@ -143,6 +143,8 @@ func (s *SmbShareSuite) TestShareAccessByIP() {
 			Name: s.shareName,
 		},
 		auths: s.testAuths,
+		// pass a context for tracking
+		parentContext: s.defaultContext(),
 	}
 	suite.Run(s.T(), shareAccessSuite)
 }
@@ -157,6 +159,8 @@ func (s *SmbShareSuite) TestShareAccessByServiceName() {
 			Name: s.shareName,
 		},
 		auths: s.testAuths,
+		// pass a context for tracking
+		parentContext: s.defaultContext(),
 	}
 	suite.Run(s.T(), shareAccessSuite)
 }
@@ -229,12 +233,12 @@ func (s *SmbShareWithDNSSuite) TestShareAccessByDomainName() {
 	s.Require().Len(sl.Items, 1, "expected exactly one matching service")
 	svcClusterIP := sl.Items[0].Spec.ClusterIP
 	// test that the IP in ad dns matches the service
-	ctx, cancel := context.WithDeadline(
+	ctx2, cancel := context.WithDeadline(
 		ctx,
 		time.Now().Add(waitForIpTime))
 	defer cancel()
 	hc := dnsclient.MustPodExec(s.tc, testNamespace, "smbclient", "")
-	s.Require().NoError(poll.TryUntil(ctx, &poll.Prober{
+	s.Require().NoError(poll.TryUntil(ctx2, &poll.Prober{
 		Cond: func() (bool, error) {
 			ip4addr, err := hc.HostAddress(dnsname)
 			if err != nil {
@@ -250,6 +254,8 @@ func (s *SmbShareWithDNSSuite) TestShareAccessByDomainName() {
 			Name: s.shareName,
 		},
 		auths: s.testAuths,
+		// pass a context for tracking
+		parentContext: ctx,
 	}
 	suite.Run(s.T(), shareAccessSuite)
 }
