@@ -150,8 +150,8 @@ func (s *ShareCreateDeleteSuite) TestCreateAndDelete() {
 	existing := s.getCurrentResources()
 
 	createFromFiles(context.TODO(), require, s.tc, s.fileSources)
-	require.NoError(waitForPodExist(s))
-	require.NoError(waitForAllPodReady(s))
+	require.NoError(waitForPodExist(context.TODO(), s))
+	require.NoError(waitForAllPodReady(context.TODO(), s))
 
 	rs1 := s.getCurrentResources()
 	require.Greater(len(rs1.pods.Items), len(existing.pods.Items))

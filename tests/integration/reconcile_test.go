@@ -37,8 +37,8 @@ func (s *limitAvailModeChangeSuite) SetupSuite() {
 	require := s.Require()
 	s.tc = kube.NewTestClient("")
 	createFromFiles(context.TODO(), require, s.tc, s.fileSources)
-	require.NoError(waitForPodExist(s), "smb server pod does not exist")
-	require.NoError(waitForPodReady(s), "smb server pod is not ready")
+	require.NoError(waitForPodExist(context.TODO(), s), "smb server pod does not exist")
+	require.NoError(waitForPodReady(context.TODO(), s), "smb server pod is not ready")
 }
 
 func (s *limitAvailModeChangeSuite) TearDownSuite() {
@@ -76,8 +76,8 @@ func (s *limitAvailModeChangeSuite) TestAvailModeUnchanged() {
 	err = s.tc.TypedObjectClient().Update(
 		context.TODO(), smbShare)
 	require.NoError(err)
-	require.NoError(waitForPodExist(s), "smb server pod does not exist")
-	require.NoError(waitForPodReady(s), "smb server pod is not ready")
+	require.NoError(waitForPodExist(context.TODO(), s), "smb server pod does not exist")
+	require.NoError(waitForPodReady(context.TODO(), s), "smb server pod is not ready")
 	err = s.tc.TypedObjectClient().Get(
 		context.TODO(), s.smbShareResource, smbShare)
 	require.NoError(err)
@@ -101,8 +101,8 @@ func (s *scaleoutClusterSuite) SetupSuite() {
 	s.tc = kube.NewTestClient("")
 	createSMBClientIfMissing(require, s.tc)
 	createFromFiles(context.TODO(), require, s.tc, s.fileSources)
-	require.NoError(waitForPodExist(s), "smb server pod does not exist")
-	require.NoError(waitForPodReady(s), "smb server pod is not ready")
+	require.NoError(waitForPodExist(context.TODO(), s), "smb server pod does not exist")
+	require.NoError(waitForPodReady(context.TODO(), s), "smb server pod is not ready")
 }
 
 func (s *scaleoutClusterSuite) TearDownSuite() {
@@ -136,8 +136,8 @@ func (s *scaleoutClusterSuite) TestScaleoutClusterSuite() {
 	err = s.tc.TypedObjectClient().Update(
 		context.TODO(), smbShare)
 	require.NoError(err)
-	require.NoError(waitForPodExist(s), "smb server pod does not exist")
-	require.NoError(waitForPodReady(s), "smb server pod is not ready")
+	require.NoError(waitForPodExist(context.TODO(), s), "smb server pod does not exist")
+	require.NoError(waitForPodReady(context.TODO(), s), "smb server pod is not ready")
 
 	l, err := s.tc.Clientset().AppsV1().StatefulSets(s.smbShareResource.Namespace).List(
 		context.TODO(),
