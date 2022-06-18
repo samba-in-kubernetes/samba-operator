@@ -12,16 +12,6 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-func runSuiteTests(sm map[string]suite.TestingSuite) func(t *testing.T) {
-	return func(t *testing.T) {
-		for name, ts := range sm {
-			t.Run(name, func(t *testing.T) {
-				suite.Run(t, ts)
-			})
-		}
-	}
-}
-
 type namedSuite struct {
 	name      string
 	testSuite suite.TestingSuite
