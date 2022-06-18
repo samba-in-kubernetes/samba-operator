@@ -23,10 +23,14 @@ type MountPathPermissionsSuite struct {
 	tc                 *kube.TestClient
 }
 
+func (s *MountPathPermissionsSuite) defaultContext() context.Context {
+	return testContext()
+}
+
 func (s *MountPathPermissionsSuite) waitForPods(labelPattern string) {
 	require := s.Require()
 	ctx, cancel := context.WithDeadline(
-		context.TODO(),
+		s.defaultContext(),
 		time.Now().Add(waitForPodsTime))
 	defer cancel()
 	opts := kube.PodFetchOptions{
@@ -48,13 +52,14 @@ func (s *MountPathPermissionsSuite) SetupSuite() {
 	require := s.Require()
 
 	// Create smbshare with Spec.Storage.PVC.Path specified
-	createFromFiles(context.TODO(), require, s.tc, append(s.commonSources, s.smbshareSources...))
+	createFromFiles(s.defaultContext(), require, s.tc, append(s.commonSources, s.smbshareSources...))
 	s.waitForPods(s.serverLabelPattern)
 }
 
 func (s *MountPathPermissionsSuite) TearDownSuite() {
-	deleteFromFiles(context.TODO(), s.Require(), s.tc, s.smbshareSources)
-	deleteFromFiles(context.TODO(), s.Require(), s.tc, s.commonSources)
+	ctx := s.defaultContext()
+	deleteFromFiles(ctx, s.Require(), s.tc, s.smbshareSources)
+	deleteFromFiles(ctx, s.Require(), s.tc, s.commonSources)
 }
 
 // The test checks the first directory within /mnt for the xattr.
@@ -68,7 +73,7 @@ func (s *MountPathPermissionsSuite) TestMountPathPermissions() {
 	}
 
 	pods, err := s.tc.FetchPods(
-		context.TODO(),
+		s.defaultContext(),
 		kube.PodFetchOptions{
 			Namespace:     s.smbShareResource.Namespace,
 			LabelSelector: s.serverLabelPattern,
