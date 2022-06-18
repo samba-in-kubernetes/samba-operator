@@ -49,7 +49,7 @@ func (s *SmbShareSuite) SetupSuite() {
 	s.tc = kube.NewTestClient("")
 	// ensure the smbclient test pod exists
 	createSMBClientIfMissing(s.Require(), s.tc)
-	createFromFiles(s.Require(), s.tc, s.fileSources)
+	createFromFiles(context.TODO(), s.Require(), s.tc, s.fileSources)
 }
 
 func (s *SmbShareSuite) SetupTest() {
@@ -59,7 +59,7 @@ func (s *SmbShareSuite) SetupTest() {
 }
 
 func (s *SmbShareSuite) TearDownSuite() {
-	deleteFromFiles(s.Require(), s.tc, s.fileSources)
+	deleteFromFiles(context.TODO(), s.Require(), s.tc, s.fileSources)
 }
 
 func (s *SmbShareSuite) getTestClient() *kube.TestClient {

@@ -24,11 +24,14 @@ type checker interface {
 }
 
 func createFromFiles(
-	require checker, tc *kube.TestClient, srcs []kube.FileSource) {
+	ctx context.Context,
+	require checker,
+	tc *kube.TestClient,
+	srcs []kube.FileSource) {
 	// ---
 	for _, fs := range srcs {
 		_, err := tc.CreateFromFileIfMissing(
-			context.TODO(),
+			ctx,
 			fs,
 		)
 		require.NoError(err)
@@ -36,11 +39,14 @@ func createFromFiles(
 }
 
 func deleteFromFiles(
-	require checker, tc *kube.TestClient, srcs []kube.FileSource) {
+	ctx context.Context,
+	require checker,
+	tc *kube.TestClient,
+	srcs []kube.FileSource) {
 	// ---
 	for _, fs := range srcs {
 		err := tc.DeleteResourceMatchingFile(
-			context.TODO(),
+			ctx,
 			fs,
 		)
 		require.NoError(err)

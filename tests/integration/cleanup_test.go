@@ -63,7 +63,7 @@ func (s *ShareCreateDeleteSuite) SetupTest() {
 }
 
 func (s *ShareCreateDeleteSuite) TearDownSuite() {
-	deleteFromFiles(s.Require(), s.tc, s.fileSources)
+	deleteFromFiles(context.TODO(), s.Require(), s.tc, s.fileSources)
 }
 
 func (s *ShareCreateDeleteSuite) getTestClient() *kube.TestClient {
@@ -149,7 +149,7 @@ func (s *ShareCreateDeleteSuite) TestCreateAndDelete() {
 	require := s.Require()
 	existing := s.getCurrentResources()
 
-	createFromFiles(require, s.tc, s.fileSources)
+	createFromFiles(context.TODO(), require, s.tc, s.fileSources)
 	require.NoError(waitForPodExist(s))
 	require.NoError(waitForAllPodReady(s))
 
@@ -197,7 +197,7 @@ func (s *ShareCreateDeleteSuite) TestCreateAndDelete() {
 	err = s.waitForNoSmbServices()
 	require.NoError(err)
 
-	deleteFromFiles(require, s.tc, s.fileSources)
+	deleteFromFiles(context.TODO(), require, s.tc, s.fileSources)
 	time.Sleep(waitForClearTime)
 
 	rs2 := s.getCurrentResources()

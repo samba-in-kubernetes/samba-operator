@@ -36,13 +36,13 @@ func (s *limitAvailModeChangeSuite) SetupSuite() {
 	// ensure the smbclient test pod exists
 	require := s.Require()
 	s.tc = kube.NewTestClient("")
-	createFromFiles(require, s.tc, s.fileSources)
+	createFromFiles(context.TODO(), require, s.tc, s.fileSources)
 	require.NoError(waitForPodExist(s), "smb server pod does not exist")
 	require.NoError(waitForPodReady(s), "smb server pod is not ready")
 }
 
 func (s *limitAvailModeChangeSuite) TearDownSuite() {
-	deleteFromFiles(s.Require(), s.tc, s.fileSources)
+	deleteFromFiles(context.TODO(), s.Require(), s.tc, s.fileSources)
 }
 
 func (s *limitAvailModeChangeSuite) getTestClient() *kube.TestClient {
@@ -100,13 +100,13 @@ func (s *scaleoutClusterSuite) SetupSuite() {
 	require := s.Require()
 	s.tc = kube.NewTestClient("")
 	createSMBClientIfMissing(require, s.tc)
-	createFromFiles(require, s.tc, s.fileSources)
+	createFromFiles(context.TODO(), require, s.tc, s.fileSources)
 	require.NoError(waitForPodExist(s), "smb server pod does not exist")
 	require.NoError(waitForPodReady(s), "smb server pod is not ready")
 }
 
 func (s *scaleoutClusterSuite) TearDownSuite() {
-	deleteFromFiles(s.Require(), s.tc, s.fileSources)
+	deleteFromFiles(context.TODO(), s.Require(), s.tc, s.fileSources)
 }
 
 func (s *scaleoutClusterSuite) getTestClient() *kube.TestClient {
