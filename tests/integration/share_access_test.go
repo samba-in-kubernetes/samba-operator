@@ -24,7 +24,7 @@ func (s *ShareAccessSuite) SetupSuite() {
 	s.clientPod = "smbclient"
 
 	// ensure the smbclient test pod is configured
-	createSMBClientIfMissing(s.Require(), kube.NewTestClient(""))
+	createSMBClientIfMissing(context.TODO(), s.Require(), kube.NewTestClient(""))
 }
 
 // TestLogin verifies that users can log into the share.

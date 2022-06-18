@@ -17,6 +17,7 @@ var (
 	waitForPodsTime  = 120 * time.Second
 	waitForReadyTime = 200 * time.Second
 	waitForClearTime = 200 * time.Millisecond
+	clientCreateTime = 120 * time.Second
 )
 
 type checker interface {
@@ -98,10 +99,11 @@ func waitForAllPodReady(ctx context.Context, s podTestClient) error {
 	)
 }
 
-func createSMBClientIfMissing(require *require.Assertions, tc *kube.TestClient) {
+func createSMBClientIfMissing(
+	ctx context.Context, require *require.Assertions, tc *kube.TestClient) {
 	// ---
 	_, err := tc.CreateFromFileIfMissing(
-		context.TODO(),
+		ctx,
 		kube.FileSource{
 			Path:      path.Join(testFilesDir, "data1.yaml"),
 			Namespace: testNamespace,
@@ -109,7 +111,7 @@ func createSMBClientIfMissing(require *require.Assertions, tc *kube.TestClient) 
 	require.NoError(err)
 
 	_, err = tc.CreateFromFileIfMissing(
-		context.TODO(),
+		ctx,
 		kube.FileSource{
 			Path:      path.Join(testFilesDir, "client-test-pod.yaml"),
 			Namespace: testNamespace,
@@ -117,13 +119,13 @@ func createSMBClientIfMissing(require *require.Assertions, tc *kube.TestClient) 
 	require.NoError(err)
 
 	// ensure the smbclient test pod exists and is ready
-	ctx, cancel := context.WithDeadline(
-		context.TODO(),
-		time.Now().Add(120*time.Second))
+	ctx2, cancel := context.WithTimeout(
+		ctx,
+		clientCreateTime)
 	defer cancel()
 	l := "app=samba-operator-test-smbclient"
 	require.NoError(kube.WaitForAnyPodExists(
-		ctx,
+		ctx2,
 		kube.NewTestClient(""),
 		kube.PodFetchOptions{
 			Namespace:     testNamespace,
@@ -132,7 +134,7 @@ func createSMBClientIfMissing(require *require.Assertions, tc *kube.TestClient) 
 		"smbclient pod does not exist",
 	)
 	require.NoError(kube.WaitForAnyPodReady(
-		ctx,
+		ctx2,
 		kube.NewTestClient(""),
 		kube.PodFetchOptions{
 			Namespace:     testNamespace,
