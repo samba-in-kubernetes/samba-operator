@@ -30,10 +30,14 @@ type MountPathSuite struct {
 	tc                      *kube.TestClient
 }
 
+func (s *MountPathSuite) defaultContext() context.Context {
+	return testContext()
+}
+
 func (s *MountPathSuite) waitForPods(labelPattern string) {
 	require := s.Require()
 	ctx, cancel := context.WithDeadline(
-		context.TODO(),
+		s.defaultContext(),
 		time.Now().Add(waitForPodsTime))
 	defer cancel()
 	opts := kube.PodFetchOptions{
@@ -52,12 +56,13 @@ func (s *MountPathSuite) waitForPods(labelPattern string) {
 
 func (s *MountPathSuite) SetupSuite() {
 	s.tc = kube.NewTestClient("")
+	ctx := s.defaultContext()
 	require := s.Require()
 
 	// Ensure smbclient is up and running
-	createSMBClientIfMissing(context.TODO(), require, s.tc)
+	createSMBClientIfMissing(ctx, require, s.tc)
 
-	createFromFiles(context.TODO(), require, s.tc, append(s.commonSources, s.smbshareSetupSources...))
+	createFromFiles(ctx, require, s.tc, append(s.commonSources, s.smbshareSetupSources...))
 	// ensure the smbserver test pod exists and is ready
 	s.waitForPods(s.setupServerLabelPattern)
 
@@ -72,7 +77,7 @@ func (s *MountPathSuite) SetupSuite() {
 	// Create folders over smbclient
 	smbclient := smbclient.MustPodExec(s.tc, testNamespace,
 		"smbclient", "client")
-	err := smbclient.CacheFlush(context.TODO())
+	err := smbclient.CacheFlush(ctx)
 	require.NoError(err)
 	auth := s.auths[0]
 	cmds := []string{
@@ -82,27 +87,29 @@ func (s *MountPathSuite) SetupSuite() {
 		"mkdir testmnt2/mnt2",
 	}
 	err = smbclient.Command(
-		context.TODO(),
+		ctx,
 		share,
 		auth,
 		cmds)
 	require.NoError(err)
 
 	// Delete the smbshare created
-	deleteFromFiles(context.TODO(), require, s.tc, s.smbshareSetupSources)
+	deleteFromFiles(ctx, require, s.tc, s.smbshareSetupSources)
 
 	// Create smbshare with Spec.Storage.PVC.Path specified
-	createFromFiles(context.TODO(), require, s.tc, append(s.commonSources, s.smbshareSources...))
+	createFromFiles(ctx, require, s.tc, append(s.commonSources, s.smbshareSources...))
 	s.waitForPods(s.serverLabelPattern)
 }
 
 func (s *MountPathSuite) TearDownSuite() {
-	deleteFromFiles(context.TODO(), s.Require(), s.tc, s.smbshareSetupSources)
-	deleteFromFiles(context.TODO(), s.Require(), s.tc, s.smbshareSources)
-	deleteFromFiles(context.TODO(), s.Require(), s.tc, s.commonSources)
+	ctx := s.defaultContext()
+	deleteFromFiles(ctx, s.Require(), s.tc, s.smbshareSetupSources)
+	deleteFromFiles(ctx, s.Require(), s.tc, s.smbshareSources)
+	deleteFromFiles(ctx, s.Require(), s.tc, s.commonSources)
 }
 
 func (s *MountPathSuite) TestMountPath() {
+	ctx := s.defaultContext()
 	require := s.Require()
 
 	svcname := fmt.Sprintf("%s.%s.svc.cluster.local",
@@ -116,11 +123,11 @@ func (s *MountPathSuite) TestMountPath() {
 	// Test if correct path mounted using smbclient
 	smbclient := smbclient.MustPodExec(s.tc, testNamespace,
 		"smbclient", "client")
-	err := smbclient.CacheFlush(context.TODO())
+	err := smbclient.CacheFlush(ctx)
 	require.NoError(err)
 	auth := s.auths[0]
 	out, err := smbclient.CommandOutput(
-		context.TODO(),
+		ctx,
 		share,
 		auth,
 		[]string{"ls"})
