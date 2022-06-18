@@ -48,7 +48,7 @@ func (s *SmbShareSuite) SetupSuite() {
 	}
 	s.tc = kube.NewTestClient("")
 	// ensure the smbclient test pod exists
-	createSMBClientIfMissing(s.Require(), s.tc)
+	createSMBClientIfMissing(context.TODO(), s.Require(), s.tc)
 	createFromFiles(context.TODO(), s.Require(), s.tc, s.fileSources)
 }
 

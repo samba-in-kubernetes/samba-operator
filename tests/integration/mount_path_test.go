@@ -55,7 +55,7 @@ func (s *MountPathSuite) SetupSuite() {
 	require := s.Require()
 
 	// Ensure smbclient is up and running
-	createSMBClientIfMissing(require, s.tc)
+	createSMBClientIfMissing(context.TODO(), require, s.tc)
 
 	createFromFiles(context.TODO(), require, s.tc, append(s.commonSources, s.smbshareSetupSources...))
 	// ensure the smbserver test pod exists and is ready

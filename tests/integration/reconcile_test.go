@@ -99,7 +99,7 @@ func (s *scaleoutClusterSuite) SetupSuite() {
 	// ensure the smbclient test pod exists
 	require := s.Require()
 	s.tc = kube.NewTestClient("")
-	createSMBClientIfMissing(require, s.tc)
+	createSMBClientIfMissing(context.TODO(), require, s.tc)
 	createFromFiles(context.TODO(), require, s.tc, s.fileSources)
 	require.NoError(waitForPodExist(context.TODO(), s), "smb server pod does not exist")
 	require.NoError(waitForPodReady(context.TODO(), s), "smb server pod is not ready")
