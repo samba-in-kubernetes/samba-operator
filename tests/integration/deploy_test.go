@@ -24,6 +24,10 @@ type DeploySuite struct {
 	tc *kube.TestClient
 }
 
+func (s *DeploySuite) defaultContext() context.Context {
+	return testContext()
+}
+
 // SetupSuite sets up (deploys) the operator.
 func (s *DeploySuite) SetupSuite() {
 	s.tc = kube.NewTestClient("")
@@ -37,7 +41,7 @@ func (s DeploySuite) createKustomized(dir string) {
 	err = cmd.Start()
 	s.Require().NoError(err, "kustomize command failed to start")
 	_, err = s.tc.CreateFromFileIfMissing(
-		context.TODO(),
+		s.defaultContext(),
 		kube.DirectSource{
 			Source:    stdout,
 			Namespace: testNamespace,
@@ -50,7 +54,7 @@ func (s DeploySuite) createKustomized(dir string) {
 
 func (s DeploySuite) TestOperatorReady() {
 	ctx, cancel := context.WithDeadline(
-		context.TODO(),
+		s.defaultContext(),
 		time.Now().Add(90*time.Second))
 	defer cancel()
 	l := "control-plane=controller-manager"
@@ -83,7 +87,7 @@ func (s DeploySuite) TestImageAndTag() {
 		return
 	}
 	deploy, err := s.tc.Clientset().AppsV1().Deployments(testNamespace).Get(
-		context.TODO(),
+		s.defaultContext(),
 		"samba-operator-controller-manager",
 		metav1.GetOptions{})
 	require := s.Require()
