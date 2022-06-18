@@ -57,7 +57,7 @@ func (s *MountPathSuite) SetupSuite() {
 	// Ensure smbclient is up and running
 	createSMBClientIfMissing(require, s.tc)
 
-	createFromFiles(require, s.tc, append(s.commonSources, s.smbshareSetupSources...))
+	createFromFiles(context.TODO(), require, s.tc, append(s.commonSources, s.smbshareSetupSources...))
 	// ensure the smbserver test pod exists and is ready
 	s.waitForPods(s.setupServerLabelPattern)
 
@@ -89,17 +89,17 @@ func (s *MountPathSuite) SetupSuite() {
 	require.NoError(err)
 
 	// Delete the smbshare created
-	deleteFromFiles(require, s.tc, s.smbshareSetupSources)
+	deleteFromFiles(context.TODO(), require, s.tc, s.smbshareSetupSources)
 
 	// Create smbshare with Spec.Storage.PVC.Path specified
-	createFromFiles(require, s.tc, append(s.commonSources, s.smbshareSources...))
+	createFromFiles(context.TODO(), require, s.tc, append(s.commonSources, s.smbshareSources...))
 	s.waitForPods(s.serverLabelPattern)
 }
 
 func (s *MountPathSuite) TearDownSuite() {
-	deleteFromFiles(s.Require(), s.tc, s.smbshareSetupSources)
-	deleteFromFiles(s.Require(), s.tc, s.smbshareSources)
-	deleteFromFiles(s.Require(), s.tc, s.commonSources)
+	deleteFromFiles(context.TODO(), s.Require(), s.tc, s.smbshareSetupSources)
+	deleteFromFiles(context.TODO(), s.Require(), s.tc, s.smbshareSources)
+	deleteFromFiles(context.TODO(), s.Require(), s.tc, s.commonSources)
 }
 
 func (s *MountPathSuite) TestMountPath() {

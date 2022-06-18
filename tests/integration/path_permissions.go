@@ -48,13 +48,13 @@ func (s *MountPathPermissionsSuite) SetupSuite() {
 	require := s.Require()
 
 	// Create smbshare with Spec.Storage.PVC.Path specified
-	createFromFiles(require, s.tc, append(s.commonSources, s.smbshareSources...))
+	createFromFiles(context.TODO(), require, s.tc, append(s.commonSources, s.smbshareSources...))
 	s.waitForPods(s.serverLabelPattern)
 }
 
 func (s *MountPathPermissionsSuite) TearDownSuite() {
-	deleteFromFiles(s.Require(), s.tc, s.smbshareSources)
-	deleteFromFiles(s.Require(), s.tc, s.commonSources)
+	deleteFromFiles(context.TODO(), s.Require(), s.tc, s.smbshareSources)
+	deleteFromFiles(context.TODO(), s.Require(), s.tc, s.commonSources)
 }
 
 // The test checks the first directory within /mnt for the xattr.
