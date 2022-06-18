@@ -117,5 +117,9 @@ func (tg *TestGroup) Shuffle() {
 var testRoot *TestGroup = &TestGroup{}
 
 func TestIntegration(t *testing.T) {
+	if testShuffleOrder {
+		t.Log("shuffling test order")
+		testRoot.Shuffle()
+	}
 	testRoot.Run(t)
 }

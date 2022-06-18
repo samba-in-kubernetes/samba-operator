@@ -5,6 +5,7 @@ package integration
 
 import (
 	"os"
+	"strconv"
 )
 
 var (
@@ -18,6 +19,8 @@ var (
 	testExpectedImage = "quay.io/samba.org/samba-operator:latest"
 
 	testClusteredShares = false
+
+	testShuffleOrder = false
 )
 
 func init() {
@@ -53,5 +56,10 @@ func init() {
 	testClustering := os.Getenv("SMBOP_TEST_CLUSTERED")
 	if testClustering != "" {
 		testClusteredShares = true
+	}
+
+	shuffleEnv := os.Getenv("SMBOP_TEST_SHUFFLE")
+	if b, err := strconv.ParseBool(shuffleEnv); b && err == nil {
+		testShuffleOrder = true
 	}
 }
