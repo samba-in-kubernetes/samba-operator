@@ -39,6 +39,17 @@ type SmbShareSuite struct {
 	tc *kube.TestClient
 }
 
+func (s *SmbShareSuite) defaultContext() context.Context {
+	ctx := testContext()
+	if s.smbShareResource.Name != "" {
+		ctx = context.WithValue(ctx, TestShareKey,
+			fmt.Sprintf("%s/%s",
+				s.smbShareResource.Namespace,
+				s.smbShareResource.Name))
+	}
+	return ctx
+}
+
 func (s *SmbShareSuite) SetupSuite() {
 	if s.destNamespace == "" {
 		s.destNamespace = testNamespace
@@ -48,18 +59,21 @@ func (s *SmbShareSuite) SetupSuite() {
 	}
 	s.tc = kube.NewTestClient("")
 	// ensure the smbclient test pod exists
-	createSMBClientIfMissing(context.TODO(), s.Require(), s.tc)
-	createFromFiles(context.TODO(), s.Require(), s.tc, s.fileSources)
+	ctx := s.defaultContext()
+	createSMBClientIfMissing(ctx, s.Require(), s.tc)
+	createFromFiles(ctx, s.Require(), s.tc, s.fileSources)
 }
 
 func (s *SmbShareSuite) SetupTest() {
+	ctx := s.defaultContext()
 	require := s.Require()
-	require.NoError(waitForPodExist(context.TODO(), s), "smb server pod does not exist")
-	require.NoError(waitForPodReady(context.TODO(), s), "smb server pod is not ready")
+	require.NoError(waitForPodExist(ctx, s), "smb server pod does not exist")
+	require.NoError(waitForPodReady(ctx, s), "smb server pod is not ready")
 }
 
 func (s *SmbShareSuite) TearDownSuite() {
-	deleteFromFiles(context.TODO(), s.Require(), s.tc, s.fileSources)
+	ctx := s.defaultContext()
+	deleteFromFiles(ctx, s.Require(), s.tc, s.fileSources)
 }
 
 func (s *SmbShareSuite) getTestClient() *kube.TestClient {
@@ -86,10 +100,11 @@ func (s *SmbShareSuite) getPodIP() (string, error) {
 }
 
 func (s *SmbShareSuite) getReadyPod() (*corev1.Pod, error) {
+	ctx := s.defaultContext()
 	l := fmt.Sprintf(
 		"samba-operator.samba.org/service=%s", s.smbShareResource.Name)
 	pods, err := s.tc.FetchPods(
-		context.TODO(),
+		ctx,
 		kube.PodFetchOptions{
 			Namespace:     s.destNamespace,
 			LabelSelector: l,
@@ -107,13 +122,13 @@ func (s *SmbShareSuite) getReadyPod() (*corev1.Pod, error) {
 }
 
 func (s *SmbShareSuite) TestPodsReady() {
-	s.Require().NoError(waitForPodReady(context.TODO(), s))
+	s.Require().NoError(waitForPodReady(s.defaultContext(), s))
 }
 
 func (s *SmbShareSuite) TestSmbShareServerGroup() {
 	smbShare := &sambaoperatorv1alpha1.SmbShare{}
 	err := s.tc.TypedObjectClient().Get(
-		context.TODO(), s.smbShareResource, smbShare)
+		s.defaultContext(), s.smbShareResource, smbShare)
 	s.Require().NoError(err)
 	s.Require().Equal(s.smbShareResource.Name, smbShare.Name)
 	s.Require().Equal(s.smbShareResource.Name, smbShare.Status.ServerGroup)
@@ -147,7 +162,8 @@ func (s *SmbShareSuite) TestShareAccessByServiceName() {
 }
 
 func (s *SmbShareSuite) TestShareEvents() {
-	s.Require().NoError(waitForPodReady(context.TODO(), s))
+	ctx := s.defaultContext()
+	s.Require().NoError(waitForPodReady(ctx, s))
 
 	// this unstructured stuff is just to get a UID for the SmbShare for event
 	// filtering. Since the tests don't currently have a way to use a typed
@@ -158,13 +174,13 @@ func (s *SmbShareSuite) TestShareEvents() {
 	dc, err := s.tc.DynamicClientset(u)
 	s.Require().NoError(err)
 	u, err = dc.Namespace(s.smbShareResource.Namespace).Get(
-		context.TODO(),
+		ctx,
 		s.smbShareResource.Name,
 		metav1.GetOptions{})
 	s.Require().NoError(err)
 
 	l, err := s.tc.Clientset().CoreV1().Events(s.smbShareResource.Namespace).List(
-		context.TODO(),
+		ctx,
 		metav1.ListOptions{
 			FieldSelector: fmt.Sprintf("involvedObject.kind=SmbShare,involvedObject.name=%s,involvedObject.uid=%s", s.smbShareResource.Name, u.GetUID()),
 		})
@@ -192,6 +208,7 @@ type SmbShareWithDNSSuite struct {
 }
 
 func (s *SmbShareWithDNSSuite) TestShareAccessByDomainName() {
+	ctx := s.defaultContext()
 	dnsname := fmt.Sprintf("%s-cluster.domain1.sink.test",
 		s.smbShareResource.Name)
 	lbl := fmt.Sprintf(
@@ -203,7 +220,7 @@ func (s *SmbShareWithDNSSuite) TestShareAccessByDomainName() {
 	// Previously, we just had a sleep but it was an unreliable workaround and
 	// it didn't help detect where the problem was.
 	sl, err := s.tc.Clientset().CoreV1().Services(s.destNamespace).List(
-		context.TODO(),
+		ctx,
 		metav1.ListOptions{
 			LabelSelector: lbl,
 		},
@@ -213,7 +230,7 @@ func (s *SmbShareWithDNSSuite) TestShareAccessByDomainName() {
 	svcClusterIP := sl.Items[0].Spec.ClusterIP
 	// test that the IP in ad dns matches the service
 	ctx, cancel := context.WithDeadline(
-		context.TODO(),
+		ctx,
 		time.Now().Add(waitForIpTime))
 	defer cancel()
 	hc := dnsclient.MustPodExec(s.tc, testNamespace, "smbclient", "")
@@ -241,7 +258,7 @@ func (s *SmbShareWithDNSSuite) TestPodForDNSContainers() {
 	l := fmt.Sprintf(
 		"samba-operator.samba.org/service=%s", s.smbShareResource.Name)
 	pods, err := s.tc.FetchPods(
-		context.TODO(),
+		s.defaultContext(),
 		kube.PodFetchOptions{
 			Namespace:     s.destNamespace,
 			LabelSelector: l,
@@ -266,7 +283,7 @@ type SmbShareWithExternalNetSuite struct {
 func (s *SmbShareWithExternalNetSuite) TestServiceIsLoadBalancer() {
 	lbl := fmt.Sprintf("samba-operator.samba.org/service=%s", s.smbShareResource.Name)
 	l, err := s.tc.Clientset().CoreV1().Services(s.destNamespace).List(
-		context.TODO(),
+		s.defaultContext(),
 		metav1.ListOptions{
 			LabelSelector: lbl,
 		},
@@ -284,7 +301,7 @@ func (s *SmbShareWithExternalNetSuite) TestServiceIsLoadBalancer() {
 }
 
 func (s *SmbShareSuite) TestMetricsOnPod() {
-	s.Require().NoError(waitForPodReady(context.TODO(), s))
+	s.Require().NoError(waitForPodReady(s.defaultContext(), s))
 
 	pod, cont, err := s.getMetricsContainer()
 	s.Require().NoError(err)
