@@ -32,17 +32,22 @@ type limitAvailModeChangeSuite struct {
 	tc *kube.TestClient
 }
 
+func (s *limitAvailModeChangeSuite) defaultContext() context.Context {
+	return testContext()
+}
+
 func (s *limitAvailModeChangeSuite) SetupSuite() {
 	// ensure the smbclient test pod exists
 	require := s.Require()
 	s.tc = kube.NewTestClient("")
-	createFromFiles(context.TODO(), require, s.tc, s.fileSources)
-	require.NoError(waitForPodExist(context.TODO(), s), "smb server pod does not exist")
-	require.NoError(waitForPodReady(context.TODO(), s), "smb server pod is not ready")
+	ctx := s.defaultContext()
+	createFromFiles(ctx, require, s.tc, s.fileSources)
+	require.NoError(waitForPodExist(ctx, s), "smb server pod does not exist")
+	require.NoError(waitForPodReady(ctx, s), "smb server pod is not ready")
 }
 
 func (s *limitAvailModeChangeSuite) TearDownSuite() {
-	deleteFromFiles(context.TODO(), s.Require(), s.tc, s.fileSources)
+	deleteFromFiles(s.defaultContext(), s.Require(), s.tc, s.fileSources)
 }
 
 func (s *limitAvailModeChangeSuite) getTestClient() *kube.TestClient {
@@ -60,10 +65,11 @@ func (s *limitAvailModeChangeSuite) getPodFetchOptions() kube.PodFetchOptions {
 }
 
 func (s *limitAvailModeChangeSuite) TestAvailModeUnchanged() {
+	ctx := s.defaultContext()
 	require := s.Require()
 	smbShare := &sambaoperatorv1alpha1.SmbShare{}
 	err := s.tc.TypedObjectClient().Get(
-		context.TODO(), s.smbShareResource, smbShare)
+		ctx, s.smbShareResource, smbShare)
 	require.NoError(err)
 	require.NotNil(smbShare.Annotations)
 	require.Contains(smbShare.Annotations[backendAnnotation], s.expectBackend)
@@ -74,12 +80,12 @@ func (s *limitAvailModeChangeSuite) TestAvailModeUnchanged() {
 	smbShare.Spec.Scaling.MinClusterSize = 2
 
 	err = s.tc.TypedObjectClient().Update(
-		context.TODO(), smbShare)
+		ctx, smbShare)
 	require.NoError(err)
-	require.NoError(waitForPodExist(context.TODO(), s), "smb server pod does not exist")
-	require.NoError(waitForPodReady(context.TODO(), s), "smb server pod is not ready")
+	require.NoError(waitForPodExist(ctx, s), "smb server pod does not exist")
+	require.NoError(waitForPodReady(ctx, s), "smb server pod is not ready")
 	err = s.tc.TypedObjectClient().Get(
-		context.TODO(), s.smbShareResource, smbShare)
+		ctx, s.smbShareResource, smbShare)
 	require.NoError(err)
 	require.NotNil(smbShare.Annotations)
 	require.Contains(smbShare.Annotations[backendAnnotation], s.expectBackend)
@@ -95,18 +101,23 @@ type scaleoutClusterSuite struct {
 	tc *kube.TestClient
 }
 
+func (s *scaleoutClusterSuite) defaultContext() context.Context {
+	return testContext()
+}
+
 func (s *scaleoutClusterSuite) SetupSuite() {
 	// ensure the smbclient test pod exists
+	ctx := s.defaultContext()
 	require := s.Require()
 	s.tc = kube.NewTestClient("")
-	createSMBClientIfMissing(context.TODO(), require, s.tc)
-	createFromFiles(context.TODO(), require, s.tc, s.fileSources)
-	require.NoError(waitForPodExist(context.TODO(), s), "smb server pod does not exist")
-	require.NoError(waitForPodReady(context.TODO(), s), "smb server pod is not ready")
+	createSMBClientIfMissing(ctx, require, s.tc)
+	createFromFiles(ctx, require, s.tc, s.fileSources)
+	require.NoError(waitForPodExist(ctx, s), "smb server pod does not exist")
+	require.NoError(waitForPodReady(ctx, s), "smb server pod is not ready")
 }
 
 func (s *scaleoutClusterSuite) TearDownSuite() {
-	deleteFromFiles(context.TODO(), s.Require(), s.tc, s.fileSources)
+	deleteFromFiles(s.defaultContext(), s.Require(), s.tc, s.fileSources)
 }
 
 func (s *scaleoutClusterSuite) getTestClient() *kube.TestClient {
@@ -124,23 +135,24 @@ func (s *scaleoutClusterSuite) getPodFetchOptions() kube.PodFetchOptions {
 }
 
 func (s *scaleoutClusterSuite) TestScaleoutClusterSuite() {
+	ctx := s.defaultContext()
 	require := s.Require()
 	smbShare := &sambaoperatorv1alpha1.SmbShare{}
 	err := s.tc.TypedObjectClient().Get(
-		context.TODO(), s.smbShareResource, smbShare)
+		ctx, s.smbShareResource, smbShare)
 	require.NoError(err)
 
 	// Increase Cluster Size by 1 and check result
 	newClusterSize := smbShare.Spec.Scaling.MinClusterSize + 1
 	smbShare.Spec.Scaling.MinClusterSize = newClusterSize
 	err = s.tc.TypedObjectClient().Update(
-		context.TODO(), smbShare)
+		ctx, smbShare)
 	require.NoError(err)
-	require.NoError(waitForPodExist(context.TODO(), s), "smb server pod does not exist")
-	require.NoError(waitForPodReady(context.TODO(), s), "smb server pod is not ready")
+	require.NoError(waitForPodExist(ctx, s), "smb server pod does not exist")
+	require.NoError(waitForPodReady(ctx, s), "smb server pod is not ready")
 
 	l, err := s.tc.Clientset().AppsV1().StatefulSets(s.smbShareResource.Namespace).List(
-		context.TODO(),
+		ctx,
 		metav1.ListOptions{
 			LabelSelector: fmt.Sprintf("samba-operator.samba.org/service=%s",
 				s.smbShareResource.Name),
