@@ -12,6 +12,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type TestContextKey string
+
+const (
+	TestIDKey    = TestContextKey("testID")
+	TestShareKey = TestContextKey("testShare")
+)
+
 var (
 	waitForIpTime    = 120 * time.Second
 	waitForPodsTime  = 120 * time.Second
@@ -22,6 +29,10 @@ var (
 
 type checker interface {
 	NoError(err error, m ...interface{})
+}
+
+func testContext() context.Context {
+	return context.Background()
 }
 
 func createFromFiles(
