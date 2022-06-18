@@ -62,9 +62,9 @@ type podTestClient interface {
 	getPodFetchOptions() kube.PodFetchOptions
 }
 
-func waitForPodExist(s podTestClient) error {
+func waitForPodExist(ctx context.Context, s podTestClient) error {
 	ctx, cancel := context.WithDeadline(
-		context.TODO(),
+		ctx,
 		time.Now().Add(waitForPodsTime))
 	defer cancel()
 	return kube.WaitForAnyPodExists(
@@ -74,9 +74,9 @@ func waitForPodExist(s podTestClient) error {
 	)
 }
 
-func waitForPodReady(s podTestClient) error {
+func waitForPodReady(ctx context.Context, s podTestClient) error {
 	ctx, cancel := context.WithDeadline(
-		context.TODO(),
+		ctx,
 		time.Now().Add(waitForReadyTime))
 	defer cancel()
 	return kube.WaitForAnyPodReady(
@@ -86,9 +86,9 @@ func waitForPodReady(s podTestClient) error {
 	)
 }
 
-func waitForAllPodReady(s podTestClient) error {
+func waitForAllPodReady(ctx context.Context, s podTestClient) error {
 	ctx, cancel := context.WithDeadline(
-		context.TODO(),
+		ctx,
 		time.Now().Add(waitForReadyTime))
 	defer cancel()
 	return kube.WaitForAllPodReady(

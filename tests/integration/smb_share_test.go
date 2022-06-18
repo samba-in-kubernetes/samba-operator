@@ -54,8 +54,8 @@ func (s *SmbShareSuite) SetupSuite() {
 
 func (s *SmbShareSuite) SetupTest() {
 	require := s.Require()
-	require.NoError(waitForPodExist(s), "smb server pod does not exist")
-	require.NoError(waitForPodReady(s), "smb server pod is not ready")
+	require.NoError(waitForPodExist(context.TODO(), s), "smb server pod does not exist")
+	require.NoError(waitForPodReady(context.TODO(), s), "smb server pod is not ready")
 }
 
 func (s *SmbShareSuite) TearDownSuite() {
@@ -107,7 +107,7 @@ func (s *SmbShareSuite) getReadyPod() (*corev1.Pod, error) {
 }
 
 func (s *SmbShareSuite) TestPodsReady() {
-	s.Require().NoError(waitForPodReady(s))
+	s.Require().NoError(waitForPodReady(context.TODO(), s))
 }
 
 func (s *SmbShareSuite) TestSmbShareServerGroup() {
@@ -147,7 +147,7 @@ func (s *SmbShareSuite) TestShareAccessByServiceName() {
 }
 
 func (s *SmbShareSuite) TestShareEvents() {
-	s.Require().NoError(waitForPodReady(s))
+	s.Require().NoError(waitForPodReady(context.TODO(), s))
 
 	// this unstructured stuff is just to get a UID for the SmbShare for event
 	// filtering. Since the tests don't currently have a way to use a typed
@@ -284,7 +284,7 @@ func (s *SmbShareWithExternalNetSuite) TestServiceIsLoadBalancer() {
 }
 
 func (s *SmbShareSuite) TestMetricsOnPod() {
-	s.Require().NoError(waitForPodReady(s))
+	s.Require().NoError(waitForPodReady(context.TODO(), s))
 
 	pod, cont, err := s.getMetricsContainer()
 	s.Require().NoError(err)
