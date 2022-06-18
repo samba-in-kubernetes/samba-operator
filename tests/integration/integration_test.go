@@ -4,8 +4,10 @@
 package integration
 
 import (
+	"math/rand"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -32,6 +34,10 @@ type TestingGroup interface {
 
 type Prioritized interface {
 	Priority() int
+}
+
+type Shuffler interface {
+	Shuffle()
 }
 
 type TestGroup struct {
@@ -83,6 +89,29 @@ func (tg *TestGroup) ChildPriority(name string, prio int) *TestGroup {
 
 func (tg *TestGroup) AddSuite(n string, s suite.TestingSuite) {
 	tg.suites = append(tg.suites, namedSuite{name: n, testSuite: s})
+}
+
+// Shuffle the order of test suites and child test groups.
+// If the suites or test groups meet the Shuffler interface the
+// contents of the subobjects will be shuffled.
+func (tg *TestGroup) Shuffle() {
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	for _, c := range tg.children {
+		if schild, ok := c.(Shuffler); ok {
+			schild.Shuffle()
+		}
+	}
+	r.Shuffle(len(tg.children), func(i, j int) {
+		tg.children[i], tg.children[j] = tg.children[j], tg.children[i]
+	})
+	for _, s := range tg.suites {
+		if ssuite, ok := s.testSuite.(Shuffler); ok {
+			ssuite.Shuffle()
+		}
+	}
+	r.Shuffle(len(tg.suites), func(i, j int) {
+		tg.suites[i], tg.suites[j] = tg.suites[j], tg.suites[i]
+	})
 }
 
 var testRoot *TestGroup = &TestGroup{}
