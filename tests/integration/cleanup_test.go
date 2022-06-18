@@ -46,6 +46,10 @@ type ShareCreateDeleteSuite struct {
 	tc *kube.TestClient
 }
 
+func (s *ShareCreateDeleteSuite) defaultContext() context.Context {
+	return testContext()
+}
+
 func (s *ShareCreateDeleteSuite) SetupSuite() {
 	s.tc = kube.NewTestClient("")
 }
@@ -63,7 +67,7 @@ func (s *ShareCreateDeleteSuite) SetupTest() {
 }
 
 func (s *ShareCreateDeleteSuite) TearDownSuite() {
-	deleteFromFiles(context.TODO(), s.Require(), s.tc, s.fileSources)
+	deleteFromFiles(s.defaultContext(), s.Require(), s.tc, s.fileSources)
 }
 
 func (s *ShareCreateDeleteSuite) getTestClient() *kube.TestClient {
@@ -83,7 +87,7 @@ func (s *ShareCreateDeleteSuite) getPodFetchOptions() kube.PodFetchOptions {
 
 func (s *ShareCreateDeleteSuite) waitForNoSmbServices() error {
 	ctx, cancel := context.WithDeadline(
-		context.TODO(),
+		s.defaultContext(),
 		time.Now().Add(waitForPodsTime))
 	defer cancel()
 	err := poll.TryUntil(ctx, &poll.Prober{
@@ -115,7 +119,7 @@ func (s *ShareCreateDeleteSuite) getCurrentResources() resourceSnapshot {
 		err     error
 		rs      resourceSnapshot
 		opts    metav1.ListOptions
-		ctx     = context.TODO()
+		ctx     = s.defaultContext()
 		require = s.Require()
 	)
 
@@ -146,12 +150,13 @@ func (s *ShareCreateDeleteSuite) getCurrentResources() resourceSnapshot {
 
 func (s *ShareCreateDeleteSuite) TestCreateAndDelete() {
 	var err error
+	ctx := s.defaultContext()
 	require := s.Require()
 	existing := s.getCurrentResources()
 
-	createFromFiles(context.TODO(), require, s.tc, s.fileSources)
-	require.NoError(waitForPodExist(context.TODO(), s))
-	require.NoError(waitForAllPodReady(context.TODO(), s))
+	createFromFiles(ctx, require, s.tc, s.fileSources)
+	require.NoError(waitForPodExist(ctx, s))
+	require.NoError(waitForAllPodReady(ctx, s))
 
 	rs1 := s.getCurrentResources()
 	require.Greater(len(rs1.pods.Items), len(existing.pods.Items))
@@ -164,8 +169,8 @@ func (s *ShareCreateDeleteSuite) TestCreateAndDelete() {
 	require.GreaterOrEqual(
 		len(rs1.statefulSets.Items), len(existing.statefulSets.Items))
 
-	ctx, cancel := context.WithDeadline(
-		context.TODO(),
+	ctx2, cancel := context.WithDeadline(
+		ctx,
 		time.Now().Add(waitForPodsTime))
 	defer cancel()
 
@@ -173,15 +178,15 @@ func (s *ShareCreateDeleteSuite) TestCreateAndDelete() {
 	smbShare := &sambaoperatorv1alpha1.SmbShare{}
 	smbShare.Namespace = s.smbShareResource.Namespace
 	smbShare.Name = s.smbShareResource.Name
-	err = s.tc.TypedObjectClient().Delete(ctx, smbShare)
+	err = s.tc.TypedObjectClient().Delete(ctx2, smbShare)
 	require.NoError(err)
 
 	// wait for smbshare to go away
-	require.NoError(poll.TryUntil(ctx, &poll.Prober{
+	require.NoError(poll.TryUntil(ctx2, &poll.Prober{
 		Cond: func() (bool, error) {
 			smbShare := &sambaoperatorv1alpha1.SmbShare{}
 			err := s.tc.TypedObjectClient().Get(
-				ctx, s.smbShareResource, smbShare)
+				ctx2, s.smbShareResource, smbShare)
 			if err == nil {
 				// found is false ... we're waiting for it to go away
 				return false, nil
@@ -197,7 +202,7 @@ func (s *ShareCreateDeleteSuite) TestCreateAndDelete() {
 	err = s.waitForNoSmbServices()
 	require.NoError(err)
 
-	deleteFromFiles(context.TODO(), require, s.tc, s.fileSources)
+	deleteFromFiles(ctx, require, s.tc, s.fileSources)
 	time.Sleep(waitForClearTime)
 
 	rs2 := s.getCurrentResources()
