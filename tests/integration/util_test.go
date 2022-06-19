@@ -5,8 +5,12 @@ package integration
 
 import (
 	"context"
+	"fmt"
 	"path"
 	"time"
+
+	"k8s.io/apimachinery/pkg/types"
+	krand "k8s.io/apimachinery/pkg/util/rand"
 
 	"github.com/samba-in-kubernetes/samba-operator/tests/utils/kube"
 	"github.com/stretchr/testify/require"
@@ -63,6 +67,63 @@ func deleteFromFiles(
 		)
 		require.NoError(err)
 	}
+}
+
+func setSuffix(s, suffix string) string {
+	return s + "-" + suffix
+}
+
+func createFromFilesWithSuffix(
+	ctx context.Context,
+	require checker,
+	tc *kube.TestClient,
+	srcs []kube.FileSource,
+	suffix string) []types.NamespacedName {
+	// ---
+	if suffix == "" {
+		require.NoError(fmt.Errorf("suffix not provided"))
+	}
+	names := []types.NamespacedName{}
+	for _, fs := range srcs {
+		nn, err := tc.CreateFromFileIfMissing(
+			ctx,
+			kube.FileSource{
+				Path:       fs.Path,
+				Namespace:  fs.Namespace,
+				NameSuffix: setSuffix(fs.NameSuffix, suffix),
+			},
+		)
+		require.NoError(err)
+		names = append(names, nn...)
+	}
+	return names
+}
+
+func deleteFromFilesWithSuffix(
+	ctx context.Context,
+	require checker,
+	tc *kube.TestClient,
+	srcs []kube.FileSource,
+	suffix string) {
+	// ---
+	if suffix == "" {
+		require.NoError(fmt.Errorf("suffix not provided"))
+	}
+	for _, fs := range srcs {
+		err := tc.DeleteResourceMatchingFile(
+			ctx,
+			kube.FileSource{
+				Path:       fs.Path,
+				Namespace:  fs.Namespace,
+				NameSuffix: setSuffix(fs.NameSuffix, suffix),
+			},
+		)
+		require.NoError(err)
+	}
+}
+
+func generateTestID() string {
+	return krand.String(6)
 }
 
 type withClient interface {
