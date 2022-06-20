@@ -29,6 +29,8 @@ var (
 	waitForReadyTime = 200 * time.Second
 	waitForClearTime = 200 * time.Millisecond
 	clientCreateTime = 120 * time.Second
+	// waitForCleanupTime is twice the wait for pods time
+	waitForCleanupTime = 240 * time.Second
 )
 
 type checker interface {

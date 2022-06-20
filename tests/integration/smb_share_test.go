@@ -6,6 +6,7 @@ package integration
 import (
 	"context"
 	"fmt"
+	"math"
 	"path"
 	"strings"
 	"time"
@@ -101,6 +102,7 @@ func (s *SmbShareSuite) TearDownSuite() {
 		s.tc,
 		s.smbshareSources,
 		s.testID)
+	s.waitForCleanup()
 }
 
 func (s *SmbShareSuite) getTestClient() *kube.TestClient {
@@ -384,6 +386,40 @@ func (s *SmbShareSuite) getMetricsContainer() (
 		}
 	}
 	return nil, nil, nil // Case running without metrics
+}
+
+func (s *SmbShareSuite) waitForCleanup() {
+	ctx, cancel := context.WithTimeout(
+		s.defaultContext(),
+		waitForCleanupTime)
+	defer cancel()
+	err := poll.TryUntil(ctx, &poll.Prober{
+		RetryInterval: time.Second,
+		Cond: func() (bool, error) {
+			lbl := fmt.Sprintf(
+				"samba-operator.samba.org/service=%s",
+				s.testShareName.Name)
+			// only set max pods since were waiting for "drain"
+			_, err := s.tc.FetchPods(
+				ctx,
+				kube.PodFetchOptions{
+					Namespace:     s.testShareName.Namespace,
+					LabelSelector: lbl,
+					MaxFound:      math.MaxInt32,
+				})
+			if err == kube.ErrNoMatchingPods {
+				return true, nil
+			}
+			if err != nil {
+				return false, err
+			}
+			s.T().Logf("pod still exists: %s/%s",
+				s.testShareName.Namespace,
+				s.testShareName.Name)
+			return false, nil
+		},
+	})
+	s.Require().NoError(err)
 }
 
 func init() {
