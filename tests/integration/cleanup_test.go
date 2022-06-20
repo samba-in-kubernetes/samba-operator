@@ -115,6 +115,8 @@ func (s *ShareCreateDeleteSuite) waitForNoSmbServices() error {
 			if err != nil {
 				return false, err
 			}
+			s.T().Logf("found samba server pod in namespace: %s",
+				s.destNamespace)
 			return false, nil
 		},
 	})
@@ -193,6 +195,7 @@ func (s *ShareCreateDeleteSuite) TestCreateAndDelete() {
 	defer cancel()
 
 	// remove smbshare
+	s.T().Log("removing smb share resource")
 	smbShare := &sambaoperatorv1alpha1.SmbShare{}
 	smbShare.Namespace = s.testShareName.Namespace
 	smbShare.Name = s.testShareName.Name
@@ -200,6 +203,7 @@ func (s *ShareCreateDeleteSuite) TestCreateAndDelete() {
 	require.NoError(err)
 
 	// wait for smbshare to go away
+	s.T().Log("waiting for server resources to be removed")
 	require.NoError(poll.TryUntil(ctx2, &poll.Prober{
 		Cond: func() (bool, error) {
 			smbShare := &sambaoperatorv1alpha1.SmbShare{}
@@ -220,6 +224,7 @@ func (s *ShareCreateDeleteSuite) TestCreateAndDelete() {
 	err = s.waitForNoSmbServices()
 	require.NoError(err)
 
+	s.T().Log("removing prerequisite resources")
 	deleteFromFiles(ctx, require, s.tc, s.fileSources)
 	time.Sleep(waitForClearTime)
 
