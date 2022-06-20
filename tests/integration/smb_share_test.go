@@ -28,7 +28,7 @@ import (
 type SmbShareSuite struct {
 	suite.Suite
 
-	fileSources     []kube.FileSource
+	commonSources   []kube.FileSource
 	smbShareSources []kube.FileSource
 	shareName       string
 	testAuths       []smbclient.Auth
@@ -75,7 +75,7 @@ func (s *SmbShareSuite) SetupSuite() {
 	// ensure the smbclient test pod exists
 	ctx := s.defaultContext()
 	createSMBClientIfMissing(ctx, s.Require(), s.tc)
-	createFromFiles(ctx, s.Require(), s.tc, s.fileSources)
+	createFromFiles(ctx, s.Require(), s.tc, s.commonSources)
 	names := createFromFilesWithSuffix(
 		ctx,
 		s.Require(),
@@ -96,7 +96,7 @@ func (s *SmbShareSuite) SetupTest() {
 
 func (s *SmbShareSuite) TearDownSuite() {
 	ctx := s.defaultContext()
-	deleteFromFiles(ctx, s.Require(), s.tc, s.fileSources)
+	deleteFromFiles(ctx, s.Require(), s.tc, s.commonSources)
 	deleteFromFilesWithSuffix(
 		ctx,
 		s.Require(),
@@ -428,7 +428,7 @@ func init() {
 
 	smbShareTests := testRoot.ChildPriority("smbShares", 1)
 	smbShareTests.AddSuite("users1", &SmbShareSuite{
-		fileSources: []kube.FileSource{
+		commonSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "userssecret1.yaml"),
 				Namespace: testNamespace,
@@ -453,7 +453,7 @@ func init() {
 	)
 
 	smbShareTests.AddSuite("domainMember1", &SmbShareWithDNSSuite{SmbShareSuite{
-		fileSources: []kube.FileSource{
+		commonSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "joinsecret1.yaml"),
 				Namespace: testNamespace,
@@ -481,7 +481,7 @@ func init() {
 	// in a different ns (for example, "default").
 	// IMPORTANT: the secrets MUST be in the same namespace as the pods.
 	smbShareTests.AddSuite("smbSharesInDefault", &SmbShareSuite{
-		fileSources: []kube.FileSource{
+		commonSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "userssecret1.yaml"),
 				Namespace: "default",
@@ -507,7 +507,7 @@ func init() {
 	)
 
 	smbShareTests.AddSuite("smbSharesExternal", &SmbShareWithExternalNetSuite{SmbShareSuite{
-		fileSources: []kube.FileSource{
+		commonSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "userssecret1.yaml"),
 				Namespace: testNamespace,
@@ -538,7 +538,7 @@ func init() {
 	if testClusteredShares {
 		clusteredTests := testRoot.ChildPriority("smbSharesClustered", 1)
 		clusteredTests.AddSuite("default", &SmbShareSuite{
-			fileSources: []kube.FileSource{
+			commonSources: []kube.FileSource{
 				{
 					Path:      path.Join(testFilesDir, "userssecret1.yaml"),
 					Namespace: testNamespace,
@@ -564,7 +564,7 @@ func init() {
 		)
 
 		clusteredTests.AddSuite("noDNS", &SmbShareSuite{
-			fileSources: []kube.FileSource{
+			commonSources: []kube.FileSource{
 				{
 					Path:      path.Join(testFilesDir, "joinsecret1.yaml"),
 					Namespace: testNamespace,
@@ -590,7 +590,7 @@ func init() {
 		)
 
 		clusteredTests.AddSuite("withDNS", &SmbShareWithDNSSuite{SmbShareSuite{
-			fileSources: []kube.FileSource{
+			commonSources: []kube.FileSource{
 				{
 					Path:      path.Join(testFilesDir, "joinsecret1.yaml"),
 					Namespace: testNamespace,
@@ -617,7 +617,7 @@ func init() {
 		)
 
 		clusteredTests.AddSuite("external", &SmbShareWithExternalNetSuite{SmbShareSuite{
-			fileSources: []kube.FileSource{
+			commonSources: []kube.FileSource{
 				{
 					Path:      path.Join(testFilesDir, "joinsecret1.yaml"),
 					Namespace: testNamespace,
