@@ -36,7 +36,7 @@ type resourceSnapshot struct {
 type ShareCreateDeleteSuite struct {
 	suite.Suite
 
-	fileSources     []kube.FileSource
+	commonSources   []kube.FileSource
 	smbShareSources []kube.FileSource
 	destNamespace   string
 	maxPods         int
@@ -75,7 +75,7 @@ func (s *ShareCreateDeleteSuite) SetupTest() {
 }
 
 func (s *ShareCreateDeleteSuite) TearDownSuite() {
-	deleteFromFiles(s.defaultContext(), s.Require(), s.tc, s.fileSources)
+	deleteFromFiles(s.defaultContext(), s.Require(), s.tc, s.commonSources)
 }
 
 func (s *ShareCreateDeleteSuite) getTestClient() *kube.TestClient {
@@ -165,7 +165,7 @@ func (s *ShareCreateDeleteSuite) TestCreateAndDelete() {
 	existing := s.getCurrentResources()
 
 	s.T().Log("creating prerequisite resources")
-	createFromFiles(ctx, require, s.tc, s.fileSources)
+	createFromFiles(ctx, require, s.tc, s.commonSources)
 	s.T().Log("creating smb share resource")
 	names := createFromFilesWithSuffix(
 		ctx,
@@ -226,7 +226,7 @@ func (s *ShareCreateDeleteSuite) TestCreateAndDelete() {
 	require.NoError(err)
 
 	s.T().Log("removing prerequisite resources")
-	deleteFromFiles(ctx, require, s.tc, s.fileSources)
+	deleteFromFiles(ctx, require, s.tc, s.commonSources)
 	time.Sleep(waitForClearTime)
 
 	rs2 := s.getCurrentResources()
@@ -246,7 +246,7 @@ func init() {
 	createDeleteTests := testRoot.ChildPriority("createDelete", 2)
 
 	createDeleteTests.AddSuite("simple", &ShareCreateDeleteSuite{
-		fileSources: []kube.FileSource{
+		commonSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "userssecret1.yaml"),
 				Namespace: ns,
@@ -269,7 +269,7 @@ func init() {
 	)
 
 	createDeleteTests.AddSuite("domainMember", &ShareCreateDeleteSuite{
-		fileSources: []kube.FileSource{
+		commonSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "joinsecret1.yaml"),
 				Namespace: testNamespace,
@@ -293,7 +293,7 @@ func init() {
 
 	// should we use a namespace other than default for this test?
 	createDeleteTests.AddSuite("altNamespace", &ShareCreateDeleteSuite{
-		fileSources: []kube.FileSource{
+		commonSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "userssecret1.yaml"),
 				Namespace: "default",
@@ -317,7 +317,7 @@ func init() {
 
 	if testClusteredShares {
 		createDeleteTests.AddSuite("clustered", &ShareCreateDeleteSuite{
-			fileSources: []kube.FileSource{
+			commonSources: []kube.FileSource{
 				{
 					Path:      path.Join(testFilesDir, "userssecret1.yaml"),
 					Namespace: ns,
@@ -340,7 +340,7 @@ func init() {
 		)
 
 		createDeleteTests.AddSuite("clusteredDomainMember", &ShareCreateDeleteSuite{
-			fileSources: []kube.FileSource{
+			commonSources: []kube.FileSource{
 				{
 					Path:      path.Join(testFilesDir, "joinsecret1.yaml"),
 					Namespace: ns,

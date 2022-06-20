@@ -23,7 +23,7 @@ var (
 type limitAvailModeChangeSuite struct {
 	suite.Suite
 
-	fileSources     []kube.FileSource
+	commonSources   []kube.FileSource
 	smbShareSources []kube.FileSource
 	nextMode        string
 	expectBackend   string
@@ -49,7 +49,7 @@ func (s *limitAvailModeChangeSuite) SetupSuite() {
 	require := s.Require()
 	s.tc = kube.NewTestClient("")
 	ctx := s.defaultContext()
-	createFromFiles(ctx, require, s.tc, s.fileSources)
+	createFromFiles(ctx, require, s.tc, s.commonSources)
 	names := createFromFilesWithSuffix(
 		ctx,
 		s.Require(),
@@ -65,7 +65,7 @@ func (s *limitAvailModeChangeSuite) SetupSuite() {
 
 func (s *limitAvailModeChangeSuite) TearDownSuite() {
 	ctx := s.defaultContext()
-	deleteFromFiles(ctx, s.Require(), s.tc, s.fileSources)
+	deleteFromFiles(ctx, s.Require(), s.tc, s.commonSources)
 	deleteFromFilesWithSuffix(
 		ctx,
 		s.Require(),
@@ -118,7 +118,7 @@ func (s *limitAvailModeChangeSuite) TestAvailModeUnchanged() {
 type scaleoutClusterSuite struct {
 	suite.Suite
 
-	fileSources     []kube.FileSource
+	commonSources   []kube.FileSource
 	smbShareSources []kube.FileSource
 
 	// cached values
@@ -143,7 +143,7 @@ func (s *scaleoutClusterSuite) SetupSuite() {
 	require := s.Require()
 	s.tc = kube.NewTestClient("")
 	createSMBClientIfMissing(ctx, require, s.tc)
-	createFromFiles(ctx, require, s.tc, s.fileSources)
+	createFromFiles(ctx, require, s.tc, s.commonSources)
 	names := createFromFilesWithSuffix(
 		ctx,
 		s.Require(),
@@ -159,7 +159,7 @@ func (s *scaleoutClusterSuite) SetupSuite() {
 
 func (s *scaleoutClusterSuite) TearDownSuite() {
 	ctx := s.defaultContext()
-	deleteFromFiles(ctx, s.Require(), s.tc, s.fileSources)
+	deleteFromFiles(ctx, s.Require(), s.tc, s.commonSources)
 	deleteFromFilesWithSuffix(
 		ctx,
 		s.Require(),
@@ -218,7 +218,7 @@ func init() {
 
 	reconTests := testRoot.ChildPriority("reconciliation", 4)
 	reconTests.AddSuite("limitAvailModeChangeStandard", &limitAvailModeChangeSuite{
-		fileSources: []kube.FileSource{
+		commonSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "userssecret1.yaml"),
 				Namespace: testNamespace,
@@ -240,7 +240,7 @@ func init() {
 	)
 
 	reconTests.AddSuite("limitAvailModeChangeClustered", &limitAvailModeChangeSuite{
-		fileSources: []kube.FileSource{
+		commonSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "userssecret1.yaml"),
 				Namespace: testNamespace,
@@ -262,7 +262,7 @@ func init() {
 	)
 
 	reconTests.AddSuite("scaleoutCluster", &scaleoutClusterSuite{
-		fileSources: []kube.FileSource{
+		commonSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "userssecret1.yaml"),
 				Namespace: testNamespace,
