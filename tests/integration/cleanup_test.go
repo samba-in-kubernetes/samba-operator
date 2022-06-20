@@ -37,7 +37,7 @@ type ShareCreateDeleteSuite struct {
 	suite.Suite
 
 	fileSources     []kube.FileSource
-	smbshareSources []kube.FileSource
+	smbShareSources []kube.FileSource
 	destNamespace   string
 	maxPods         int
 	minPods         int
@@ -171,7 +171,7 @@ func (s *ShareCreateDeleteSuite) TestCreateAndDelete() {
 		ctx,
 		s.Require(),
 		s.tc,
-		s.smbshareSources,
+		s.smbShareSources,
 		s.testID,
 	)
 	s.Require().Len(names, 1, "expected one smb share resource")
@@ -256,7 +256,7 @@ func init() {
 				Namespace: ns,
 			},
 		},
-		smbshareSources: []kube.FileSource{
+		smbShareSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "smbshare1.yaml"),
 				Namespace: ns,
@@ -279,7 +279,7 @@ func init() {
 				Namespace: testNamespace,
 			},
 		},
-		smbshareSources: []kube.FileSource{
+		smbShareSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "smbshare2.yaml"),
 				Namespace: testNamespace,
@@ -303,7 +303,7 @@ func init() {
 				Namespace: "default",
 			},
 		},
-		smbshareSources: []kube.FileSource{
+		smbShareSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "smbshare3.yaml"),
 				Namespace: "default",
@@ -327,7 +327,7 @@ func init() {
 					Namespace: ns,
 				},
 			},
-			smbshareSources: []kube.FileSource{
+			smbShareSources: []kube.FileSource{
 				{
 					Path:      path.Join(testFilesDir, "smbshare_ctdb1.yaml"),
 					Namespace: ns,
@@ -350,7 +350,7 @@ func init() {
 					Namespace: ns,
 				},
 			},
-			smbshareSources: []kube.FileSource{
+			smbShareSources: []kube.FileSource{
 				{
 					Path:      path.Join(testFilesDir, "smbshare_ctdb2.yaml"),
 					Namespace: ns,

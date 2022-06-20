@@ -18,7 +18,7 @@ type MountPathPermissionsSuite struct {
 	suite.Suite
 
 	commonSources   []kube.FileSource
-	smbshareSources []kube.FileSource
+	smbShareSources []kube.FileSource
 
 	// tc is a TestClient instance
 	tc *kube.TestClient
@@ -67,7 +67,7 @@ func (s *MountPathPermissionsSuite) SetupSuite() {
 		ctx,
 		s.Require(),
 		s.tc,
-		s.smbshareSources,
+		s.smbShareSources,
 		s.testID,
 	)
 	s.Require().Len(names, 1, "expected one smb share resource")
@@ -79,7 +79,7 @@ func (s *MountPathPermissionsSuite) SetupSuite() {
 
 func (s *MountPathPermissionsSuite) TearDownSuite() {
 	ctx := s.defaultContext()
-	deleteFromFilesWithSuffix(ctx, s.Require(), s.tc, s.smbshareSources, s.testID)
+	deleteFromFilesWithSuffix(ctx, s.Require(), s.tc, s.smbShareSources, s.testID)
 	deleteFromFiles(ctx, s.Require(), s.tc, s.commonSources)
 }
 
