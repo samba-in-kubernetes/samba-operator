@@ -29,7 +29,7 @@ type SmbShareSuite struct {
 	suite.Suite
 
 	fileSources     []kube.FileSource
-	smbshareSources []kube.FileSource
+	smbShareSources []kube.FileSource
 	shareName       string
 	testAuths       []smbclient.Auth
 	destNamespace   string
@@ -70,7 +70,7 @@ func (s *SmbShareSuite) SetupSuite() {
 		s.maxPods = 1
 	}
 	s.Require().Len(
-		s.smbshareSources, 1, "currently only one share may be tested")
+		s.smbShareSources, 1, "currently only one share may be tested")
 	s.tc = kube.NewTestClient("")
 	// ensure the smbclient test pod exists
 	ctx := s.defaultContext()
@@ -80,7 +80,7 @@ func (s *SmbShareSuite) SetupSuite() {
 		ctx,
 		s.Require(),
 		s.tc,
-		s.smbshareSources,
+		s.smbShareSources,
 		s.testID,
 	)
 	s.Require().Len(names, 1, "expected one smb share resource")
@@ -101,7 +101,7 @@ func (s *SmbShareSuite) TearDownSuite() {
 		ctx,
 		s.Require(),
 		s.tc,
-		s.smbshareSources,
+		s.smbShareSources,
 		s.testID)
 	s.waitForCleanup()
 }
@@ -438,7 +438,7 @@ func init() {
 				Namespace: testNamespace,
 			},
 		},
-		smbshareSources: []kube.FileSource{
+		smbShareSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "smbshare1.yaml"),
 				Namespace: testNamespace,
@@ -463,7 +463,7 @@ func init() {
 				Namespace: testNamespace,
 			},
 		},
-		smbshareSources: []kube.FileSource{
+		smbShareSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "smbshare2.yaml"),
 				Namespace: testNamespace,
@@ -491,7 +491,7 @@ func init() {
 				Namespace: "default",
 			},
 		},
-		smbshareSources: []kube.FileSource{
+		smbShareSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "smbshare3.yaml"),
 				Namespace: "default",
@@ -521,7 +521,7 @@ func init() {
 				Namespace: testNamespace,
 			},
 		},
-		smbshareSources: []kube.FileSource{
+		smbShareSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "smbshare4.yaml"),
 				Namespace: testNamespace,
@@ -548,7 +548,7 @@ func init() {
 					Namespace: testNamespace,
 				},
 			},
-			smbshareSources: []kube.FileSource{
+			smbShareSources: []kube.FileSource{
 				{
 					Path:      path.Join(testFilesDir, "smbshare_ctdb1.yaml"),
 					Namespace: testNamespace,
@@ -574,7 +574,7 @@ func init() {
 					Namespace: testNamespace,
 				},
 			},
-			smbshareSources: []kube.FileSource{
+			smbShareSources: []kube.FileSource{
 				{
 					Path:      path.Join(testFilesDir, "smbshare_ctdb2.yaml"),
 					Namespace: testNamespace,
@@ -600,7 +600,7 @@ func init() {
 					Namespace: testNamespace,
 				},
 			},
-			smbshareSources: []kube.FileSource{
+			smbShareSources: []kube.FileSource{
 				{
 					Path:      path.Join(testFilesDir, "smbshare_ctdb2.yaml"),
 					Namespace: testNamespace,
@@ -631,7 +631,7 @@ func init() {
 					Namespace: testNamespace,
 				},
 			},
-			smbshareSources: []kube.FileSource{
+			smbShareSources: []kube.FileSource{
 				{
 					Path:      path.Join(testFilesDir, "smbshare_ctdb3.yaml"),
 					Namespace: testNamespace,

@@ -24,7 +24,7 @@ type limitAvailModeChangeSuite struct {
 	suite.Suite
 
 	fileSources     []kube.FileSource
-	smbshareSources []kube.FileSource
+	smbShareSources []kube.FileSource
 	nextMode        string
 	expectBackend   string
 
@@ -54,7 +54,7 @@ func (s *limitAvailModeChangeSuite) SetupSuite() {
 		ctx,
 		s.Require(),
 		s.tc,
-		s.smbshareSources,
+		s.smbShareSources,
 		s.testID,
 	)
 	s.Require().Len(names, 1, "expected one smb share resource")
@@ -70,7 +70,7 @@ func (s *limitAvailModeChangeSuite) TearDownSuite() {
 		ctx,
 		s.Require(),
 		s.tc,
-		s.smbshareSources,
+		s.smbShareSources,
 		s.testID)
 }
 
@@ -119,7 +119,7 @@ type scaleoutClusterSuite struct {
 	suite.Suite
 
 	fileSources     []kube.FileSource
-	smbshareSources []kube.FileSource
+	smbShareSources []kube.FileSource
 
 	// cached values
 	tc *kube.TestClient
@@ -148,7 +148,7 @@ func (s *scaleoutClusterSuite) SetupSuite() {
 		ctx,
 		s.Require(),
 		s.tc,
-		s.smbshareSources,
+		s.smbShareSources,
 		s.testID,
 	)
 	s.Require().Len(names, 1, "expected one smb share resource")
@@ -164,7 +164,7 @@ func (s *scaleoutClusterSuite) TearDownSuite() {
 		ctx,
 		s.Require(),
 		s.tc,
-		s.smbshareSources,
+		s.smbShareSources,
 		s.testID)
 }
 
@@ -228,7 +228,7 @@ func init() {
 				Namespace: testNamespace,
 			},
 		},
-		smbshareSources: []kube.FileSource{
+		smbShareSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "smbshare1.yaml"),
 				Namespace: testNamespace,
@@ -250,7 +250,7 @@ func init() {
 				Namespace: testNamespace,
 			},
 		},
-		smbshareSources: []kube.FileSource{
+		smbShareSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "smbshare_ctdb1.yaml"),
 				Namespace: testNamespace,
@@ -272,7 +272,7 @@ func init() {
 				Namespace: testNamespace,
 			},
 		},
-		smbshareSources: []kube.FileSource{
+		smbShareSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "smbshare_ctdb1.yaml"),
 				Namespace: testNamespace,

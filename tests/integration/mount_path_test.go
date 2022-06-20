@@ -21,8 +21,8 @@ type MountPathSuite struct {
 
 	auths                []smbclient.Auth
 	commonSources        []kube.FileSource
-	smbshareSetupSources []kube.FileSource
-	smbshareSources      []kube.FileSource
+	smbShareSetupSources []kube.FileSource
+	smbShareSources      []kube.FileSource
 
 	// tc is a TestClient instance
 	tc *kube.TestClient
@@ -73,7 +73,7 @@ func (s *MountPathSuite) SetupSuite() {
 		ctx,
 		require,
 		s.tc,
-		s.smbshareSetupSources,
+		s.smbShareSetupSources,
 		s.testID,
 	)
 	require.Len(names, 1, "expected one smb share resource")
@@ -111,7 +111,7 @@ func (s *MountPathSuite) SetupSuite() {
 	require.NoError(err)
 
 	// Delete the smbshare created
-	deleteFromFilesWithSuffix(ctx, require, s.tc, s.smbshareSetupSources, s.testID)
+	deleteFromFilesWithSuffix(ctx, require, s.tc, s.smbShareSetupSources, s.testID)
 
 	// Create smbshare with Spec.Storage.PVC.Path specified
 	createFromFiles(ctx, require, s.tc, s.commonSources)
@@ -119,7 +119,7 @@ func (s *MountPathSuite) SetupSuite() {
 		ctx,
 		require,
 		s.tc,
-		s.smbshareSources,
+		s.smbShareSources,
 		s.testID,
 	)
 	require.Len(names, 1, "expected one smb share resource")
@@ -132,8 +132,8 @@ func (s *MountPathSuite) SetupSuite() {
 func (s *MountPathSuite) TearDownSuite() {
 	ctx := s.defaultContext()
 	require := s.Require()
-	deleteFromFilesWithSuffix(ctx, require, s.tc, s.smbshareSources, s.testID)
-	deleteFromFilesWithSuffix(ctx, require, s.tc, s.smbshareSetupSources, s.testID)
+	deleteFromFilesWithSuffix(ctx, require, s.tc, s.smbShareSources, s.testID)
+	deleteFromFilesWithSuffix(ctx, require, s.tc, s.smbShareSetupSources, s.testID)
 	deleteFromFiles(ctx, require, s.tc, s.commonSources)
 }
 
@@ -187,13 +187,13 @@ func init() {
 				Namespace: testNamespace,
 			},
 		},
-		smbshareSetupSources: []kube.FileSource{
+		smbShareSetupSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "smbsharepvc1.yaml"),
 				Namespace: testNamespace,
 			},
 		},
-		smbshareSources: []kube.FileSource{
+		smbShareSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "smbsharepvc2.yaml"),
 				Namespace: testNamespace,
@@ -213,7 +213,7 @@ func init() {
 				Namespace: testNamespace,
 			},
 		},
-		smbshareSources: []kube.FileSource{
+		smbShareSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "smbshare1.yaml"),
 				Namespace: testNamespace,
