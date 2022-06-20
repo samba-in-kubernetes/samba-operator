@@ -4,6 +4,7 @@ package integration
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -16,11 +17,17 @@ import (
 type MountPathPermissionsSuite struct {
 	suite.Suite
 
-	commonSources      []kube.FileSource
-	smbshareSources    []kube.FileSource
-	smbShareResource   types.NamespacedName
-	serverLabelPattern string
-	tc                 *kube.TestClient
+	commonSources   []kube.FileSource
+	smbshareSources []kube.FileSource
+
+	// tc is a TestClient instance
+	tc *kube.TestClient
+
+	// testID is a short unique test id, pseudo-randomly generated
+	testID string
+	// testShareName is the name of the SmbShare being tested by this
+	// test instance
+	testShareName types.NamespacedName
 }
 
 func (s *MountPathPermissionsSuite) defaultContext() context.Context {
@@ -38,27 +45,40 @@ func (s *MountPathPermissionsSuite) waitForPods(labelPattern string) {
 		LabelSelector: labelPattern,
 	}
 	require.NoError(
-		kube.WaitForAnyPodExists(ctx, kube.NewTestClient(""), opts),
+		kube.WaitForAnyPodExists(ctx, s.tc, opts),
 		"pod does not exist",
 	)
 	require.NoError(
-		kube.WaitForAnyPodReady(ctx, kube.NewTestClient(""), opts),
+		kube.WaitForAnyPodReady(ctx, s.tc, opts),
 		"pod not ready",
 	)
 }
 
 func (s *MountPathPermissionsSuite) SetupSuite() {
+	s.testID = generateTestID()
 	s.tc = kube.NewTestClient("")
 	require := s.Require()
 
 	// Create smbshare with Spec.Storage.PVC.Path specified
-	createFromFiles(s.defaultContext(), require, s.tc, append(s.commonSources, s.smbshareSources...))
-	s.waitForPods(s.serverLabelPattern)
+	ctx := s.defaultContext()
+	createFromFiles(ctx, require, s.tc, s.commonSources)
+	names := createFromFilesWithSuffix(
+		ctx,
+		s.Require(),
+		s.tc,
+		s.smbshareSources,
+		s.testID,
+	)
+	s.Require().Len(names, 1, "expected one smb share resource")
+	s.testShareName = names[0]
+	lbl := fmt.Sprintf(
+		"samba-operator.samba.org/service=%s", s.testShareName.Name)
+	s.waitForPods(lbl)
 }
 
 func (s *MountPathPermissionsSuite) TearDownSuite() {
 	ctx := s.defaultContext()
-	deleteFromFiles(ctx, s.Require(), s.tc, s.smbshareSources)
+	deleteFromFilesWithSuffix(ctx, s.Require(), s.tc, s.smbshareSources, s.testID)
 	deleteFromFiles(ctx, s.Require(), s.tc, s.commonSources)
 }
 
@@ -72,18 +92,20 @@ func (s *MountPathPermissionsSuite) TestMountPathPermissions() {
 		"import xattr,os;mp='/mnt/' + os.listdir('/mnt')[0]; print(xattr.get(mp, 'user.share-perms-status'))",
 	}
 
+	lbl := fmt.Sprintf(
+		"samba-operator.samba.org/service=%s", s.testShareName.Name)
 	pods, err := s.tc.FetchPods(
 		s.defaultContext(),
 		kube.PodFetchOptions{
-			Namespace:     s.smbShareResource.Namespace,
-			LabelSelector: s.serverLabelPattern,
+			Namespace:     s.testShareName.Namespace,
+			LabelSelector: lbl,
 			MaxFound:      1,
 		})
 	require.NoError(err)
 
 	pc := kube.PodCommand{
 		Command:       cmd,
-		Namespace:     s.smbShareResource.Namespace,
+		Namespace:     s.testShareName.Namespace,
 		PodName:       pods[0].Name,
 		ContainerName: "samba",
 	}

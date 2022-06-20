@@ -19,15 +19,19 @@ import (
 type MountPathSuite struct {
 	suite.Suite
 
-	auths                   []smbclient.Auth
-	commonSources           []kube.FileSource
-	smbshareSetupSources    []kube.FileSource
-	smbshareSources         []kube.FileSource
-	smbShareSetupResource   types.NamespacedName
-	setupServerLabelPattern string
-	smbShareResource        types.NamespacedName
-	serverLabelPattern      string
-	tc                      *kube.TestClient
+	auths                []smbclient.Auth
+	commonSources        []kube.FileSource
+	smbshareSetupSources []kube.FileSource
+	smbshareSources      []kube.FileSource
+
+	// tc is a TestClient instance
+	tc *kube.TestClient
+
+	// testID is a short unique test id, pseudo-randomly generated
+	testID string
+	// testShareName is the name of the SmbShare being tested by this
+	// test instance
+	testShareName types.NamespacedName
 }
 
 func (s *MountPathSuite) defaultContext() context.Context {
@@ -45,16 +49,17 @@ func (s *MountPathSuite) waitForPods(labelPattern string) {
 		LabelSelector: labelPattern,
 	}
 	require.NoError(
-		kube.WaitForAnyPodExists(ctx, kube.NewTestClient(""), opts),
+		kube.WaitForAnyPodExists(ctx, s.tc, opts),
 		"pod does not exist",
 	)
 	require.NoError(
-		kube.WaitForAnyPodReady(ctx, kube.NewTestClient(""), opts),
+		kube.WaitForAnyPodReady(ctx, s.tc, opts),
 		"pod not ready",
 	)
 }
 
 func (s *MountPathSuite) SetupSuite() {
+	s.testID = generateTestID()
 	s.tc = kube.NewTestClient("")
 	ctx := s.defaultContext()
 	require := s.Require()
@@ -62,16 +67,27 @@ func (s *MountPathSuite) SetupSuite() {
 	// Ensure smbclient is up and running
 	createSMBClientIfMissing(ctx, require, s.tc)
 
-	createFromFiles(ctx, require, s.tc, append(s.commonSources, s.smbshareSetupSources...))
+	createFromFiles(ctx, require, s.tc, s.commonSources)
+	names := createFromFilesWithSuffix(
+		ctx,
+		require,
+		s.tc,
+		s.smbshareSetupSources,
+		s.testID,
+	)
+	require.Len(names, 1, "expected one smb share resource")
+	setupName := names[0]
 	// ensure the smbserver test pod exists and is ready
-	s.waitForPods(s.setupServerLabelPattern)
+	setupLabel := fmt.Sprintf(
+		"samba-operator.samba.org/service=%s", setupName.Name)
+	s.waitForPods(setupLabel)
 
 	svcname := fmt.Sprintf("%s.%s.svc.cluster.local",
-		s.smbShareSetupResource.Name,
-		s.smbShareSetupResource.Namespace)
+		setupName.Name,
+		setupName.Namespace)
 	share := smbclient.Share{
 		Host: smbclient.Host(svcname),
-		Name: s.smbShareSetupResource.Name,
+		Name: setupName.Name,
 	}
 
 	// Create folders over smbclient
@@ -94,18 +110,30 @@ func (s *MountPathSuite) SetupSuite() {
 	require.NoError(err)
 
 	// Delete the smbshare created
-	deleteFromFiles(ctx, require, s.tc, s.smbshareSetupSources)
+	deleteFromFilesWithSuffix(ctx, require, s.tc, s.smbshareSetupSources, s.testID)
 
 	// Create smbshare with Spec.Storage.PVC.Path specified
-	createFromFiles(ctx, require, s.tc, append(s.commonSources, s.smbshareSources...))
-	s.waitForPods(s.serverLabelPattern)
+	createFromFiles(ctx, require, s.tc, s.commonSources)
+	names = createFromFilesWithSuffix(
+		ctx,
+		require,
+		s.tc,
+		s.smbshareSources,
+		s.testID,
+	)
+	require.Len(names, 1, "expected one smb share resource")
+	s.testShareName = names[0]
+	lbl := fmt.Sprintf(
+		"samba-operator.samba.org/service=%s", s.testShareName.Name)
+	s.waitForPods(lbl)
 }
 
 func (s *MountPathSuite) TearDownSuite() {
 	ctx := s.defaultContext()
-	deleteFromFiles(ctx, s.Require(), s.tc, s.smbshareSetupSources)
-	deleteFromFiles(ctx, s.Require(), s.tc, s.smbshareSources)
-	deleteFromFiles(ctx, s.Require(), s.tc, s.commonSources)
+	require := s.Require()
+	deleteFromFilesWithSuffix(ctx, require, s.tc, s.smbshareSources, s.testID)
+	deleteFromFilesWithSuffix(ctx, require, s.tc, s.smbshareSetupSources, s.testID)
+	deleteFromFiles(ctx, require, s.tc, s.commonSources)
 }
 
 func (s *MountPathSuite) TestMountPath() {
@@ -113,11 +141,11 @@ func (s *MountPathSuite) TestMountPath() {
 	require := s.Require()
 
 	svcname := fmt.Sprintf("%s.%s.svc.cluster.local",
-		s.smbShareResource.Name,
-		s.smbShareResource.Namespace)
+		s.testShareName.Name,
+		s.testShareName.Namespace)
 	share := smbclient.Share{
 		Host: smbclient.Host(svcname),
-		Name: s.smbShareResource.Name,
+		Name: s.testShareName.Name,
 	}
 
 	// Test if correct path mounted using smbclient
@@ -170,10 +198,6 @@ func init() {
 				Namespace: testNamespace,
 			},
 		},
-		smbShareSetupResource:   types.NamespacedName{testNamespace, "tshare1-setup-pvc"},
-		setupServerLabelPattern: "samba-operator.samba.org/service=tshare1-setup-pvc",
-		smbShareResource:        types.NamespacedName{testNamespace, "tshare1-pvc"},
-		serverLabelPattern:      "samba-operator.samba.org/service=tshare1-pvc",
 	},
 	)
 
@@ -194,8 +218,6 @@ func init() {
 				Namespace: testNamespace,
 			},
 		},
-		smbShareResource:   types.NamespacedName{testNamespace, "tshare1"},
-		serverLabelPattern: "samba-operator.samba.org/service=tshare1",
 	},
 	)
 }
