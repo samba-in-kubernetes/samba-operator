@@ -36,14 +36,20 @@ type resourceSnapshot struct {
 type ShareCreateDeleteSuite struct {
 	suite.Suite
 
-	fileSources      []kube.FileSource
-	smbShareResource types.NamespacedName
-	destNamespace    string
-	maxPods          int
-	minPods          int
+	fileSources     []kube.FileSource
+	smbshareSources []kube.FileSource
+	destNamespace   string
+	maxPods         int
+	minPods         int
 
 	// cached values
 	tc *kube.TestClient
+
+	// testID is a short unique test id, pseudo-randomly generated
+	testID string
+	// testShareName is the name of the SmbShare being tested by this
+	// test instance
+	testShareName types.NamespacedName
 }
 
 func (s *ShareCreateDeleteSuite) defaultContext() context.Context {
@@ -51,6 +57,7 @@ func (s *ShareCreateDeleteSuite) defaultContext() context.Context {
 }
 
 func (s *ShareCreateDeleteSuite) SetupSuite() {
+	s.testID = generateTestID()
 	s.tc = kube.NewTestClient("")
 }
 
@@ -76,7 +83,7 @@ func (s *ShareCreateDeleteSuite) getTestClient() *kube.TestClient {
 
 func (s *ShareCreateDeleteSuite) getPodFetchOptions() kube.PodFetchOptions {
 	l := fmt.Sprintf(
-		"samba-operator.samba.org/service=%s", s.smbShareResource.Name)
+		"samba-operator.samba.org/service=%s", s.testShareName.Name)
 	return kube.PodFetchOptions{
 		Namespace:     s.destNamespace,
 		LabelSelector: l,
@@ -154,7 +161,18 @@ func (s *ShareCreateDeleteSuite) TestCreateAndDelete() {
 	require := s.Require()
 	existing := s.getCurrentResources()
 
+	s.T().Log("creating prerequisite resources")
 	createFromFiles(ctx, require, s.tc, s.fileSources)
+	s.T().Log("creating smb share resource")
+	names := createFromFilesWithSuffix(
+		ctx,
+		s.Require(),
+		s.tc,
+		s.smbshareSources,
+		s.testID,
+	)
+	s.Require().Len(names, 1, "expected one smb share resource")
+	s.testShareName = names[0]
 	require.NoError(waitForPodExist(ctx, s))
 	require.NoError(waitForAllPodReady(ctx, s))
 
@@ -176,8 +194,8 @@ func (s *ShareCreateDeleteSuite) TestCreateAndDelete() {
 
 	// remove smbshare
 	smbShare := &sambaoperatorv1alpha1.SmbShare{}
-	smbShare.Namespace = s.smbShareResource.Namespace
-	smbShare.Name = s.smbShareResource.Name
+	smbShare.Namespace = s.testShareName.Namespace
+	smbShare.Name = s.testShareName.Name
 	err = s.tc.TypedObjectClient().Delete(ctx2, smbShare)
 	require.NoError(err)
 
@@ -186,7 +204,7 @@ func (s *ShareCreateDeleteSuite) TestCreateAndDelete() {
 		Cond: func() (bool, error) {
 			smbShare := &sambaoperatorv1alpha1.SmbShare{}
 			err := s.tc.TypedObjectClient().Get(
-				ctx2, s.smbShareResource, smbShare)
+				ctx2, s.testShareName, smbShare)
 			if err == nil {
 				// found is false ... we're waiting for it to go away
 				return false, nil
@@ -231,15 +249,16 @@ func init() {
 				Path:      path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
 				Namespace: ns,
 			},
+		},
+		smbshareSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "smbshare1.yaml"),
 				Namespace: ns,
 			},
 		},
-		destNamespace:    ns,
-		smbShareResource: types.NamespacedName{ns, "tshare1"},
-		maxPods:          1,
-		minPods:          1,
+		destNamespace: ns,
+		maxPods:       1,
+		minPods:       1,
 	},
 	)
 
@@ -253,15 +272,16 @@ func init() {
 				Path:      path.Join(testFilesDir, "smbsecurityconfig2.yaml"),
 				Namespace: testNamespace,
 			},
+		},
+		smbshareSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "smbshare2.yaml"),
 				Namespace: testNamespace,
 			},
 		},
-		destNamespace:    ns,
-		smbShareResource: types.NamespacedName{testNamespace, "tshare2"},
-		maxPods:          1,
-		minPods:          1,
+		destNamespace: ns,
+		maxPods:       1,
+		minPods:       1,
 	},
 	)
 
@@ -276,15 +296,16 @@ func init() {
 				Path:      path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
 				Namespace: "default",
 			},
+		},
+		smbshareSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "smbshare3.yaml"),
 				Namespace: "default",
 			},
 		},
-		destNamespace:    "default",
-		smbShareResource: types.NamespacedName{"default", "tshare3"},
-		maxPods:          1,
-		minPods:          1,
+		destNamespace: "default",
+		maxPods:       1,
+		minPods:       1,
 	},
 	)
 
@@ -299,16 +320,16 @@ func init() {
 					Path:      path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
 					Namespace: ns,
 				},
+			},
+			smbshareSources: []kube.FileSource{
 				{
-					Path:       path.Join(testFilesDir, "smbshare_ctdb1.yaml"),
-					Namespace:  ns,
-					NameSuffix: "-cleanme",
+					Path:      path.Join(testFilesDir, "smbshare_ctdb1.yaml"),
+					Namespace: ns,
 				},
 			},
-			destNamespace:    ns,
-			smbShareResource: types.NamespacedName{ns, "cshare1-cleanme"},
-			maxPods:          3,
-			minPods:          2,
+			destNamespace: ns,
+			maxPods:       3,
+			minPods:       2,
 		},
 		)
 
@@ -322,16 +343,16 @@ func init() {
 					Path:      path.Join(testFilesDir, "smbsecurityconfig2.yaml"),
 					Namespace: ns,
 				},
+			},
+			smbshareSources: []kube.FileSource{
 				{
-					Path:       path.Join(testFilesDir, "smbshare_ctdb2.yaml"),
-					Namespace:  ns,
-					NameSuffix: "-cleanme",
+					Path:      path.Join(testFilesDir, "smbshare_ctdb2.yaml"),
+					Namespace: ns,
 				},
 			},
-			destNamespace:    ns,
-			smbShareResource: types.NamespacedName{ns, "cshare2-cleanme"},
-			maxPods:          3,
-			minPods:          2,
+			destNamespace: ns,
+			maxPods:       3,
+			minPods:       2,
 		},
 		)
 	}
