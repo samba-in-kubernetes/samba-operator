@@ -58,6 +58,7 @@ func (s *ShareCreateDeleteSuite) defaultContext() context.Context {
 
 func (s *ShareCreateDeleteSuite) SetupSuite() {
 	s.testID = generateTestID()
+	s.T().Logf("test ID: %s", s.testID)
 	s.tc = kube.NewTestClient("")
 }
 

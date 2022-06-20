@@ -60,6 +60,7 @@ func (s *MountPathSuite) waitForPods(labelPattern string) {
 
 func (s *MountPathSuite) SetupSuite() {
 	s.testID = generateTestID()
+	s.T().Logf("test ID: %s", s.testID)
 	s.tc = kube.NewTestClient("")
 	ctx := s.defaultContext()
 	require := s.Require()

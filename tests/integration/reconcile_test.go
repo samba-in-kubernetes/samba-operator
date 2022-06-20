@@ -44,6 +44,7 @@ func (s *limitAvailModeChangeSuite) defaultContext() context.Context {
 
 func (s *limitAvailModeChangeSuite) SetupSuite() {
 	s.testID = generateTestID()
+	s.T().Logf("test ID: %s", s.testID)
 	// ensure the smbclient test pod exists
 	require := s.Require()
 	s.tc = kube.NewTestClient("")
@@ -136,6 +137,7 @@ func (s *scaleoutClusterSuite) defaultContext() context.Context {
 
 func (s *scaleoutClusterSuite) SetupSuite() {
 	s.testID = generateTestID()
+	s.T().Logf("test ID: %s", s.testID)
 	// ensure the smbclient test pod exists
 	ctx := s.defaultContext()
 	require := s.Require()

@@ -56,6 +56,7 @@ func (s *MountPathPermissionsSuite) waitForPods(labelPattern string) {
 
 func (s *MountPathPermissionsSuite) SetupSuite() {
 	s.testID = generateTestID()
+	s.T().Logf("test ID: %s", s.testID)
 	s.tc = kube.NewTestClient("")
 	require := s.Require()
 

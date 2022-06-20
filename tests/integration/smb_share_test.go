@@ -62,6 +62,7 @@ func (s *SmbShareSuite) defaultContext() context.Context {
 
 func (s *SmbShareSuite) SetupSuite() {
 	s.testID = generateTestID()
+	s.T().Logf("test ID: %s", s.testID)
 	if s.destNamespace == "" {
 		s.destNamespace = testNamespace
 	}
