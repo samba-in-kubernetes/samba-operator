@@ -43,9 +43,10 @@ const (
 // ServiceAccount (if not exists) and enable Role and RoleBinding referencing
 // to OpenShift's 'anyuid' SCC.
 type OpenShiftManager struct {
-	client rtclient.Client
-	logger logr.Logger
-	cfg    *conf.OperatorConfig
+	client      rtclient.Client
+	logger      logr.Logger
+	cfg         *conf.OperatorConfig
+	ClusterType ClusterType
 }
 
 // NewOpenShiftManager creates a ServiceAccountManager instance
@@ -66,7 +67,8 @@ func (m *OpenShiftManager) Process(
 	ctx context.Context,
 	nsname types.NamespacedName) Result {
 	// Do-nothing if not on OpenShift
-	if !IsOpenShiftCluster(ctx, m.client, m.cfg) {
+	m.resolveClusterType(ctx)
+	if m.ClusterType != ClusterTypeOpenshift {
 		return Done
 	}
 
@@ -96,6 +98,15 @@ func (m *OpenShiftManager) Process(
 	}
 	// resource is alive
 	return m.Update(ctx, cc)
+}
+
+// Cache cluster type
+func (m *OpenShiftManager) resolveClusterType(ctx context.Context) {
+	if IsOpenShiftCluster(ctx, m.client, m.cfg) {
+		m.ClusterType = ClusterTypeOpenshift
+	} else {
+		m.ClusterType = ClusterTypeDefault
+	}
 }
 
 // Update should be called when a SmbCommonConfig resource changes.

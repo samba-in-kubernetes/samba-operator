@@ -32,8 +32,9 @@ import (
 // SmbCommonConfigReconciler reconciles a SmbCommonConfig object
 type SmbCommonConfigReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	Log         logr.Logger
+	Scheme      *runtime.Scheme
+	ClusterType resources.ClusterType
 }
 
 //revive:disable kubebuilder directives
@@ -57,12 +58,29 @@ func (r *SmbCommonConfigReconciler) Reconcile(
 	// ---
 	log := r.Log.WithValues("smbcommonconfig", req.NamespacedName)
 
+	// Process OpenShift logic in one of two states:
+	// 1) Unknown cluster type due to first-time reconcile
+	// 2) Known to be running over OpenShift by in-memory cached state from
+	//    previous reconcile loop.
+	if r.ClusterType != "" && r.ClusterType != resources.ClusterTypeOpenshift {
+		return ctrl.Result{}, nil
+	}
+
 	mgr := resources.NewOpenShiftManager(r.Client, log, conf.Get())
 	res := mgr.Process(ctx, req.NamespacedName)
 	err := res.Err()
 	if res.Requeue() {
 		return ctrl.Result{Requeue: true}, err
 	}
+
+	// Cache in-memory cluster-type to avoid extra network round-trips in next
+	// reconcile phase.
+	if r.ClusterType == "" {
+		r.Log.Info("Saving discovered cluster type",
+			"ClusterType", mgr.ClusterType)
+		r.ClusterType = mgr.ClusterType
+	}
+
 	return ctrl.Result{}, err
 }
 
