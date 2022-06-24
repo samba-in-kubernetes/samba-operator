@@ -25,6 +25,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sambaoperatorv1alpha1 "github.com/samba-in-kubernetes/samba-operator/api/v1alpha1"
+	"github.com/samba-in-kubernetes/samba-operator/internal/conf"
+	"github.com/samba-in-kubernetes/samba-operator/internal/resources"
 )
 
 // SmbCommonConfigReconciler reconciles a SmbCommonConfig object
@@ -39,18 +41,29 @@ type SmbCommonConfigReconciler struct {
 // nolint:lll
 // +kubebuilder:rbac:groups=samba-operator.samba.org,resources=smbcommonconfigs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=samba-operator.samba.org,resources=smbcommonconfigs/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=core,resources=serviceaccounts,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=pods;endpoints;services;namespaces,verbs=get;list;watch;update
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings,verbs=get;list;watch;create;update;delete
+// +kubebuilder:rbac:groups=security.openshift.io,resources=securitycontextconstraints,verbs=get;list;use
+// +kubebuilder:rbac:groups=security.openshift.io,resourceNames=anyuid,resources=securitycontextconstraints,verbs=get;list;create;update
+// +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;create;update
+// +kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors;prometheusrules,verbs=get;list;watch;create;update
 
 //revive:enable
 
 // Reconcile SmbCommonConfig resources.
 func (r *SmbCommonConfigReconciler) Reconcile(
-	_ context.Context, req ctrl.Request) (ctrl.Result, error) {
+	ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	// ---
-	_ = r.Log.WithValues("smbcommonconfig", req.NamespacedName)
+	log := r.Log.WithValues("smbcommonconfig", req.NamespacedName)
 
-	// your logic here
-
-	return ctrl.Result{}, nil
+	mgr := resources.NewOpenShiftManager(r.Client, log, conf.Get())
+	res := mgr.Process(ctx, req.NamespacedName)
+	err := res.Err()
+	if res.Requeue() {
+		return ctrl.Result{Requeue: true}, err
+	}
+	return ctrl.Result{}, err
 }
 
 // SetupWithManager sets up resource management.

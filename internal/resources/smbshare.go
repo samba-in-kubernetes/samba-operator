@@ -300,6 +300,24 @@ func (m *SmbShareManager) Update(
 		return Requeue
 	}
 
+	_, created, err = m.getOrCreateMetricsService(
+		ctx, planner, destNamespace)
+	if err != nil {
+		return Result{err: err}
+	} else if created {
+		m.logger.Info("Created metrics service")
+		return Requeue
+	}
+
+	_, created, err = m.getOrCreateMetricsServiceMonitor(
+		ctx, planner, destNamespace)
+	if err != nil {
+		return Result{err: err}
+	} else if created {
+		m.logger.Info("Created metrics servicemonitor")
+		return Requeue
+	}
+
 	m.logger.Info("Done updating SmbShare resources")
 	return Done
 }
