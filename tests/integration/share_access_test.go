@@ -84,17 +84,17 @@ func (s *ShareAccessSuite) TestLogin() {
 func (s *ShareAccessSuite) TestPutFile() {
 	ctx := s.defaultContext()
 	tc := kube.NewTestClient("")
-	smbclient := smbclient.MustPodExec(tc, testNamespace, s.clientPod, "")
-	err := smbclient.CacheFlush(ctx)
+	client := smbclient.MustPodExec(tc, testNamespace, s.clientPod, "")
+	err := client.CacheFlush(ctx)
 	s.Require().NoError(err)
 	auth := s.auths[0]
-	err = smbclient.Command(
+	err = client.Command(
 		ctx,
 		s.share,
 		auth,
 		[]string{"put profile.jpeg"})
 	s.Require().NoError(err)
-	out, err := smbclient.CommandOutput(
+	out, err := client.CommandOutput(
 		ctx,
 		s.share,
 		auth,
