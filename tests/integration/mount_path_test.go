@@ -96,6 +96,7 @@ func (s *MountPathSuite) SetupSuite() {
 		"smbclient", "client")
 	err := smbclient.CacheFlush(ctx)
 	require.NoError(err)
+	requireSMBLogin(ctx, require, smbclient, share, s.auths)
 	auth := s.auths[0]
 	cmds := []string{
 		"mkdir testmnt1",
@@ -154,6 +155,7 @@ func (s *MountPathSuite) TestMountPath() {
 		"smbclient", "client")
 	err := smbclient.CacheFlush(ctx)
 	require.NoError(err)
+	requireSMBLogin(ctx, require, smbclient, share, s.auths)
 	auth := s.auths[0]
 	out, err := smbclient.CommandOutput(
 		ctx,
