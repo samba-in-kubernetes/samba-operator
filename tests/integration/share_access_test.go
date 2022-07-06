@@ -56,29 +56,12 @@ func (s *ShareAccessSuite) TestLogin() {
 	client := smbclient.MustPodExec(tc, testNamespace, s.clientPod, "")
 	err := client.CacheFlush(ctx)
 	require.NoError(err)
-
-	ctx2, cancel := context.WithTimeout(ctx, loginTestTimeout)
-	defer cancel()
-	for _, auth := range s.auths {
-		var cmderr error
-		err := poll.TryUntil(ctx2, &poll.Prober{
-			RetryInterval: loginTestInterval,
-			Cond: func() (bool, error) {
-				cmderr = client.Command(
-					ctx,
-					s.share,
-					auth,
-					[]string{"ls"})
-				return cmderr == nil, nil
-			},
-		})
-		// first check that cmderr is nil in order to capture the (much more
-		// relevant) error that client.Command returned. if cmderr == nil
-		// then err == nil. checking err at all is just a belt-and-suspenders
-		// extra check in case something unexpected happens.
-		require.NoError(cmderr)
-		require.NoError(err)
-	}
+	requireSMBLogin(
+		ctx,
+		require,
+		client,
+		s.share,
+		s.auths)
 }
 
 func (s *ShareAccessSuite) TestPutFile() {
@@ -101,4 +84,38 @@ func (s *ShareAccessSuite) TestPutFile() {
 		[]string{"ls"})
 	s.Require().NoError(err)
 	s.Require().Contains(string(out), "profile.jpeg")
+}
+
+func requireSMBLogin(
+	ctx context.Context,
+	require checker,
+	client smbclient.SmbClient,
+	share smbclient.Share,
+	auths []smbclient.Auth) {
+	// ---
+	err := client.CacheFlush(ctx)
+	require.NoError(err)
+
+	ctx2, cancel := context.WithTimeout(ctx, loginTestTimeout)
+	defer cancel()
+	for _, auth := range auths {
+		var cmderr error
+		err := poll.TryUntil(ctx2, &poll.Prober{
+			RetryInterval: loginTestInterval,
+			Cond: func() (bool, error) {
+				cmderr = client.Command(
+					ctx,
+					share,
+					auth,
+					[]string{"ls"})
+				return cmderr == nil, nil
+			},
+		})
+		// first check that cmderr is nil in order to capture the (much more
+		// relevant) error that client.Command returned. if cmderr == nil
+		// then err == nil. checking err at all is just a belt-and-suspenders
+		// extra check in case something unexpected happens.
+		require.NoError(cmderr)
+		require.NoError(err)
+	}
 }
