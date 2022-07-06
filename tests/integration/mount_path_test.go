@@ -92,11 +92,11 @@ func (s *MountPathSuite) SetupSuite() {
 	}
 
 	// Create folders over smbclient
-	smbclient := smbclient.MustPodExec(s.tc, testNamespace,
+	client := smbclient.MustPodExec(s.tc, testNamespace,
 		"smbclient", "client")
-	err := smbclient.CacheFlush(ctx)
+	err := client.CacheFlush(ctx)
 	require.NoError(err)
-	requireSMBLogin(ctx, require, smbclient, share, s.auths)
+	requireSMBLogin(ctx, require, client, share, s.auths)
 	auth := s.auths[0]
 	cmds := []string{
 		"mkdir testmnt1",
@@ -104,7 +104,7 @@ func (s *MountPathSuite) SetupSuite() {
 		"mkdir testmnt1/mnt1",
 		"mkdir testmnt2/mnt2",
 	}
-	err = smbclient.Command(
+	err = client.Command(
 		ctx,
 		share,
 		auth,
@@ -151,13 +151,13 @@ func (s *MountPathSuite) TestMountPath() {
 	}
 
 	// Test if correct path mounted using smbclient
-	smbclient := smbclient.MustPodExec(s.tc, testNamespace,
+	client := smbclient.MustPodExec(s.tc, testNamespace,
 		"smbclient", "client")
-	err := smbclient.CacheFlush(ctx)
+	err := client.CacheFlush(ctx)
 	require.NoError(err)
-	requireSMBLogin(ctx, require, smbclient, share, s.auths)
+	requireSMBLogin(ctx, require, client, share, s.auths)
 	auth := s.auths[0]
-	out, err := smbclient.CommandOutput(
+	out, err := client.CommandOutput(
 		ctx,
 		share,
 		auth,
