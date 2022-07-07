@@ -6,6 +6,7 @@ package integration
 import (
 	"context"
 	"fmt"
+	"math"
 	"path"
 	"strings"
 	"time"
@@ -27,41 +28,63 @@ import (
 type SmbShareSuite struct {
 	suite.Suite
 
-	fileSources      []kube.FileSource
-	smbShareResource types.NamespacedName
-	shareName        string
-	testAuths        []smbclient.Auth
-	destNamespace    string
-	maxPods          int
-	minPods          int
+	commonSources   []kube.FileSource
+	smbShareSources []kube.FileSource
+	shareName       string
+	testAuths       []smbclient.Auth
+	destNamespace   string
+	maxPods         int
+	minPods         int
 
 	// cached values
 	tc *kube.TestClient
+
+	// testID is a short unique test id, pseudo-randomly generated
+	testID string
+	// testShareName is the name of the SmbShare being tested by this
+	// test instance
+	testShareName types.NamespacedName
 }
 
 func (s *SmbShareSuite) defaultContext() context.Context {
 	ctx := testContext()
-	if s.smbShareResource.Name != "" {
+	if s.testID != "" {
+		ctx = context.WithValue(ctx, TestIDKey, s.testID)
+	}
+	if s.testShareName.Name != "" {
 		ctx = context.WithValue(ctx, TestShareKey,
 			fmt.Sprintf("%s/%s",
-				s.smbShareResource.Namespace,
-				s.smbShareResource.Name))
+				s.testShareName.Namespace,
+				s.testShareName.Name))
 	}
 	return ctx
 }
 
 func (s *SmbShareSuite) SetupSuite() {
+	s.testID = generateTestID()
+	s.T().Logf("test ID: %s", s.testID)
 	if s.destNamespace == "" {
 		s.destNamespace = testNamespace
 	}
 	if s.maxPods == 0 {
 		s.maxPods = 1
 	}
+	s.Require().Len(
+		s.smbShareSources, 1, "currently only one share may be tested")
 	s.tc = kube.NewTestClient("")
 	// ensure the smbclient test pod exists
 	ctx := s.defaultContext()
 	createSMBClientIfMissing(ctx, s.Require(), s.tc)
-	createFromFiles(ctx, s.Require(), s.tc, s.fileSources)
+	createFromFiles(ctx, s.Require(), s.tc, s.commonSources)
+	names := createFromFilesWithSuffix(
+		ctx,
+		s.Require(),
+		s.tc,
+		s.smbShareSources,
+		s.testID,
+	)
+	s.Require().Len(names, 1, "expected one smb share resource")
+	s.testShareName = names[0]
 }
 
 func (s *SmbShareSuite) SetupTest() {
@@ -73,7 +96,14 @@ func (s *SmbShareSuite) SetupTest() {
 
 func (s *SmbShareSuite) TearDownSuite() {
 	ctx := s.defaultContext()
-	deleteFromFiles(ctx, s.Require(), s.tc, s.fileSources)
+	deleteFromFiles(ctx, s.Require(), s.tc, s.commonSources)
+	deleteFromFilesWithSuffix(
+		ctx,
+		s.Require(),
+		s.tc,
+		s.smbShareSources,
+		s.testID)
+	s.waitForCleanup()
 }
 
 func (s *SmbShareSuite) getTestClient() *kube.TestClient {
@@ -82,7 +112,7 @@ func (s *SmbShareSuite) getTestClient() *kube.TestClient {
 
 func (s *SmbShareSuite) getPodFetchOptions() kube.PodFetchOptions {
 	l := fmt.Sprintf(
-		"samba-operator.samba.org/service=%s", s.smbShareResource.Name)
+		"samba-operator.samba.org/service=%s", s.testShareName.Name)
 	return kube.PodFetchOptions{
 		Namespace:     s.destNamespace,
 		LabelSelector: l,
@@ -102,7 +132,7 @@ func (s *SmbShareSuite) getPodIP() (string, error) {
 func (s *SmbShareSuite) getReadyPod() (*corev1.Pod, error) {
 	ctx := s.defaultContext()
 	l := fmt.Sprintf(
-		"samba-operator.samba.org/service=%s", s.smbShareResource.Name)
+		"samba-operator.samba.org/service=%s", s.testShareName.Name)
 	pods, err := s.tc.FetchPods(
 		ctx,
 		kube.PodFetchOptions{
@@ -128,10 +158,10 @@ func (s *SmbShareSuite) TestPodsReady() {
 func (s *SmbShareSuite) TestSmbShareServerGroup() {
 	smbShare := &sambaoperatorv1alpha1.SmbShare{}
 	err := s.tc.TypedObjectClient().Get(
-		s.defaultContext(), s.smbShareResource, smbShare)
+		s.defaultContext(), s.testShareName, smbShare)
 	s.Require().NoError(err)
-	s.Require().Equal(s.smbShareResource.Name, smbShare.Name)
-	s.Require().Equal(s.smbShareResource.Name, smbShare.Status.ServerGroup)
+	s.Require().Equal(s.testShareName.Name, smbShare.Name)
+	s.Require().Equal(s.testShareName.Name, smbShare.Status.ServerGroup)
 }
 
 func (s *SmbShareSuite) TestShareAccessByIP() {
@@ -151,7 +181,7 @@ func (s *SmbShareSuite) TestShareAccessByIP() {
 
 func (s *SmbShareSuite) TestShareAccessByServiceName() {
 	svcname := fmt.Sprintf("%s.%s.svc.cluster.local",
-		s.smbShareResource.Name,
+		s.testShareName.Name,
 		s.destNamespace)
 	shareAccessSuite := &ShareAccessSuite{
 		share: smbclient.Share{
@@ -177,16 +207,16 @@ func (s *SmbShareSuite) TestShareEvents() {
 	u.SetKind("SmbShare")
 	dc, err := s.tc.DynamicClientset(u)
 	s.Require().NoError(err)
-	u, err = dc.Namespace(s.smbShareResource.Namespace).Get(
+	u, err = dc.Namespace(s.testShareName.Namespace).Get(
 		ctx,
-		s.smbShareResource.Name,
+		s.testShareName.Name,
 		metav1.GetOptions{})
 	s.Require().NoError(err)
 
-	l, err := s.tc.Clientset().CoreV1().Events(s.smbShareResource.Namespace).List(
+	l, err := s.tc.Clientset().CoreV1().Events(s.testShareName.Namespace).List(
 		ctx,
 		metav1.ListOptions{
-			FieldSelector: fmt.Sprintf("involvedObject.kind=SmbShare,involvedObject.name=%s,involvedObject.uid=%s", s.smbShareResource.Name, u.GetUID()),
+			FieldSelector: fmt.Sprintf("involvedObject.kind=SmbShare,involvedObject.name=%s,involvedObject.uid=%s", s.testShareName.Name, u.GetUID()),
 		})
 	s.Require().NoError(err)
 	s.Require().GreaterOrEqual(len(l.Items), 1)
@@ -214,9 +244,9 @@ type SmbShareWithDNSSuite struct {
 func (s *SmbShareWithDNSSuite) TestShareAccessByDomainName() {
 	ctx := s.defaultContext()
 	dnsname := fmt.Sprintf("%s-cluster.domain1.sink.test",
-		s.smbShareResource.Name)
+		s.testShareName.Name)
 	lbl := fmt.Sprintf(
-		"samba-operator.samba.org/service=%s", s.smbShareResource.Name)
+		"samba-operator.samba.org/service=%s", s.testShareName.Name)
 
 	// get the ip of the service that should have been added to the ad dns. We
 	// take these extra steps to help disentangle dns update, caching, or
@@ -262,7 +292,7 @@ func (s *SmbShareWithDNSSuite) TestShareAccessByDomainName() {
 
 func (s *SmbShareWithDNSSuite) TestPodForDNSContainers() {
 	l := fmt.Sprintf(
-		"samba-operator.samba.org/service=%s", s.smbShareResource.Name)
+		"samba-operator.samba.org/service=%s", s.testShareName.Name)
 	pods, err := s.tc.FetchPods(
 		s.defaultContext(),
 		kube.PodFetchOptions{
@@ -287,7 +317,7 @@ type SmbShareWithExternalNetSuite struct {
 }
 
 func (s *SmbShareWithExternalNetSuite) TestServiceIsLoadBalancer() {
-	lbl := fmt.Sprintf("samba-operator.samba.org/service=%s", s.smbShareResource.Name)
+	lbl := fmt.Sprintf("samba-operator.samba.org/service=%s", s.testShareName.Name)
 	l, err := s.tc.Clientset().CoreV1().Services(s.destNamespace).List(
 		s.defaultContext(),
 		metav1.ListOptions{
@@ -359,12 +389,46 @@ func (s *SmbShareSuite) getMetricsContainer() (
 	return nil, nil, nil // Case running without metrics
 }
 
+func (s *SmbShareSuite) waitForCleanup() {
+	ctx, cancel := context.WithTimeout(
+		s.defaultContext(),
+		waitForCleanupTime)
+	defer cancel()
+	err := poll.TryUntil(ctx, &poll.Prober{
+		RetryInterval: time.Second,
+		Cond: func() (bool, error) {
+			lbl := fmt.Sprintf(
+				"samba-operator.samba.org/service=%s",
+				s.testShareName.Name)
+			// only set max pods since were waiting for "drain"
+			_, err := s.tc.FetchPods(
+				ctx,
+				kube.PodFetchOptions{
+					Namespace:     s.testShareName.Namespace,
+					LabelSelector: lbl,
+					MaxFound:      math.MaxInt32,
+				})
+			if err == kube.ErrNoMatchingPods {
+				return true, nil
+			}
+			if err != nil {
+				return false, err
+			}
+			s.T().Logf("pod still exists: %s/%s",
+				s.testShareName.Namespace,
+				s.testShareName.Name)
+			return false, nil
+		},
+	})
+	s.Require().NoError(err)
+}
+
 func init() {
 	utilruntime.Must(sambaoperatorv1alpha1.AddToScheme(kube.TypedClientScheme))
 
 	smbShareTests := testRoot.ChildPriority("smbShares", 1)
 	smbShareTests.AddSuite("users1", &SmbShareSuite{
-		fileSources: []kube.FileSource{
+		commonSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "userssecret1.yaml"),
 				Namespace: testNamespace,
@@ -373,13 +437,14 @@ func init() {
 				Path:      path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
 				Namespace: testNamespace,
 			},
+		},
+		smbShareSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "smbshare1.yaml"),
 				Namespace: testNamespace,
 			},
 		},
-		smbShareResource: types.NamespacedName{testNamespace, "tshare1"},
-		shareName:        "My Share",
+		shareName: "My Share",
 		testAuths: []smbclient.Auth{{
 			Username: "sambauser",
 			Password: "1nsecurely",
@@ -388,7 +453,7 @@ func init() {
 	)
 
 	smbShareTests.AddSuite("domainMember1", &SmbShareWithDNSSuite{SmbShareSuite{
-		fileSources: []kube.FileSource{
+		commonSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "joinsecret1.yaml"),
 				Namespace: testNamespace,
@@ -397,13 +462,14 @@ func init() {
 				Path:      path.Join(testFilesDir, "smbsecurityconfig2.yaml"),
 				Namespace: testNamespace,
 			},
+		},
+		smbShareSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "smbshare2.yaml"),
 				Namespace: testNamespace,
 			},
 		},
-		smbShareResource: types.NamespacedName{testNamespace, "tshare2"},
-		shareName:        "My Kingdom",
+		shareName: "My Kingdom",
 		testAuths: []smbclient.Auth{{
 			Username: "DOMAIN1\\bwayne",
 			Password: "1115Rose.",
@@ -415,7 +481,7 @@ func init() {
 	// in a different ns (for example, "default").
 	// IMPORTANT: the secrets MUST be in the same namespace as the pods.
 	smbShareTests.AddSuite("smbSharesInDefault", &SmbShareSuite{
-		fileSources: []kube.FileSource{
+		commonSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "userssecret1.yaml"),
 				Namespace: "default",
@@ -424,14 +490,15 @@ func init() {
 				Path:      path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
 				Namespace: "default",
 			},
+		},
+		smbShareSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "smbshare3.yaml"),
 				Namespace: "default",
 			},
 		},
-		smbShareResource: types.NamespacedName{"default", "tshare3"},
-		destNamespace:    "default",
-		shareName:        "My Other Share",
+		destNamespace: "default",
+		shareName:     "My Other Share",
 		testAuths: []smbclient.Auth{{
 			Username: "sambauser",
 			Password: "1nsecurely",
@@ -440,7 +507,7 @@ func init() {
 	)
 
 	smbShareTests.AddSuite("smbSharesExternal", &SmbShareWithExternalNetSuite{SmbShareSuite{
-		fileSources: []kube.FileSource{
+		commonSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "userssecret1.yaml"),
 				Namespace: testNamespace,
@@ -453,13 +520,14 @@ func init() {
 				Path:      path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
 				Namespace: testNamespace,
 			},
+		},
+		smbShareSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "smbshare4.yaml"),
 				Namespace: testNamespace,
 			},
 		},
-		smbShareResource: types.NamespacedName{testNamespace, "tshare4"},
-		shareName:        "Since When",
+		shareName: "Since When",
 		testAuths: []smbclient.Auth{{
 			Username: "sambauser",
 			Password: "1nsecurely",
@@ -470,7 +538,7 @@ func init() {
 	if testClusteredShares {
 		clusteredTests := testRoot.ChildPriority("smbSharesClustered", 1)
 		clusteredTests.AddSuite("default", &SmbShareSuite{
-			fileSources: []kube.FileSource{
+			commonSources: []kube.FileSource{
 				{
 					Path:      path.Join(testFilesDir, "userssecret1.yaml"),
 					Namespace: testNamespace,
@@ -479,14 +547,15 @@ func init() {
 					Path:      path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
 					Namespace: testNamespace,
 				},
+			},
+			smbShareSources: []kube.FileSource{
 				{
 					Path:      path.Join(testFilesDir, "smbshare_ctdb1.yaml"),
 					Namespace: testNamespace,
 				},
 			},
-			smbShareResource: types.NamespacedName{testNamespace, "cshare1"},
-			maxPods:          3,
-			shareName:        "CTDB Me",
+			maxPods:   3,
+			shareName: "CTDB Me",
 			testAuths: []smbclient.Auth{{
 				Username: "bob",
 				Password: "r0b0t",
@@ -495,7 +564,7 @@ func init() {
 		)
 
 		clusteredTests.AddSuite("noDNS", &SmbShareSuite{
-			fileSources: []kube.FileSource{
+			commonSources: []kube.FileSource{
 				{
 					Path:      path.Join(testFilesDir, "joinsecret1.yaml"),
 					Namespace: testNamespace,
@@ -504,15 +573,15 @@ func init() {
 					Path:      path.Join(testFilesDir, "smbsecurityconfig2.yaml"),
 					Namespace: testNamespace,
 				},
+			},
+			smbShareSources: []kube.FileSource{
 				{
-					Path:       path.Join(testFilesDir, "smbshare_ctdb2.yaml"),
-					Namespace:  testNamespace,
-					NameSuffix: "-dmo",
+					Path:      path.Join(testFilesDir, "smbshare_ctdb2.yaml"),
+					Namespace: testNamespace,
 				},
 			},
-			smbShareResource: types.NamespacedName{testNamespace, "cshare2-dmo"},
-			maxPods:          3,
-			shareName:        "Three Kingdoms",
+			maxPods:   3,
+			shareName: "Three Kingdoms",
 			testAuths: []smbclient.Auth{{
 				Username: "DOMAIN1\\ckent",
 				Password: "1115Rose.",
@@ -521,7 +590,7 @@ func init() {
 		)
 
 		clusteredTests.AddSuite("withDNS", &SmbShareWithDNSSuite{SmbShareSuite{
-			fileSources: []kube.FileSource{
+			commonSources: []kube.FileSource{
 				{
 					Path:      path.Join(testFilesDir, "joinsecret1.yaml"),
 					Namespace: testNamespace,
@@ -530,16 +599,16 @@ func init() {
 					Path:      path.Join(testFilesDir, "smbsecurityconfig2.yaml"),
 					Namespace: testNamespace,
 				},
+			},
+			smbShareSources: []kube.FileSource{
 				{
-					Path:       path.Join(testFilesDir, "smbshare_ctdb2.yaml"),
-					Namespace:  testNamespace,
-					NameSuffix: "-dmdns",
+					Path:      path.Join(testFilesDir, "smbshare_ctdb2.yaml"),
+					Namespace: testNamespace,
 				},
 			},
-			smbShareResource: types.NamespacedName{testNamespace, "cshare2-dmdns"},
-			maxPods:          3,
-			minPods:          2,
-			shareName:        "Three Kingdoms",
+			maxPods:   3,
+			minPods:   2,
+			shareName: "Three Kingdoms",
 			testAuths: []smbclient.Auth{{
 				Username: "DOMAIN1\\ckent",
 				Password: "1115Rose.",
@@ -548,7 +617,7 @@ func init() {
 		)
 
 		clusteredTests.AddSuite("external", &SmbShareWithExternalNetSuite{SmbShareSuite{
-			fileSources: []kube.FileSource{
+			commonSources: []kube.FileSource{
 				{
 					Path:      path.Join(testFilesDir, "joinsecret1.yaml"),
 					Namespace: testNamespace,
@@ -561,16 +630,16 @@ func init() {
 					Path:      path.Join(testFilesDir, "smbsecurityconfig2.yaml"),
 					Namespace: testNamespace,
 				},
+			},
+			smbShareSources: []kube.FileSource{
 				{
-					Path:       path.Join(testFilesDir, "smbshare_ctdb3.yaml"),
-					Namespace:  testNamespace,
-					NameSuffix: "-exlb",
+					Path:      path.Join(testFilesDir, "smbshare_ctdb3.yaml"),
+					Namespace: testNamespace,
 				},
 			},
-			smbShareResource: types.NamespacedName{testNamespace, "cshare3-exlb"},
-			maxPods:          3,
-			minPods:          2,
-			shareName:        "Costly Hare",
+			maxPods:   3,
+			minPods:   2,
+			shareName: "Costly Hare",
 			testAuths: []smbclient.Auth{{
 				Username: "DOMAIN1\\bwayne",
 				Password: "1115Rose.",

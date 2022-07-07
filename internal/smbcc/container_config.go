@@ -148,6 +148,7 @@ func NewGlobals(opts GlobalOptions) GlobalConfig {
 			"printing":        "bsd",
 			"printcap name":   "/dev/null",
 			"disable spoolss": Yes,
+			"dos charset":     "ascii",
 			"smb ports":       strconv.Itoa(opts.SmbPort),
 		},
 	}
