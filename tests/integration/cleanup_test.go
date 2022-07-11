@@ -227,18 +227,62 @@ func (s *ShareCreateDeleteSuite) TestCreateAndDelete() {
 
 	s.T().Log("removing prerequisite resources")
 	deleteFromFiles(ctx, require, s.tc, s.commonSources)
-	time.Sleep(waitForClearTime)
 
-	rs2 := s.getCurrentResources()
-	require.Equal(len(rs2.pods.Items), len(existing.pods.Items))
-	require.Equal(len(rs2.configMaps.Items), len(existing.configMaps.Items))
-	require.Equal(len(rs2.secrets.Items), len(existing.secrets.Items))
-	require.Equal(len(rs2.services.Items), len(existing.services.Items))
-	require.Equal(len(rs2.pvcs.Items), len(existing.pvcs.Items))
-	require.Equal(
-		len(rs2.deployments.Items), len(existing.deployments.Items))
-	require.Equal(
-		len(rs2.statefulSets.Items), len(existing.statefulSets.Items))
+	s.requireResourcesDone(&existing)
+}
+
+func (s *ShareCreateDeleteSuite) requireResourcesDone(base *resourceSnapshot) {
+	ctx, cancel := context.WithTimeout(s.defaultContext(), loginTestTimeout)
+	defer cancel()
+	s.Require().NoError(poll.TryUntil(ctx, &poll.Prober{
+		RetryInterval: time.Second,
+		Cond: func() (bool, error) {
+			return s.checkResourcesDone(base), nil
+		},
+	}))
+}
+
+func (s *ShareCreateDeleteSuite) checkResourcesDone(
+	base *resourceSnapshot) bool {
+	curr := s.getCurrentResources()
+	podsDiff := len(curr.pods.Items) - len(base.pods.Items)
+	if podsDiff != 0 {
+		s.T().Logf("%d pods still exist", podsDiff)
+		return false
+	}
+	configMapsDiff := len(curr.configMaps.Items) - len(base.configMaps.Items)
+	if configMapsDiff != 0 {
+		s.T().Logf("%d configMaps still exist", configMapsDiff)
+		return false
+	}
+	secretsDiff := len(curr.secrets.Items) - len(base.secrets.Items)
+	if secretsDiff != 0 {
+		s.T().Logf("%d secrets still exist", secretsDiff)
+		return false
+	}
+	servicesDiff := len(curr.services.Items) - len(base.services.Items)
+	if servicesDiff != 0 {
+		s.T().Logf("%d services still exist", servicesDiff)
+		return false
+	}
+	pvcsDiff := len(curr.pvcs.Items) - len(base.pvcs.Items)
+	if pvcsDiff != 0 {
+		s.T().Logf("%d pvcs still exist", pvcsDiff)
+		return false
+	}
+	deploymentsDiff :=
+		len(curr.deployments.Items) - len(base.deployments.Items)
+	if deploymentsDiff != 0 {
+		s.T().Logf("%d deployments still exist", deploymentsDiff)
+		return false
+	}
+	statefulSetsDiff :=
+		len(curr.statefulSets.Items) - len(base.statefulSets.Items)
+	if statefulSetsDiff != 0 {
+		s.T().Logf("%d statefulSets still exist", statefulSetsDiff)
+		return false
+	}
+	return true
 }
 
 func init() {
