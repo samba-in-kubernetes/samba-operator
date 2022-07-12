@@ -133,27 +133,75 @@ func (s *ShareCreateDeleteSuite) getCurrentResources() resourceSnapshot {
 		require = s.Require()
 	)
 
-	rs.pods, err = s.tc.Clientset().CoreV1().
+	rs.pods = &corev1.PodList{}
+	pods, err := s.tc.Clientset().CoreV1().
 		Pods(s.destNamespace).List(ctx, opts)
 	require.NoError(err)
-	rs.services, err = s.tc.Clientset().CoreV1().
+	for _, pod := range pods.Items {
+		if pod.GetDeletionTimestamp().IsZero() {
+			rs.pods.Items = append(rs.pods.Items, pod)
+		}
+	}
+
+	rs.services = &corev1.ServiceList{}
+	services, err := s.tc.Clientset().CoreV1().
 		Services(s.destNamespace).List(ctx, opts)
 	require.NoError(err)
-	rs.secrets, err = s.tc.Clientset().CoreV1().
+	for _, service := range services.Items {
+		if service.GetDeletionTimestamp().IsZero() {
+			rs.services.Items = append(rs.services.Items, service)
+		}
+	}
+
+	rs.secrets = &corev1.SecretList{}
+	secrets, err := s.tc.Clientset().CoreV1().
 		Secrets(s.destNamespace).List(ctx, opts)
 	require.NoError(err)
-	rs.configMaps, err = s.tc.Clientset().CoreV1().
+	for _, secret := range secrets.Items {
+		if secret.GetDeletionTimestamp().IsZero() {
+			rs.secrets.Items = append(rs.secrets.Items, secret)
+		}
+	}
+
+	rs.configMaps = &corev1.ConfigMapList{}
+	configMaps, err := s.tc.Clientset().CoreV1().
 		ConfigMaps(s.destNamespace).List(ctx, opts)
 	require.NoError(err)
-	rs.pvcs, err = s.tc.Clientset().CoreV1().
+	for _, configMap := range configMaps.Items {
+		if configMap.GetDeletionTimestamp().IsZero() {
+			rs.configMaps.Items = append(rs.configMaps.Items, configMap)
+		}
+	}
+
+	rs.pvcs = &corev1.PersistentVolumeClaimList{}
+	pvcs, err := s.tc.Clientset().CoreV1().
 		PersistentVolumeClaims(s.destNamespace).List(ctx, opts)
 	require.NoError(err)
-	rs.deployments, err = s.tc.Clientset().AppsV1().
+	for _, pvc := range pvcs.Items {
+		if pvc.GetDeletionTimestamp().IsZero() {
+			rs.pvcs.Items = append(rs.pvcs.Items, pvc)
+		}
+	}
+
+	rs.deployments = &appsv1.DeploymentList{}
+	deployments, err := s.tc.Clientset().AppsV1().
 		Deployments(s.destNamespace).List(ctx, opts)
 	require.NoError(err)
-	rs.statefulSets, err = s.tc.Clientset().AppsV1().
+	for _, deployment := range deployments.Items {
+		if deployment.GetDeletionTimestamp().IsZero() {
+			rs.deployments.Items = append(rs.deployments.Items, deployment)
+		}
+	}
+
+	rs.statefulSets = &appsv1.StatefulSetList{}
+	statefulSets, err := s.tc.Clientset().AppsV1().
 		StatefulSets(s.destNamespace).List(ctx, opts)
 	require.NoError(err)
+	for _, statefulSet := range statefulSets.Items {
+		if statefulSet.GetDeletionTimestamp().IsZero() {
+			rs.statefulSets.Items = append(rs.statefulSets.Items, statefulSet)
+		}
+	}
 
 	return rs
 }
