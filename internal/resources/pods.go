@@ -783,7 +783,3 @@ func getJoinSources(planner *pln.Planner) joinSources {
 func joinEnvPaths(p []string) string {
 	return strings.Join(p, ":")
 }
-
-func dupVolMounts(vols []volMount) []volMount {
-	return append(make([]volMount, 0, len(vols)), vols...)
-}
