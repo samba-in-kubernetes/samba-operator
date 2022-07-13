@@ -427,7 +427,8 @@ func buildSmbdCtrs(
 	ctrs := []corev1.Container{}
 	ctrs = append(ctrs, buildSmbdCtr(planner, env, vols))
 	if withMetricsExporter(planner.GlobalConfig) {
-		ctrs = append(ctrs, buildSmbdMetricsCtr(planner, metaPodEnv(), vols))
+		mmVols := vols.exclude(tagData)
+		ctrs = append(ctrs, buildSmbdMetricsCtr(planner, metaPodEnv(), mmVols))
 	}
 	return ctrs
 }
