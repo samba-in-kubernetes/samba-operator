@@ -121,32 +121,32 @@ func buildUserPodSpec(
 	_ *conf.OperatorConfig,
 	pvcName string) corev1.PodSpec {
 	// ---
-	vols := newVolKeeper()
+	volumes := newVolKeeper()
 	initContainers := []corev1.Container{}
 
 	shareVol := shareVolumeAndMount(planner, pvcName)
-	vols.add(shareVol)
+	volumes.add(shareVol)
 
 	stateVol := sambaStateVolumeAndMount(planner)
-	vols.add(stateVol)
+	volumes.add(stateVol)
 
 	configVol := configVolumeAndMount(planner)
-	vols.add(configVol)
+	volumes.add(configVol)
 
 	podEnv := defaultPodEnv(planner)
 	initContainers = append(initContainers,
-		buildEnsureShareCtr(planner, podEnv, vols))
+		buildEnsureShareCtr(planner, podEnv, volumes))
 
 	osRunVol := osRunVolumeAndMount(planner)
-	vols.add(osRunVol)
+	volumes.add(osRunVol)
 
 	if planner.UserSecuritySource().Configured {
 		v := userConfigVolumeAndMount(planner)
-		vols.add(v)
+		volumes.add(v)
 	}
 	podSpec := defaultPodSpec(planner)
-	podSpec.Volumes = getVolumes(vols.all())
-	podSpec.Containers = buildSmbdCtrs(planner, podEnv, vols)
+	podSpec.Volumes = getVolumes(volumes.all())
+	podSpec.Containers = buildSmbdCtrs(planner, podEnv, volumes)
 	podSpec.InitContainers = initContainers
 	return podSpec
 }
