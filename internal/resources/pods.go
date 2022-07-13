@@ -156,41 +156,41 @@ func buildClusteredUserPodSpec(
 	dataPVCName, statePVCName string) corev1.PodSpec {
 	// ---
 	var (
-		volumes        []volMount
-		podCfgVols     []volMount
+		volumes        = newVolKeeper()
+		podCfgVols     = newVolKeeper()
 		initContainers []corev1.Container
 		containers     []corev1.Container
 	)
 
 	shareVol := shareVolumeAndMount(planner, dataPVCName)
-	volumes = append(volumes, shareVol)
+	volumes.add(shareVol)
 
 	configVol := configVolumeAndMount(planner)
-	volumes = append(volumes, configVol)
-	podCfgVols = append(podCfgVols, configVol)
+	volumes.add(configVol)
+	podCfgVols.add(configVol)
 
 	stateVol := sambaStateVolumeAndMount(planner)
-	volumes = append(volumes, stateVol)
+	volumes.add(stateVol)
 
 	ctdbConfigVol := ctdbConfigVolumeAndMount(planner)
-	volumes = append(volumes, ctdbConfigVol)
+	volumes.add(ctdbConfigVol)
 
 	ctdbPeristentVol := ctdbPersistentVolumeAndMount(planner)
-	volumes = append(volumes, ctdbPeristentVol)
+	volumes.add(ctdbPeristentVol)
 
 	ctdbVolatileVol := ctdbVolatileVolumeAndMount(planner)
-	volumes = append(volumes, ctdbVolatileVol)
+	volumes.add(ctdbVolatileVol)
 
 	ctdbSocketsVol := ctdbSocketsVolumeAndMount(planner)
-	volumes = append(volumes, ctdbSocketsVol)
+	volumes.add(ctdbSocketsVol)
 
 	ctdbSharedVol := ctdbSharedStateVolumeAndMount(planner, statePVCName)
-	volumes = append(volumes, ctdbSharedVol)
+	volumes.add(ctdbSharedVol)
 
 	if planner.UserSecuritySource().Configured {
 		v := userConfigVolumeAndMount(planner)
-		volumes = append(volumes, v)
-		podCfgVols = append(podCfgVols, v)
+		volumes.add(v)
+		podCfgVols.add(v)
 	}
 
 	podEnv := defaultPodEnv(planner)
@@ -199,74 +199,66 @@ func buildClusteredUserPodSpec(
 
 	initContainers = append(
 		initContainers,
-		buildInitCtr(planner, podEnv, append(
-			podCfgVols,
-			stateVol,
-			ctdbSharedVol, // needed to decide if real init or not
-		)))
+		buildInitCtr(
+			planner,
+			podEnv,
+			// ctdbSharedVol is needed to decide if real init or not
+			podCfgVols.clone().add(stateVol).add(ctdbSharedVol).all(),
+		))
 
 	initContainers = append(
 		initContainers,
-		buildEnsureShareCtr(planner, podEnv, append(
-			podCfgVols,
-			stateVol,
-			shareVol,
-		)))
+		buildEnsureShareCtr(
+			planner,
+			podEnv,
+			podCfgVols.clone().add(stateVol).add(shareVol).all(),
+		))
 
+	ctdbMigrateVols := podCfgVols.clone().
+		add(stateVol).
+		add(ctdbSharedVol).
+		add(ctdbConfigVol).
+		add(ctdbPeristentVol)
 	initContainers = append(
 		initContainers,
-		buildCTDBMigrateCtr(planner, ctdbEnv, append(
-			podCfgVols,
-			stateVol,
-			ctdbSharedVol,
-			ctdbConfigVol,
-			ctdbPeristentVol,
-		)))
-
-	ctdbInitVols := dupVolMounts(podCfgVols)
-	ctdbInitVols = append(
-		ctdbInitVols,
-		stateVol,
-		ctdbSharedVol,
-		ctdbConfigVol,
+		buildCTDBMigrateCtr(planner, ctdbEnv, ctdbMigrateVols.all()),
 	)
+
+	ctdbInitVols := podCfgVols.clone().
+		add(stateVol).
+		add(ctdbSharedVol).
+		add(ctdbConfigVol)
 	initContainers = append(
 		initContainers,
-		buildCTDBSetNodeCtr(planner, ctdbEnv, ctdbInitVols),
-		buildCTDBMustHaveNodeCtr(planner, ctdbEnv, ctdbInitVols),
+		buildCTDBSetNodeCtr(planner, ctdbEnv, ctdbInitVols.all()),
+		buildCTDBMustHaveNodeCtr(planner, ctdbEnv, ctdbInitVols.all()),
 	)
 
-	ctdbdVols := dupVolMounts(podCfgVols)
-	ctdbdVols = append(
-		ctdbdVols,
-		ctdbConfigVol,
-		ctdbPeristentVol,
-		ctdbVolatileVol,
-		ctdbSocketsVol,
-		ctdbSharedVol,
-	)
+	ctdbdVols := podCfgVols.clone().
+		add(ctdbConfigVol).
+		add(ctdbPeristentVol).
+		add(ctdbVolatileVol).
+		add(ctdbSocketsVol).
+		add(ctdbSharedVol)
 	containers = append(
 		containers,
-		buildCTDBDaemonCtr(planner, ctdbEnv, ctdbdVols))
+		buildCTDBDaemonCtr(planner, ctdbEnv, ctdbdVols.all()))
 
-	ctdbManageNodesVols := dupVolMounts(podCfgVols)
-	ctdbManageNodesVols = append(
-		ctdbManageNodesVols,
-		ctdbConfigVol,
-		ctdbSocketsVol,
-		ctdbSharedVol,
-	)
+	ctdbManageNodesVols := podCfgVols.clone().
+		add(ctdbConfigVol).
+		add(ctdbSocketsVol).
+		add(ctdbSharedVol)
 	containers = append(
 		containers,
-		buildCTDBManageNodesCtr(planner, ctdbEnv, ctdbManageNodesVols))
+		buildCTDBManageNodesCtr(planner, ctdbEnv, ctdbManageNodesVols.all()))
 
 	// smbd
 	containers = append(
 		containers,
-		buildSmbdCtrs(planner, podEnv, volumes)...)
+		buildSmbdCtrs(planner, podEnv, volumes.all())...)
 
 	podSpec := defaultPodSpec(planner)
-	podSpec.Volumes = getVolumes(volumes)
+	podSpec.Volumes = getVolumes(volumes.all())
 	podSpec.InitContainers = initContainers
 	podSpec.Containers = containers
 	return podSpec
