@@ -53,20 +53,20 @@ func buildADPodSpec(
 	pvcName string) corev1.PodSpec {
 	// ---
 	volumes := newVolKeeper()
-	smbAllVols := newVolKeeper()
+	smbInitVols := newVolKeeper()
 
 	configVol := configVolumeAndMount(planner)
 	volumes.add(configVol)
-	smbAllVols.add(configVol)
+	smbInitVols.add(configVol)
 
 	stateVol := sambaStateVolumeAndMount(planner)
 	volumes.add(stateVol)
-	smbAllVols.add(stateVol)
+	smbInitVols.add(stateVol)
 
 	// for smb server containers (not init containers)
 	wbSockVol := wbSocketsVolumeAndMount(planner)
 	volumes.add(wbSockVol)
-	smbServerVols := smbAllVols.clone().add(wbSockVol)
+	smbServerVols := smbInitVols.clone().add(wbSockVol)
 
 	// for smbd only
 	shareVol := shareVolumeAndMount(planner, pvcName)
@@ -75,7 +75,7 @@ func buildADPodSpec(
 
 	jsrc := getJoinSources(planner)
 	volumes.extend(jsrc.volumes)
-	joinVols := smbAllVols.clone().extend(jsrc.volumes)
+	joinVols := smbInitVols.clone().extend(jsrc.volumes)
 
 	podEnv := defaultPodEnv(planner)
 	// nolint:gocritic
@@ -108,7 +108,7 @@ func buildADPodSpec(
 	podSpec := defaultPodSpec(planner)
 	podSpec.Volumes = getVolumes(volumes.all())
 	podSpec.InitContainers = []corev1.Container{
-		buildInitCtr(planner, podEnv, smbAllVols),
+		buildInitCtr(planner, podEnv, smbInitVols),
 		buildEnsureShareCtr(planner, podEnv, smbdVols),
 		buildMustJoinCtr(planner, joinEnv, joinVols),
 	}
