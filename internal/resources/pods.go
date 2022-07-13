@@ -52,33 +52,30 @@ func buildADPodSpec(
 	_ *conf.OperatorConfig,
 	pvcName string) corev1.PodSpec {
 	// ---
-	volumes := []volMount{}
-	smbAllVols := []volMount{}
+	volumes := newVolKeeper()
+	smbAllVols := newVolKeeper()
 
 	configVol := configVolumeAndMount(planner)
-	volumes = append(volumes, configVol)
-	smbAllVols = append(smbAllVols, configVol)
+	volumes.add(configVol)
+	smbAllVols.add(configVol)
 
 	stateVol := sambaStateVolumeAndMount(planner)
-	volumes = append(volumes, stateVol)
-	smbAllVols = append(smbAllVols, stateVol)
+	volumes.add(stateVol)
+	smbAllVols.add(stateVol)
 
 	// for smb server containers (not init containers)
 	wbSockVol := wbSocketsVolumeAndMount(planner)
-	volumes = append(volumes, wbSockVol)
-	smbServerVols := dupVolMounts(smbAllVols)
-	smbServerVols = append(smbServerVols, wbSockVol)
+	volumes.add(wbSockVol)
+	smbServerVols := smbAllVols.clone().add(wbSockVol)
 
 	// for smbd only
 	shareVol := shareVolumeAndMount(planner, pvcName)
-	volumes = append(volumes, shareVol)
-	smbdVols := dupVolMounts(smbServerVols)
-	smbdVols = append(smbdVols, shareVol)
+	volumes.add(shareVol)
+	smbdVols := smbServerVols.clone().add(shareVol)
 
 	jsrc := getJoinSources(planner)
-	volumes = append(volumes, jsrc.volumes...)
-	joinVols := dupVolMounts(smbAllVols)
-	joinVols = append(joinVols, jsrc.volumes...)
+	volumes.extend(jsrc.volumes)
+	joinVols := smbAllVols.clone().extend(jsrc.volumes)
 
 	podEnv := defaultPodEnv(planner)
 	// nolint:gocritic
@@ -90,31 +87,30 @@ func buildADPodSpec(
 		},
 	)
 
-	containers := buildSmbdCtrs(planner, podEnv, smbdVols)
+	containers := buildSmbdCtrs(planner, podEnv, smbdVols.all())
 	containers = append(containers,
-		buildWinbinddCtr(planner, podEnv, smbServerVols))
+		buildWinbinddCtr(planner, podEnv, smbServerVols.all()))
 
 	if planner.DNSRegister() != pln.DNSRegisterNever {
 		watchVol := svcWatchVolumeAndMount(
 			planner.Paths().ServiceWatchStateDir(),
 		)
-		volumes = append(volumes, watchVol)
-		svcWatchVols := []volMount{watchVol}
-		dnsRegVols := dupVolMounts(smbServerVols)
-		dnsRegVols = append(dnsRegVols, watchVol)
+		volumes.add(watchVol)
+		svcWatchVols := newVolKeeper().add(watchVol)
+		dnsRegVols := smbServerVols.clone().add(watchVol)
 		containers = append(
 			containers,
-			buildSvcWatchCtr(planner, svcWatchEnv(planner), svcWatchVols),
-			buildDNSRegCtr(planner, podEnv, dnsRegVols),
+			buildSvcWatchCtr(planner, svcWatchEnv(planner), svcWatchVols.all()),
+			buildDNSRegCtr(planner, podEnv, dnsRegVols.all()),
 		)
 	}
 
 	podSpec := defaultPodSpec(planner)
-	podSpec.Volumes = getVolumes(volumes)
+	podSpec.Volumes = getVolumes(volumes.all())
 	podSpec.InitContainers = []corev1.Container{
-		buildInitCtr(planner, podEnv, smbAllVols),
-		buildEnsureShareCtr(planner, podEnv, smbdVols),
-		buildMustJoinCtr(planner, joinEnv, joinVols),
+		buildInitCtr(planner, podEnv, smbAllVols.all()),
+		buildEnsureShareCtr(planner, podEnv, smbdVols.all()),
+		buildMustJoinCtr(planner, joinEnv, joinVols.all()),
 	}
 	podSpec.Containers = containers
 	return podSpec
