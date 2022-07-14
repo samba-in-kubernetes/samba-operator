@@ -133,27 +133,75 @@ func (s *ShareCreateDeleteSuite) getCurrentResources() resourceSnapshot {
 		require = s.Require()
 	)
 
-	rs.pods, err = s.tc.Clientset().CoreV1().
+	rs.pods = &corev1.PodList{}
+	pods, err := s.tc.Clientset().CoreV1().
 		Pods(s.destNamespace).List(ctx, opts)
 	require.NoError(err)
-	rs.services, err = s.tc.Clientset().CoreV1().
+	for _, pod := range pods.Items {
+		if pod.GetDeletionTimestamp().IsZero() {
+			rs.pods.Items = append(rs.pods.Items, pod)
+		}
+	}
+
+	rs.services = &corev1.ServiceList{}
+	services, err := s.tc.Clientset().CoreV1().
 		Services(s.destNamespace).List(ctx, opts)
 	require.NoError(err)
-	rs.secrets, err = s.tc.Clientset().CoreV1().
+	for _, service := range services.Items {
+		if service.GetDeletionTimestamp().IsZero() {
+			rs.services.Items = append(rs.services.Items, service)
+		}
+	}
+
+	rs.secrets = &corev1.SecretList{}
+	secrets, err := s.tc.Clientset().CoreV1().
 		Secrets(s.destNamespace).List(ctx, opts)
 	require.NoError(err)
-	rs.configMaps, err = s.tc.Clientset().CoreV1().
+	for _, secret := range secrets.Items {
+		if secret.GetDeletionTimestamp().IsZero() {
+			rs.secrets.Items = append(rs.secrets.Items, secret)
+		}
+	}
+
+	rs.configMaps = &corev1.ConfigMapList{}
+	configMaps, err := s.tc.Clientset().CoreV1().
 		ConfigMaps(s.destNamespace).List(ctx, opts)
 	require.NoError(err)
-	rs.pvcs, err = s.tc.Clientset().CoreV1().
+	for _, configMap := range configMaps.Items {
+		if configMap.GetDeletionTimestamp().IsZero() {
+			rs.configMaps.Items = append(rs.configMaps.Items, configMap)
+		}
+	}
+
+	rs.pvcs = &corev1.PersistentVolumeClaimList{}
+	pvcs, err := s.tc.Clientset().CoreV1().
 		PersistentVolumeClaims(s.destNamespace).List(ctx, opts)
 	require.NoError(err)
-	rs.deployments, err = s.tc.Clientset().AppsV1().
+	for _, pvc := range pvcs.Items {
+		if pvc.GetDeletionTimestamp().IsZero() {
+			rs.pvcs.Items = append(rs.pvcs.Items, pvc)
+		}
+	}
+
+	rs.deployments = &appsv1.DeploymentList{}
+	deployments, err := s.tc.Clientset().AppsV1().
 		Deployments(s.destNamespace).List(ctx, opts)
 	require.NoError(err)
-	rs.statefulSets, err = s.tc.Clientset().AppsV1().
+	for _, deployment := range deployments.Items {
+		if deployment.GetDeletionTimestamp().IsZero() {
+			rs.deployments.Items = append(rs.deployments.Items, deployment)
+		}
+	}
+
+	rs.statefulSets = &appsv1.StatefulSetList{}
+	statefulSets, err := s.tc.Clientset().AppsV1().
 		StatefulSets(s.destNamespace).List(ctx, opts)
 	require.NoError(err)
+	for _, statefulSet := range statefulSets.Items {
+		if statefulSet.GetDeletionTimestamp().IsZero() {
+			rs.statefulSets.Items = append(rs.statefulSets.Items, statefulSet)
+		}
+	}
 
 	return rs
 }
@@ -227,18 +275,62 @@ func (s *ShareCreateDeleteSuite) TestCreateAndDelete() {
 
 	s.T().Log("removing prerequisite resources")
 	deleteFromFiles(ctx, require, s.tc, s.commonSources)
-	time.Sleep(waitForClearTime)
 
-	rs2 := s.getCurrentResources()
-	require.Equal(len(rs2.pods.Items), len(existing.pods.Items))
-	require.Equal(len(rs2.configMaps.Items), len(existing.configMaps.Items))
-	require.Equal(len(rs2.secrets.Items), len(existing.secrets.Items))
-	require.Equal(len(rs2.services.Items), len(existing.services.Items))
-	require.Equal(len(rs2.pvcs.Items), len(existing.pvcs.Items))
-	require.Equal(
-		len(rs2.deployments.Items), len(existing.deployments.Items))
-	require.Equal(
-		len(rs2.statefulSets.Items), len(existing.statefulSets.Items))
+	s.requireResourcesDone(&existing)
+}
+
+func (s *ShareCreateDeleteSuite) requireResourcesDone(base *resourceSnapshot) {
+	ctx, cancel := context.WithTimeout(s.defaultContext(), loginTestTimeout)
+	defer cancel()
+	s.Require().NoError(poll.TryUntil(ctx, &poll.Prober{
+		RetryInterval: time.Second,
+		Cond: func() (bool, error) {
+			return s.checkResourcesDone(base), nil
+		},
+	}))
+}
+
+func (s *ShareCreateDeleteSuite) checkResourcesDone(
+	base *resourceSnapshot) bool {
+	curr := s.getCurrentResources()
+	podsDiff := len(curr.pods.Items) - len(base.pods.Items)
+	if podsDiff != 0 {
+		s.T().Logf("%d pods still exist", podsDiff)
+		return false
+	}
+	configMapsDiff := len(curr.configMaps.Items) - len(base.configMaps.Items)
+	if configMapsDiff != 0 {
+		s.T().Logf("%d configMaps still exist", configMapsDiff)
+		return false
+	}
+	secretsDiff := len(curr.secrets.Items) - len(base.secrets.Items)
+	if secretsDiff != 0 {
+		s.T().Logf("%d secrets still exist", secretsDiff)
+		return false
+	}
+	servicesDiff := len(curr.services.Items) - len(base.services.Items)
+	if servicesDiff != 0 {
+		s.T().Logf("%d services still exist", servicesDiff)
+		return false
+	}
+	pvcsDiff := len(curr.pvcs.Items) - len(base.pvcs.Items)
+	if pvcsDiff != 0 {
+		s.T().Logf("%d pvcs still exist", pvcsDiff)
+		return false
+	}
+	deploymentsDiff :=
+		len(curr.deployments.Items) - len(base.deployments.Items)
+	if deploymentsDiff != 0 {
+		s.T().Logf("%d deployments still exist", deploymentsDiff)
+		return false
+	}
+	statefulSetsDiff :=
+		len(curr.statefulSets.Items) - len(base.statefulSets.Items)
+	if statefulSetsDiff != 0 {
+		s.T().Logf("%d statefulSets still exist", statefulSetsDiff)
+		return false
+	}
+	return true
 }
 
 func init() {
