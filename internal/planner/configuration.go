@@ -93,13 +93,10 @@ func (pl *Planner) Update() (changed bool, err error) {
 	share, found := pl.ConfigState.Shares[shareKey]
 	if !found {
 		share = smbcc.NewSimpleShare(pl.Paths().Share())
-		if !pl.SmbShare.Spec.Browseable {
-			share.Options[smbcc.BrowseableParam] = smbcc.No
-		}
-		if pl.SmbShare.Spec.ReadOnly {
-			share.Options[smbcc.ReadOnlyParam] = smbcc.Yes
-		}
 		pl.ConfigState.Shares[shareKey] = share
+		changed = true
+	}
+	if c := applyShareValues(share, pl.SmbShare.Spec); c {
 		changed = true
 	}
 	cfgKey := pl.instanceID()
@@ -142,4 +139,30 @@ func (pl *Planner) Update() (changed bool, err error) {
 		}
 	}
 	return
+}
+
+func applyShareValues(share smbcc.ShareConfig, spec api.SmbShareSpec) bool {
+	changed := false
+
+	setBrowsable := smbcc.Yes
+	if !spec.Browseable {
+		setBrowsable = smbcc.No
+	}
+
+	setReadOnly := smbcc.No
+	if spec.ReadOnly {
+		setReadOnly = smbcc.Yes
+	}
+
+	if share.Options[smbcc.BrowseableParam] != setBrowsable {
+		share.Options[smbcc.BrowseableParam] = setBrowsable
+		changed = true
+	}
+
+	if share.Options[smbcc.ReadOnlyParam] != setReadOnly {
+		share.Options[smbcc.ReadOnlyParam] = setReadOnly
+		changed = true
+	}
+
+	return changed
 }
