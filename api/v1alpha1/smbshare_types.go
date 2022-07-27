@@ -104,6 +104,21 @@ type SmbShareScalingSpec struct {
 	// MinClusterSize specifies the minimum number of smb server instances
 	// to establish when availabilityMode is "clustered".
 	MinClusterSize int `json:"minClusterSize,omitempty"`
+	// Group specifies the name of a server group that will host
+	// this share. If the group doesn't already exist it will be created.
+	// The value must be a valid Kubernetes resource name (RFC 1035 label).
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=63
+	// +kubebuilder:validation:Pattern=`^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$`
+	// +optional
+	Group string `json:"group,omitempty"`
+	// GroupMode specifies how this share can be grouped with other
+	// shares under one (logical) server host.
+	// Valid values are "never" and "explicit".
+	// +optional
+	// +kubebuilder:validation:Enum:=never;explicit
+	// +kubebuilder:default:=never
+	GroupMode string `json:"groupMode,omitempty"`
 }
 
 // SmbShareStatus defines the observed state of SmbShare
