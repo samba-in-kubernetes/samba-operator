@@ -121,8 +121,10 @@ func (m *SmbShareManager) Update(
 		return Requeue
 	}
 
-	// assign the share to a Server Group. Currently we only support 1:1
-	// shares to servers & it simply reflects the name of the resource.
+	// assign the share to a Server Group. The server group represents
+	// the resources needed to create samba servers (possibly a cluster)
+	// and prerequisite resources. The serverGroup name used to name
+	// many (all?) of these resources.
 	changed, err = m.setServerGroup(ctx, instance)
 	if err != nil {
 		return Result{err: err}
@@ -1054,9 +1056,50 @@ func (m *SmbShareManager) setServerGroup(
 		return false, nil
 	}
 
-	// NOTE: currently the ServerGroup is only assigned the exact name of the
-	// resource. In the future this may change if/when multiple SmbShares can
-	// be hosted by one smbd pod.
-	s.Status.ServerGroup = s.ObjectMeta.Name
+	// if the share's scaling.groupMode option allows >1 share per
+	// serverGroup instance, we allow the group name to be supplied
+	// by the scaling.group option.
+	// In other cases it's based on the name of the SmbShare resource.
+	serverGroup := s.ObjectMeta.Name
+	mode := pln.GroupModeNever
+	reqGroupName := ""
+	if s.Spec.Scaling != nil {
+		mode = pln.GroupMode(s.Spec.Scaling.GroupMode)
+		reqGroupName = s.Spec.Scaling.Group
+	}
+
+	switch mode {
+	case pln.GroupModeNever, pln.GroupModeUnset:
+		if reqGroupName != "" {
+			msg := "a group name may not be specified when groupMode is 'never'"
+			m.recorder.Event(
+				s,
+				EventWarning,
+				ReasonInvalidConfiguration,
+				msg)
+			return false, fmt.Errorf(msg)
+		}
+	case pln.GroupModeExplicit:
+		if reqGroupName == "" {
+			msg := "a group name is required when groupMode is 'explicit'"
+			m.recorder.Event(
+				s,
+				EventWarning,
+				ReasonInvalidConfiguration,
+				msg)
+			return false, fmt.Errorf(msg)
+		}
+		serverGroup = reqGroupName
+	default:
+		msg := "invalid group mode"
+		m.recorder.Event(
+			s,
+			EventWarning,
+			ReasonInvalidConfiguration,
+			msg)
+		return false, fmt.Errorf(msg)
+	}
+
+	s.Status.ServerGroup = serverGroup
 	return true, m.client.Status().Update(ctx, s)
 }
