@@ -68,6 +68,19 @@ spec:
                         - standard
                         - clustered
                       type: string
+                    group:
+                      description: Group specifies the name of a server group that will host this share. If the group doesn't already exist it will be created. The value must be a valid Kubernetes resource name (RFC 1035 label).
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                      type: string
+                    groupMode:
+                      default: never
+                      description: GroupMode specifies how this share can be grouped with other shares under one (logical) server host. Valid values are "never" and "explicit".
+                      enum:
+                        - never
+                        - explicit
+                      type: string
                     minClusterSize:
                       description: MinClusterSize specifies the minimum number of smb server instances to establish when availabilityMode is "clustered".
                       type: integer
