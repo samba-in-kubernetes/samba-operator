@@ -947,6 +947,12 @@ func (m *SmbShareManager) updateConfiguration(
 		m.logger.Error(err, "unable to read samba container config")
 		return nil, false, err
 	}
+	otherShares, err := ownerSharesExcluding(cm, s)
+	if err != nil {
+		m.logger.Error(err, "unable to get shares owning config map")
+		return nil, false, err
+	}
+
 	isDeleting := s.GetDeletionTimestamp() != nil
 	if isDeleting {
 		m.logger.Info(
@@ -963,6 +969,22 @@ func (m *SmbShareManager) updateConfiguration(
 	shareInstance, err := m.getShareInstance(ctx, s)
 	if err != nil {
 		return nil, false, err
+	}
+
+	if len(otherShares) > 0 {
+		// this server group will be hosting > 1 share, but we must
+		// first pass our sanity checks
+		other, err := m.getSmbShareByName(ctx, otherShares[0])
+		if err != nil {
+			return nil, false, err
+		}
+		otherInstance, err := m.getShareInstance(ctx, other)
+		if err != nil {
+			return nil, false, err
+		}
+		if err = pln.CheckCompatible(shareInstance, otherInstance); err != nil {
+			return nil, false, err
+		}
 	}
 
 	// extract config from map
