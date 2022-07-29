@@ -1,0 +1,21 @@
+---
+apiVersion: samba-operator.samba.org/v1alpha1
+kind: SmbShare
+metadata:
+  name: oops-share
+spec:
+  shareName: "Oops"
+  readOnly: false
+  browseable: false
+  securityConfig: sharesec1
+  scaling:
+    groupMode: never
+    group: oops
+  storage:
+    pvc:
+      spec:
+        accessModes:
+          - ReadWriteMany
+        resources:
+          requests:
+            storage: 1Gi
