@@ -1,0 +1,17 @@
+---
+apiVersion: samba-operator.samba.org/v1alpha1
+kind: SmbShare
+metadata:
+  name: cross-share2
+spec:
+  shareName: "Cross Two"
+  readOnly: false
+  browseable: true
+  securityConfig: sharesec1
+  scaling:
+    groupMode: explicit
+    group: cross1
+  storage:
+    pvc:
+      name: cross-pvc1
+      path: two
