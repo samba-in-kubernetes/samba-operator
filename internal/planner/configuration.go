@@ -101,7 +101,7 @@ func (pl *Planner) Update() (changed bool, err error) {
 	}
 	cfgKey := pl.instanceID()
 	cfg, found := pl.ConfigState.Configs[cfgKey]
-	if !found || cfg.Shares[0] != shareKey {
+	if !found {
 		cfg = smbcc.ConfigSection{
 			Shares:       []smbcc.Key{shareKey},
 			Globals:      []smbcc.Key{smbcc.Globals},
@@ -115,8 +115,14 @@ func (pl *Planner) Update() (changed bool, err error) {
 		if pl.IsClustered() {
 			cfg.InstanceFeatures = []smbcc.FeatureFlag{smbcc.CTDB}
 		}
-		pl.ConfigState.Configs[cfgKey] = cfg
 		changed = true
+	}
+	if !hasShare(cfg, shareKey) {
+		cfg.Shares = append(cfg.Shares, shareKey)
+		changed = true
+	}
+	if changed {
+		pl.ConfigState.Configs[cfgKey] = cfg
 	}
 	if len(pl.ConfigState.Users) == 0 {
 		pl.ConfigState.Users = smbcc.NewDefaultUsers()
@@ -165,4 +171,13 @@ func applyShareValues(share smbcc.ShareConfig, spec api.SmbShareSpec) bool {
 	}
 
 	return changed
+}
+
+func hasShare(cfg smbcc.ConfigSection, k smbcc.Key) bool {
+	for i := range cfg.Shares {
+		if cfg.Shares[i] == k {
+			return true
+		}
+	}
+	return false
 }
