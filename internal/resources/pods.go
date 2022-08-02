@@ -427,10 +427,13 @@ func buildSmbdCtrs(
 	ctrs := []corev1.Container{}
 	ctrs = append(ctrs, buildSmbdCtr(planner, env, vols))
 	metaOnlyVols := vols.exclude(tagData)
-	// insert a container to watch for changes to the config json
-	// and apply those changes to samba
+	// Insert a container to watch for changes to the config json
+	// and apply those changes to samba.
+	// We need to pass data vols to the config update container as it is
+	// responsible for creating missing dirs and setting perms when new shares
+	// appear.
 	ctrs = append(ctrs, buildUpdateConfigWatchCtr(
-		planner, env, metaOnlyVols))
+		planner, env, vols))
 	if withMetricsExporter(planner.GlobalConfig) {
 		ctrs = append(ctrs, buildSmbdMetricsCtr(
 			planner, metaPodEnv(), metaOnlyVols))
