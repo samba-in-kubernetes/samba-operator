@@ -148,146 +148,29 @@ func (m *SmbShareManager) Update(
 	}
 
 	if shareNeedsPvc(instance) {
-		pvc, created, err := m.getOrCreatePvc(
-			ctx, instance, destNamespace)
-		if err != nil {
-			return Result{err: err}
-		} else if created {
-			m.logger.Info("Created PVC")
-			m.recorder.Eventf(instance,
-				EventNormal,
-				ReasonCreatedPersistentVolumeClaim,
-				"Created PVC %s for SmbShare", pvc.Name)
-			return Requeue
+		if result := m.updatePVC(ctx, instance); result.Yield() {
+			return result
 		}
-		// if name is unset in the YAML, set it here
-		instance.Spec.Storage.Pvc.Name = pvc.Name
 	}
 
 	hasBackend := instance.Annotations[serverBackend] != ""
 	if !hasBackend {
-		if instance.Annotations == nil {
-			instance.Annotations = map[string]string{}
+		if result := m.updateBackend(ctx, planner); result.Yield() {
+			return result
 		}
-		if planner.IsClustered() {
-			instance.Annotations[serverBackend] = clusteredBackend
-		} else {
-			instance.Annotations[serverBackend] = standardBackend
-		}
-		m.logger.Info("Setting backend",
-			"SmbShare.Namespace", instance.Namespace,
-			"SmbShare.Name", instance.Name,
-			"SmbShare.UID", instance.UID,
-			"backend", instance.Annotations[serverBackend])
-		err = m.client.Update(ctx, instance)
-		if err != nil {
-			m.logger.Error(
-				err,
-				"Failed to update SmbShare",
-				"SmbShare.Namespace", instance.Namespace,
-				"SmbShare.Name", instance.Name,
-				"SmbShare.UID", instance.UID)
-			return Result{err: err}
-		}
-		return Requeue
-	}
-	if hasBackend {
-		// As of today, the system is too immature to try and trivially
-		// reconcile a change in availability mode. We use the previously
-		// recorded backend to check if a change is being made after the
-		// "point of no return".
-		// In the future we should certainly revisit this and support
-		// intelligent methods to handle changes like this.
-		b := instance.Annotations[serverBackend]
-		if planner.IsClustered() && b != clusteredBackend {
-			err = fmt.Errorf(
-				"Can not convert SmbShare to clustered instance."+
-					" Current backend: %s",
-				b)
-			m.logger.Error(
-				err,
-				"Backend inconsistency detected",
-				"SmbShare.Namespace", instance.Namespace,
-				"SmbShare.Name", instance.Name,
-				"SmbShare.UID", instance.UID)
-			return Result{err: err}
-		}
-		if !planner.IsClustered() && b != standardBackend {
-			err = fmt.Errorf(
-				"Can not convert SmbShare to non-clustered instance."+
-					" Current backend: %s",
-				b)
-			m.logger.Error(
-				err,
-				"Backend inconsistency detected",
-				"SmbShare.Namespace", instance.Namespace,
-				"SmbShare.Name", instance.Name,
-				"SmbShare.UID", instance.UID)
-			return Result{err: err}
+	} else {
+		if result := m.validateBackend(planner); result.Yield() {
+			return result
 		}
 	}
 
 	if planner.IsClustered() {
-		if !planner.MayCluster() {
-			err = fmt.Errorf(
-				"CTDB clustering not enabled in ClusterSupport: %v",
-				planner.GlobalConfig.ClusterSupport)
-			m.logger.Error(err, "Clustering support is not enabled")
-			return Result{err: err}
-		}
-		_, created, err := m.getOrCreateStatePVC(
-			ctx, planner, destNamespace)
-		if err != nil {
-			return Result{err: err}
-		} else if created {
-			m.logger.Info("Created shared state PVC")
-			return Requeue
-		}
-
-		statefulSet, created, err := m.getOrCreateStatefulSet(
-			ctx, planner, destNamespace)
-		if err != nil {
-			return Result{err: err}
-		} else if created {
-			// StatefulSet created successfully - return and requeue
-			m.logger.Info("Created StatefulSet")
-			m.recorder.Eventf(instance,
-				EventNormal,
-				ReasonCreatedStatefulSet,
-				"Created stateful set %s for SmbShare", statefulSet.Name)
-			return Requeue
-		}
-
-		resized, err := m.updateStatefulSetSize(
-			ctx, statefulSet,
-			int32(planner.SmbShare.Spec.Scaling.MinClusterSize))
-		if err != nil {
-			return Result{err: err}
-		} else if resized {
-			m.logger.Info("Resized statefulSet")
-			return Requeue
+		if result := m.updateClusteredState(ctx, planner); result.Yield() {
+			return result
 		}
 	} else {
-		deployment, created, err := m.getOrCreateDeployment(
-			ctx, planner, destNamespace)
-		if err != nil {
-			return Result{err: err}
-		} else if created {
-			// Deployment created successfully - return and requeue
-			m.logger.Info("Created deployment")
-			m.recorder.Eventf(instance,
-				EventNormal,
-				ReasonCreatedDeployment,
-				"Created deployment %s for SmbShare", deployment.Name)
-			return Requeue
-		}
-
-		resized, err := m.updateDeploymentSize(ctx, deployment)
-		if err != nil {
-			return Result{err: err}
-		} else if resized {
-			m.logger.Info("Resized deployment")
-			return Requeue
+		if result := m.updateNonClusteredState(ctx, planner); result.Yield() {
+			return result
 		}
 	}
 
@@ -319,6 +202,189 @@ func (m *SmbShareManager) Update(
 	}
 
 	m.logger.Info("Done updating SmbShare resources")
+	return Done
+}
+
+func (m *SmbShareManager) updatePVC(
+	ctx context.Context,
+	instance *sambaoperatorv1alpha1.SmbShare) Result {
+	// ---
+	destNamespace := instance.Namespace
+	pvc, created, err := m.getOrCreatePvc(
+		ctx, instance, destNamespace)
+	if err != nil {
+		return Result{err: err}
+	} else if created {
+		m.logger.Info("Created PVC")
+		m.recorder.Eventf(instance,
+			EventNormal,
+			ReasonCreatedPersistentVolumeClaim,
+			"Created PVC %s for SmbShare", pvc.Name)
+		return Requeue
+	}
+	// if name is unset in the YAML, set it here
+	instance.Spec.Storage.Pvc.Name = pvc.Name
+	return Done
+}
+
+func (m *SmbShareManager) updateBackend(
+	ctx context.Context,
+	planner *pln.Planner) Result {
+	// ---
+	var (
+		err      error
+		instance = planner.SmbShare
+	)
+	if instance.Annotations == nil {
+		instance.Annotations = map[string]string{}
+	}
+	if planner.IsClustered() {
+		instance.Annotations[serverBackend] = clusteredBackend
+	} else {
+		instance.Annotations[serverBackend] = standardBackend
+	}
+	m.logger.Info("Setting backend",
+		"SmbShare.Namespace", instance.Namespace,
+		"SmbShare.Name", instance.Name,
+		"SmbShare.UID", instance.UID,
+		"backend", instance.Annotations[serverBackend])
+	err = m.client.Update(ctx, instance)
+	if err != nil {
+		m.logger.Error(
+			err,
+			"Failed to update SmbShare",
+			"SmbShare.Namespace", instance.Namespace,
+			"SmbShare.Name", instance.Name,
+			"SmbShare.UID", instance.UID)
+		return Result{err: err}
+	}
+	return Requeue
+}
+
+func (m *SmbShareManager) validateBackend(
+	planner *pln.Planner) Result {
+	// ---
+	var (
+		err      error
+		instance = planner.SmbShare
+	)
+	// As of today, the system is too immature to try and trivially
+	// reconcile a change in availability mode. We use the previously
+	// recorded backend to check if a change is being made after the
+	// "point of no return".
+	// In the future we should certainly revisit this and support
+	// intelligent methods to handle changes like this.
+	b := instance.Annotations[serverBackend]
+	if planner.IsClustered() && b != clusteredBackend {
+		err = fmt.Errorf(
+			"Can not convert SmbShare to clustered instance."+
+				" Current backend: %s",
+			b)
+		m.logger.Error(
+			err,
+			"Backend inconsistency detected",
+			"SmbShare.Namespace", instance.Namespace,
+			"SmbShare.Name", instance.Name,
+			"SmbShare.UID", instance.UID)
+		return Result{err: err}
+	}
+	if !planner.IsClustered() && b != standardBackend {
+		err = fmt.Errorf(
+			"Can not convert SmbShare to non-clustered instance."+
+				" Current backend: %s",
+			b)
+		m.logger.Error(
+			err,
+			"Backend inconsistency detected",
+			"SmbShare.Namespace", instance.Namespace,
+			"SmbShare.Name", instance.Name,
+			"SmbShare.UID", instance.UID)
+		return Result{err: err}
+	}
+	return Done
+}
+
+func (m *SmbShareManager) updateClusteredState(
+	ctx context.Context,
+	planner *pln.Planner) Result {
+	// ---
+	var (
+		err           error
+		instance      = planner.SmbShare
+		destNamespace = instance.Namespace
+	)
+	if !planner.MayCluster() {
+		err = fmt.Errorf(
+			"CTDB clustering not enabled in ClusterSupport: %v",
+			planner.GlobalConfig.ClusterSupport)
+		m.logger.Error(err, "Clustering support is not enabled")
+		return Result{err: err}
+	}
+	_, created, err := m.getOrCreateStatePVC(
+		ctx, planner, destNamespace)
+	if err != nil {
+		return Result{err: err}
+	} else if created {
+		m.logger.Info("Created shared state PVC")
+		return Requeue
+	}
+
+	statefulSet, created, err := m.getOrCreateStatefulSet(
+		ctx, planner, destNamespace)
+	if err != nil {
+		return Result{err: err}
+	} else if created {
+		// StatefulSet created successfully - return and requeue
+		m.logger.Info("Created StatefulSet")
+		m.recorder.Eventf(instance,
+			EventNormal,
+			ReasonCreatedStatefulSet,
+			"Created stateful set %s for SmbShare", statefulSet.Name)
+		return Requeue
+	}
+
+	resized, err := m.updateStatefulSetSize(
+		ctx, statefulSet,
+		int32(planner.SmbShare.Spec.Scaling.MinClusterSize))
+	if err != nil {
+		return Result{err: err}
+	} else if resized {
+		m.logger.Info("Resized statefulSet")
+		return Requeue
+	}
+	return Done
+}
+
+func (m *SmbShareManager) updateNonClusteredState(
+	ctx context.Context,
+	planner *pln.Planner) Result {
+	// ---
+	var (
+		err           error
+		instance      = planner.SmbShare
+		destNamespace = instance.Namespace
+	)
+	deployment, created, err := m.getOrCreateDeployment(
+		ctx, planner, destNamespace)
+	if err != nil {
+		return Result{err: err}
+	} else if created {
+		// Deployment created successfully - return and requeue
+		m.logger.Info("Created deployment")
+		m.recorder.Eventf(instance,
+			EventNormal,
+			ReasonCreatedDeployment,
+			"Created deployment %s for SmbShare", deployment.Name)
+		return Requeue
+	}
+
+	resized, err := m.updateDeploymentSize(ctx, deployment)
+	if err != nil {
+		return Result{err: err}
+	} else if resized {
+		m.logger.Info("Resized deployment")
+		return Requeue
+	}
 	return Done
 }
 
