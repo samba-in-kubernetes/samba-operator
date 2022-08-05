@@ -207,23 +207,22 @@ func (m *SmbShareManager) Update(
 
 func (m *SmbShareManager) updatePVC(
 	ctx context.Context,
-	instance *sambaoperatorv1alpha1.SmbShare) Result {
+	smbshare *sambaoperatorv1alpha1.SmbShare) Result {
 	// ---
-	destNamespace := instance.Namespace
 	pvc, created, err := m.getOrCreatePvc(
-		ctx, instance, destNamespace)
+		ctx, smbshare, smbshare.Namespace)
 	if err != nil {
 		return Result{err: err}
 	} else if created {
 		m.logger.Info("Created PVC")
-		m.recorder.Eventf(instance,
+		m.recorder.Eventf(smbshare,
 			EventNormal,
 			ReasonCreatedPersistentVolumeClaim,
 			"Created PVC %s for SmbShare", pvc.Name)
 		return Requeue
 	}
 	// if name is unset in the YAML, set it here
-	instance.Spec.Storage.Pvc.Name = pvc.Name
+	smbshare.Spec.Storage.Pvc.Name = pvc.Name
 	return Done
 }
 
@@ -233,29 +232,29 @@ func (m *SmbShareManager) updateBackend(
 	// ---
 	var (
 		err      error
-		instance = planner.SmbShare
+		smbshare = planner.SmbShare
 	)
-	if instance.Annotations == nil {
-		instance.Annotations = map[string]string{}
+	if smbshare.Annotations == nil {
+		smbshare.Annotations = map[string]string{}
 	}
 	if planner.IsClustered() {
-		instance.Annotations[serverBackend] = clusteredBackend
+		smbshare.Annotations[serverBackend] = clusteredBackend
 	} else {
-		instance.Annotations[serverBackend] = standardBackend
+		smbshare.Annotations[serverBackend] = standardBackend
 	}
 	m.logger.Info("Setting backend",
-		"SmbShare.Namespace", instance.Namespace,
-		"SmbShare.Name", instance.Name,
-		"SmbShare.UID", instance.UID,
-		"backend", instance.Annotations[serverBackend])
-	err = m.client.Update(ctx, instance)
+		"SmbShare.Namespace", smbshare.Namespace,
+		"SmbShare.Name", smbshare.Name,
+		"SmbShare.UID", smbshare.UID,
+		"backend", smbshare.Annotations[serverBackend])
+	err = m.client.Update(ctx, smbshare)
 	if err != nil {
 		m.logger.Error(
 			err,
 			"Failed to update SmbShare",
-			"SmbShare.Namespace", instance.Namespace,
-			"SmbShare.Name", instance.Name,
-			"SmbShare.UID", instance.UID)
+			"SmbShare.Namespace", smbshare.Namespace,
+			"SmbShare.Name", smbshare.Name,
+			"SmbShare.UID", smbshare.UID)
 		return Result{err: err}
 	}
 	return Requeue
@@ -266,7 +265,7 @@ func (m *SmbShareManager) validateBackend(
 	// ---
 	var (
 		err      error
-		instance = planner.SmbShare
+		smbshare = planner.SmbShare
 	)
 	// As of today, the system is too immature to try and trivially
 	// reconcile a change in availability mode. We use the previously
@@ -274,7 +273,7 @@ func (m *SmbShareManager) validateBackend(
 	// "point of no return".
 	// In the future we should certainly revisit this and support
 	// intelligent methods to handle changes like this.
-	b := instance.Annotations[serverBackend]
+	b := smbshare.Annotations[serverBackend]
 	if planner.IsClustered() && b != clusteredBackend {
 		err = fmt.Errorf(
 			"Can not convert SmbShare to clustered instance."+
@@ -283,9 +282,9 @@ func (m *SmbShareManager) validateBackend(
 		m.logger.Error(
 			err,
 			"Backend inconsistency detected",
-			"SmbShare.Namespace", instance.Namespace,
-			"SmbShare.Name", instance.Name,
-			"SmbShare.UID", instance.UID)
+			"SmbShare.Namespace", smbshare.Namespace,
+			"SmbShare.Name", smbshare.Name,
+			"SmbShare.UID", smbshare.UID)
 		return Result{err: err}
 	}
 	if !planner.IsClustered() && b != standardBackend {
@@ -296,9 +295,9 @@ func (m *SmbShareManager) validateBackend(
 		m.logger.Error(
 			err,
 			"Backend inconsistency detected",
-			"SmbShare.Namespace", instance.Namespace,
-			"SmbShare.Name", instance.Name,
-			"SmbShare.UID", instance.UID)
+			"SmbShare.Namespace", smbshare.Namespace,
+			"SmbShare.Name", smbshare.Name,
+			"SmbShare.UID", smbshare.UID)
 		return Result{err: err}
 	}
 	return Done
@@ -308,11 +307,7 @@ func (m *SmbShareManager) updateClusteredState(
 	ctx context.Context,
 	planner *pln.Planner) Result {
 	// ---
-	var (
-		err           error
-		instance      = planner.SmbShare
-		destNamespace = instance.Namespace
-	)
+	var err error
 	if !planner.MayCluster() {
 		err = fmt.Errorf(
 			"CTDB clustering not enabled in ClusterSupport: %v",
@@ -321,7 +316,7 @@ func (m *SmbShareManager) updateClusteredState(
 		return Result{err: err}
 	}
 	_, created, err := m.getOrCreateStatePVC(
-		ctx, planner, destNamespace)
+		ctx, planner, planner.SmbShare.Namespace)
 	if err != nil {
 		return Result{err: err}
 	} else if created {
@@ -330,13 +325,13 @@ func (m *SmbShareManager) updateClusteredState(
 	}
 
 	statefulSet, created, err := m.getOrCreateStatefulSet(
-		ctx, planner, destNamespace)
+		ctx, planner, planner.SmbShare.Namespace)
 	if err != nil {
 		return Result{err: err}
 	} else if created {
 		// StatefulSet created successfully - return and requeue
 		m.logger.Info("Created StatefulSet")
-		m.recorder.Eventf(instance,
+		m.recorder.Eventf(planner.SmbShare,
 			EventNormal,
 			ReasonCreatedStatefulSet,
 			"Created stateful set %s for SmbShare", statefulSet.Name)
@@ -359,19 +354,15 @@ func (m *SmbShareManager) updateNonClusteredState(
 	ctx context.Context,
 	planner *pln.Planner) Result {
 	// ---
-	var (
-		err           error
-		instance      = planner.SmbShare
-		destNamespace = instance.Namespace
-	)
+	var err error
 	deployment, created, err := m.getOrCreateDeployment(
-		ctx, planner, destNamespace)
+		ctx, planner, planner.SmbShare.Namespace)
 	if err != nil {
 		return Result{err: err}
 	} else if created {
 		// Deployment created successfully - return and requeue
 		m.logger.Info("Created deployment")
-		m.recorder.Eventf(instance,
+		m.recorder.Eventf(planner.SmbShare,
 			EventNormal,
 			ReasonCreatedDeployment,
 			"Created deployment %s for SmbShare", deployment.Name)
