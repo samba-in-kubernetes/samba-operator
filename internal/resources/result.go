@@ -31,6 +31,11 @@ func (r Result) Requeue() bool {
 	return r.requeue
 }
 
+// Yield returns true if current processing should be discontinued.
+func (r Result) Yield() bool {
+	return r.requeue || r.err != nil
+}
+
 var (
 	// Done represents a result that is complete.
 	Done = Result{}
