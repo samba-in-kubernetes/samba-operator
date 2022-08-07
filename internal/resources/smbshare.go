@@ -131,20 +131,14 @@ func (m *SmbShareManager) Update(
 		return Requeue
 	}
 
-	destNamespace := instance.Namespace
-	cm, created, err := m.getOrCreateConfigMap(ctx, instance, destNamespace)
-	if err != nil {
-		return Result{err: err}
-	} else if created {
-		m.logger.Info("Created config map")
-		return Requeue
-	}
-	planner, changed, err := m.updateConfiguration(ctx, cm, instance)
-	if err != nil {
-		return Result{err: err}
-	} else if changed {
-		m.logger.Info("Updated config map")
-		return Requeue
+	var planner *pln.Planner
+	if p, result := m.updateConfigMap(ctx, instance); !result.Yield() {
+		// p and result only exist within the scope of the if-statement. This
+		// is done to keep the result out of the function scope. But to reuse
+		// the planner, we need to assign p to the func scoped var
+		planner = p
+	} else {
+		return result
 	}
 
 	if shareNeedsPvc(instance) {
@@ -174,35 +168,42 @@ func (m *SmbShareManager) Update(
 		}
 	}
 
-	_, created, err = m.getOrCreateService(
-		ctx, planner, destNamespace)
-	if err != nil {
-		return Result{err: err}
-	} else if created {
-		m.logger.Info("Created service")
-		return Requeue
+	if result := m.updateSmbService(ctx, planner); result.Yield() {
+		return result
 	}
 
-	_, created, err = m.getOrCreateMetricsService(
-		ctx, planner, destNamespace)
-	if err != nil {
-		return Result{err: err}
-	} else if created {
-		m.logger.Info("Created metrics service")
-		return Requeue
+	if result := m.updateMetricsService(ctx, planner); result.Yield() {
+		return result
 	}
 
-	_, created, err = m.getOrCreateMetricsServiceMonitor(
-		ctx, planner, destNamespace)
-	if err != nil {
-		return Result{err: err}
-	} else if created {
-		m.logger.Info("Created metrics servicemonitor")
-		return Requeue
+	if result := m.updateMetricsServiceMonitor(ctx, planner); result.Yield() {
+		return result
 	}
 
 	m.logger.Info("Done updating SmbShare resources")
 	return Done
+}
+
+func (m *SmbShareManager) updateConfigMap(
+	ctx context.Context,
+	smbshare *sambaoperatorv1alpha1.SmbShare) (*pln.Planner, Result) {
+	// ---
+	destNamespace := smbshare.Namespace
+	cm, created, err := m.getOrCreateConfigMap(ctx, smbshare, destNamespace)
+	if err != nil {
+		return nil, Result{err: err}
+	} else if created {
+		m.logger.Info("Created config map")
+		return nil, Requeue
+	}
+	planner, changed, err := m.updateConfiguration(ctx, cm, smbshare)
+	if err != nil {
+		return nil, Result{err: err}
+	} else if changed {
+		m.logger.Info("Updated config map")
+		return nil, Requeue
+	}
+	return planner, Done
 }
 
 func (m *SmbShareManager) updatePVC(
@@ -374,6 +375,51 @@ func (m *SmbShareManager) updateNonClusteredState(
 		return Result{err: err}
 	} else if resized {
 		m.logger.Info("Resized deployment")
+		return Requeue
+	}
+	return Done
+}
+
+func (m *SmbShareManager) updateSmbService(
+	ctx context.Context,
+	planner *pln.Planner) Result {
+	// ---
+	_, created, err := m.getOrCreateService(
+		ctx, planner, planner.SmbShare.Namespace)
+	if err != nil {
+		return Result{err: err}
+	} else if created {
+		m.logger.Info("Created service")
+		return Requeue
+	}
+	return Done
+}
+
+func (m *SmbShareManager) updateMetricsService(
+	ctx context.Context,
+	planner *pln.Planner) Result {
+	// ---
+	_, created, err := m.getOrCreateMetricsService(
+		ctx, planner, planner.SmbShare.Namespace)
+	if err != nil {
+		return Result{err: err}
+	} else if created {
+		m.logger.Info("Created metrics service")
+		return Requeue
+	}
+	return Done
+}
+
+func (m *SmbShareManager) updateMetricsServiceMonitor(
+	ctx context.Context,
+	planner *pln.Planner) Result {
+	// ---
+	_, created, err := m.getOrCreateMetricsServiceMonitor(
+		ctx, planner, planner.SmbShare.Namespace)
+	if err != nil {
+		return Result{err: err}
+	} else if created {
+		m.logger.Info("Created metrics servicemonitor")
 		return Requeue
 	}
 	return Done
