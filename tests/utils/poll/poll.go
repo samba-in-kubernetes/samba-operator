@@ -1,3 +1,4 @@
+// Package poll assists in writing polling loops.
 package poll
 
 import (
