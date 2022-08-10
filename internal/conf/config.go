@@ -1,3 +1,4 @@
+// Package conf defines the operator's configuration parameters.
 package conf
 
 import (
