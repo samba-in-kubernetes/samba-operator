@@ -469,17 +469,38 @@ func (m *SmbShareManager) Finalize(
 	ctx context.Context,
 	instance *sambaoperatorv1alpha1.SmbShare) Result {
 	// ---
-	destNamespace := instance.Namespace
-	cm, err := m.getConfigMap(ctx, instance, destNamespace)
+	if result := m.finalizeConfigMap(ctx, instance); result.Yield() {
+		return result
+	}
+
+	// TODO: transferOwnership for deployment OR statefulset?
+
+	// TODO: transferOwnership for pvc(s)?
+
+	m.logger.Info("Removing finalizer")
+	controllerutil.RemoveFinalizer(instance, shareFinalizer)
+	err := m.client.Update(ctx, instance)
+	if err != nil {
+		return Result{err: err}
+	}
+	return Done
+}
+
+func (m *SmbShareManager) finalizeConfigMap(
+	ctx context.Context,
+	smbshare *sambaoperatorv1alpha1.SmbShare) Result {
+	// ---
+	destNamespace := smbshare.Namespace
+	cm, err := m.getConfigMap(ctx, smbshare, destNamespace)
 	if err == nil {
-		if result := m.transferOwnership(ctx, cm, instance); result.Yield() {
+		if result := m.transferOwnership(ctx, cm, smbshare); result.Yield() {
 			return result
 		}
 		// previously, we kept one configmap for many SmbShares but have moved
 		// away from that however, just to be safe, we're retaining the finalizer
 		// and check that the config is OK to remove in the case that we need to
 		// share the config map across other/multiple resources in the future.
-		_, changed, err := m.updateConfiguration(ctx, cm, instance)
+		_, changed, err := m.updateConfiguration(ctx, cm, smbshare)
 		if err != nil {
 			return Result{err: err}
 		} else if changed {
@@ -487,13 +508,6 @@ func (m *SmbShareManager) Finalize(
 			return Requeue
 		}
 	} else if !errors.IsNotFound(err) {
-		return Result{err: err}
-	}
-
-	m.logger.Info("Removing finalizer")
-	controllerutil.RemoveFinalizer(instance, shareFinalizer)
-	err = m.client.Update(ctx, instance)
-	if err != nil {
 		return Result{err: err}
 	}
 	return Done
