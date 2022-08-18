@@ -956,7 +956,7 @@ func (m *SmbShareManager) updateConfiguration(
 	isDeleting := s.GetDeletionTimestamp() != nil
 	if isDeleting {
 		m.logger.Info(
-			"ConfigMap is being deleted - returning minimal planner")
+			"SmbShare is being deleted - using a minimal planner")
 		planner := pln.New(
 			pln.InstanceConfiguration{
 				SmbShare:     s,
