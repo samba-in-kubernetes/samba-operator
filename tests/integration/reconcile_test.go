@@ -7,12 +7,14 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 	"k8s.io/apimachinery/pkg/types"
 
 	sambaoperatorv1alpha1 "github.com/samba-in-kubernetes/samba-operator/api/v1alpha1"
 	"github.com/samba-in-kubernetes/samba-operator/tests/utils/kube"
+	"github.com/samba-in-kubernetes/samba-operator/tests/utils/poll"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -120,6 +122,8 @@ type scaleoutClusterSuite struct {
 
 	commonSources   []kube.FileSource
 	smbShareSources []kube.FileSource
+	maxPods         int
+	minPods         int
 
 	// cached values
 	tc *kube.TestClient
@@ -178,7 +182,8 @@ func (s *scaleoutClusterSuite) getPodFetchOptions() kube.PodFetchOptions {
 	return kube.PodFetchOptions{
 		Namespace:     s.testShareName.Namespace,
 		LabelSelector: l,
-		MaxFound:      3,
+		MaxFound:      s.maxPods,
+		MinFound:      s.minPods,
 	}
 }
 
@@ -196,19 +201,44 @@ func (s *scaleoutClusterSuite) TestScaleoutClusterSuite() {
 	err = s.tc.TypedObjectClient().Update(
 		ctx, smbShare)
 	require.NoError(err)
-	require.NoError(waitForPodExist(ctx, s), "smb server pod does not exist")
-	require.NoError(waitForPodReady(ctx, s), "smb server pod is not ready")
 
+	ctx2, cancel := context.WithTimeout(s.defaultContext(), 3*time.Second)
+	defer cancel()
+	s.Require().NoError(poll.TryUntil(ctx2, &poll.Prober{
+		RetryInterval: time.Second,
+		Cond: func() (bool, error) {
+			return s.checkStatefulSet(ctx, int32(newClusterSize)), nil
+		},
+	}))
+
+	s.minPods = newClusterSize
+	require.NoError(waitForPodExist(ctx, s), "smb server pod does not exist")
+}
+
+func (s *scaleoutClusterSuite) checkStatefulSet(
+	ctx context.Context, cSize int32) bool {
 	l, err := s.tc.Clientset().AppsV1().StatefulSets(s.testShareName.Namespace).List(
 		ctx,
 		metav1.ListOptions{
 			LabelSelector: fmt.Sprintf("samba-operator.samba.org/service=%s",
 				s.testShareName.Name),
 		})
-	require.NoError(err)
-	// Only one stateful set should be available for this smbshare.
-	require.Len(l.Items, 1)
-	require.Equal(int32(newClusterSize), *l.Items[0].Spec.Replicas, "Clustersize not as expected")
+	if err != nil {
+		s.T().Logf("StatefulSet couldn't be listed")
+		return false
+	}
+
+	if len(l.Items) != 1 {
+		// Only one stateful set should be available for this smbshare.
+		s.T().Logf("StatefulSet count does not match")
+		return false
+	}
+	if *l.Items[0].Spec.Replicas != cSize {
+		// Replicas field should reflect updated MinClusterSize
+		s.T().Logf("StatefulSet Replicas not yet updated")
+		return false
+	}
+	return true
 }
 
 func init() {
@@ -278,6 +308,8 @@ func init() {
 				Namespace: testNamespace,
 			},
 		},
+		maxPods: 3,
+		minPods: 2,
 	},
 	)
 }
