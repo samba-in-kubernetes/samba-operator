@@ -12,7 +12,7 @@ gtest() {
     if [ "$SMBOP_TEST_CLUSTERED" ]; then
         go test -tags integration -v -count 1 -timeout 30m "$@"
     else
-        go test -tags integration -v -count 1 "$@"
+        go test -tags integration -v -count 1 -timeout 20m "$@"
     fi
 }
 
