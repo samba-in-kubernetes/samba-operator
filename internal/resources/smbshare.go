@@ -496,11 +496,9 @@ func (m *SmbShareManager) finalizeConfigMap(
 		if result := m.transferOwnership(ctx, cm, smbshare); result.Yield() {
 			return result
 		}
-		// previously, we kept one configmap for many SmbShares but have moved
-		// away from that however, just to be safe, we're retaining the finalizer
-		// and check that the config is OK to remove in the case that we need to
-		// share the config map across other/multiple resources in the future.
-		_, changed, err := m.updateConfiguration(ctx, cm, smbshare)
+		// if this configmap is used by >1 share we will need to prune
+		// the old share from the configuration.
+		changed, err := m.pruneConfiguration(ctx, cm, smbshare)
 		if err != nil {
 			return Result{err: err}
 		} else if changed {
@@ -972,15 +970,10 @@ func (m *SmbShareManager) updateConfiguration(
 
 	isDeleting := s.GetDeletionTimestamp() != nil
 	if isDeleting {
-		m.logger.Info(
-			"SmbShare is being deleted - using a minimal planner")
-		planner := pln.New(
-			pln.InstanceConfiguration{
-				SmbShare:     s,
-				GlobalConfig: m.cfg,
-			},
-			nil)
-		return planner, false, nil
+		err := fmt.Errorf(
+			"updateConfiguration called for deleted SmbShare: %s",
+			s.Name)
+		return nil, false, err
 	}
 
 	shareInstance, err := m.getShareInstance(ctx, s)
@@ -1041,6 +1034,66 @@ func (m *SmbShareManager) updateConfiguration(
 		return nil, false, err
 	}
 	return planner, true, nil
+}
+
+func (m *SmbShareManager) pruneConfiguration(
+	ctx context.Context,
+	cm *corev1.ConfigMap,
+	s *sambaoperatorv1alpha1.SmbShare) (bool, error) {
+	// ---
+	cc, err := getContainerConfig(cm)
+	if err != nil {
+		m.logger.Error(err, "unable to read samba container config")
+		return false, err
+	}
+
+	isDeleting := s.GetDeletionTimestamp() != nil
+	if !isDeleting {
+		err := fmt.Errorf(
+			"pruneConfiguration called for SmbShare not being deleted: %s",
+			s.Name)
+		return false, err
+	}
+
+	var changed bool
+	// currently, the global/common/security settings have no impact on
+	// pruning the config. We always assume if a share is in the map it
+	// had matching settings. So we can skip fetching those resources,
+	// which is nice esp. if they have already been deleted.
+	shareInstance := pln.InstanceConfiguration{
+		SmbShare:     s,
+		GlobalConfig: m.cfg,
+	}
+	planner := pln.New(shareInstance, cc)
+	changed, err = planner.Prune()
+	if err != nil {
+		m.logger.Error(err, "unable to update samba container config")
+		return false, err
+	}
+	if !changed {
+		// nothing changed between the planner and the config stored in the cm
+		// we can just return now as no changes need to be applied to the cm
+		return false, nil
+	}
+	err = setContainerConfig(cm, planner.ConfigState)
+	if err != nil {
+		m.logger.Error(
+			err,
+			"unable to set container config in ConfigMap",
+			"ConfigMap.Namespace", cm.Namespace,
+			"ConfigMap.Name", cm.Name)
+		return false, err
+	}
+	err = m.client.Update(ctx, cm)
+	if err != nil {
+		m.logger.Error(
+			err,
+			"failed to update ConfigMap",
+			"ConfigMap.Namespace", cm.Namespace,
+			"ConfigMap.Name", cm.Name)
+		return false, err
+	}
+	return true, nil
 }
 
 func (m *SmbShareManager) addFinalizer(
