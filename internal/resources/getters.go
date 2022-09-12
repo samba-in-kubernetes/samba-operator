@@ -17,11 +17,11 @@ import (
 	pln "github.com/samba-in-kubernetes/samba-operator/internal/planner"
 )
 
-func (m *SmbShareManager) getOrCreateDeployment(
+func (m *SmbShareManager) getExistingDeployment(
 	ctx context.Context,
 	planner *pln.Planner,
-	ns string) (*appsv1.Deployment, bool, error) {
-	// Check if the deployment already exists, if not create a new one
+	ns string) (*appsv1.Deployment, error) {
+	// ---
 	depKey := types.NamespacedName{
 		Name:      planner.InstanceName(),
 		Namespace: ns,
@@ -29,7 +29,7 @@ func (m *SmbShareManager) getOrCreateDeployment(
 	found := &appsv1.Deployment{}
 	err := m.client.Get(ctx, depKey, found)
 	if err == nil {
-		return found, false, nil
+		return found, nil
 	}
 
 	if !errors.IsNotFound(err) {
@@ -41,7 +41,23 @@ func (m *SmbShareManager) getOrCreateDeployment(
 			"SmbShare.Name", planner.SmbShare.Name,
 			"Deployment.Namespace", depKey.Namespace,
 			"Deployment.Name", depKey.Name)
+		return nil, err
+	}
+	// was not found
+	return nil, nil
+}
+
+func (m *SmbShareManager) getOrCreateDeployment(
+	ctx context.Context,
+	planner *pln.Planner,
+	ns string) (*appsv1.Deployment, bool, error) {
+	// Check if the deployment already exists, if not create a new one
+	found, err := m.getExistingDeployment(ctx, planner, ns)
+	if err != nil {
 		return nil, false, err
+	}
+	if found != nil {
+		return found, false, nil
 	}
 
 	// not found - define a new deployment
@@ -126,12 +142,10 @@ func (m *SmbShareManager) getOrCreatePvc(
 	return pvc, cr, err
 }
 
-func (m *SmbShareManager) getOrCreateGenericPVC(
+func (m *SmbShareManager) getExistingPVC(
 	ctx context.Context,
-	smbShare *sambaoperatorv1alpha1.SmbShare,
-	spec *corev1.PersistentVolumeClaimSpec,
-	name, ns string) (*corev1.PersistentVolumeClaim, bool, error) {
-	// Check if the pvc already exists, if not create it
+	name, ns string) (*corev1.PersistentVolumeClaim, error) {
+	// ---
 	pvc := &corev1.PersistentVolumeClaim{}
 	pvcKey := types.NamespacedName{
 		Name:      name,
@@ -139,7 +153,7 @@ func (m *SmbShareManager) getOrCreateGenericPVC(
 	}
 	err := m.client.Get(ctx, pvcKey, pvc)
 	if err == nil {
-		return pvc, false, nil
+		return pvc, nil
 	}
 
 	if !errors.IsNotFound(err) {
@@ -147,11 +161,25 @@ func (m *SmbShareManager) getOrCreateGenericPVC(
 		m.logger.Error(
 			err,
 			"Failed to get PVC",
-			"SmbShare.Namespace", smbShare.Namespace,
-			"SmbShare.Name", smbShare.Name,
 			"PersistentVolumeClaim.Namespace", pvcKey.Namespace,
 			"PersistentVolumeClaim.Name", pvcKey.Name)
+		return nil, err
+	}
+	return nil, nil
+}
+
+func (m *SmbShareManager) getOrCreateGenericPVC(
+	ctx context.Context,
+	smbShare *sambaoperatorv1alpha1.SmbShare,
+	spec *corev1.PersistentVolumeClaimSpec,
+	name, ns string) (*corev1.PersistentVolumeClaim, bool, error) {
+	// Check if the pvc already exists, if not create it
+	pvc, err := m.getExistingPVC(ctx, name, ns)
+	if err != nil {
 		return nil, false, err
+	}
+	if pvc != nil {
+		return pvc, false, nil
 	}
 
 	// not found - define a new pvc
@@ -332,11 +360,11 @@ func (m *SmbShareManager) getOrCreateConfigMap(
 	return cm, true, nil
 }
 
-func (m *SmbShareManager) getOrCreateStatefulSet(
+func (m *SmbShareManager) getExistingStatefulSet(
 	ctx context.Context,
 	planner *pln.Planner,
-	ns string) (*appsv1.StatefulSet, bool, error) {
-	// Check if the ss already exists, if not create a new one
+	ns string) (*appsv1.StatefulSet, error) {
+	// ---
 	found := &appsv1.StatefulSet{}
 	ssKey := types.NamespacedName{
 		Name:      planner.InstanceName(),
@@ -344,7 +372,7 @@ func (m *SmbShareManager) getOrCreateStatefulSet(
 	}
 	err := m.client.Get(ctx, ssKey, found)
 	if err == nil {
-		return found, false, nil
+		return found, nil
 	}
 
 	if !errors.IsNotFound(err) {
@@ -356,7 +384,22 @@ func (m *SmbShareManager) getOrCreateStatefulSet(
 			"SmbShare.Name", planner.SmbShare.Name,
 			"SatefulSet.Namespace", ssKey.Namespace,
 			"SatefulSet.Name", ssKey.Name)
+		return nil, err
+	}
+	return nil, nil
+}
+
+func (m *SmbShareManager) getOrCreateStatefulSet(
+	ctx context.Context,
+	planner *pln.Planner,
+	ns string) (*appsv1.StatefulSet, bool, error) {
+	// Check if the ss already exists, if not create a new one
+	found, err := m.getExistingStatefulSet(ctx, planner, ns)
+	if err != nil {
 		return nil, false, err
+	}
+	if found != nil {
+		return found, false, nil
 	}
 
 	// not found - define a new stateful set
