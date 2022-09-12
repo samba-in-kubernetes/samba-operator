@@ -472,7 +472,9 @@ func (m *SmbShareManager) Finalize(
 		return result
 	}
 
-	// TODO: transferOwnership for deployment OR statefulset?
+	if result := m.finalizeServerResources(ctx, instance); result.Yield() {
+		return result
+	}
 
 	// TODO: transferOwnership for pvc(s)?
 
@@ -506,6 +508,52 @@ func (m *SmbShareManager) finalizeConfigMap(
 		}
 	} else if !errors.IsNotFound(err) {
 		return Result{err: err}
+	}
+	return Done
+}
+
+func (m *SmbShareManager) finalizeServerResources(
+	ctx context.Context,
+	smbshare *sambaoperatorv1alpha1.SmbShare) Result {
+	// ---
+	destNamespace := smbshare.Namespace
+	shareInstance := pln.InstanceConfiguration{
+		SmbShare:     smbshare,
+		GlobalConfig: m.cfg,
+	}
+	// create a minimal planner
+	planner := pln.New(shareInstance, nil)
+
+	if planner.IsClustered() {
+		ss, err := m.getExistingStatefulSet(ctx, planner, destNamespace)
+		if err != nil {
+			return Result{err: err}
+		}
+		if ss != nil {
+			if result := m.transferOwnership(ctx, ss, smbshare); result.Yield() {
+				return result
+			}
+		}
+
+		sspvc, err := m.getExistingPVC(ctx, sharedStatePVCName(planner), destNamespace)
+		if err != nil {
+			return Result{err: err}
+		}
+		if sspvc != nil {
+			if result := m.transferOwnership(ctx, sspvc, smbshare); result.Yield() {
+				return result
+			}
+		}
+	} else {
+		deployment, err := m.getExistingDeployment(ctx, planner, destNamespace)
+		if err != nil {
+			return Result{err: err}
+		}
+		if deployment != nil {
+			if result := m.transferOwnership(ctx, deployment, smbshare); result.Yield() {
+				return result
+			}
+		}
 	}
 	return Done
 }
