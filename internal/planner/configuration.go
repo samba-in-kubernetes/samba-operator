@@ -81,11 +81,11 @@ func (pl *Planner) idmapOptions() smbcc.SmbOptions {
 // Update the held configuration based on the state of the instance
 // configuration.
 func (pl *Planner) Update() (changed bool, err error) {
-	globals, found := pl.ConfigState.Globals[smbcc.Globals]
+	_, found := pl.ConfigState.Globals[smbcc.Globals]
 	if !found {
 		globalOptions := smbcc.NewGlobalOptions()
 		globalOptions.SmbPort = pl.GlobalConfig.SmbdPort
-		globals = smbcc.NewGlobals(globalOptions)
+		globals := smbcc.NewGlobals(globalOptions)
 		pl.ConfigState.Globals[smbcc.Globals] = globals
 		changed = true
 	}
