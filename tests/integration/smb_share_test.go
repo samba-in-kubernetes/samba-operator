@@ -122,33 +122,13 @@ func (s *SmbShareSuite) getPodFetchOptions() kube.PodFetchOptions {
 }
 
 func (s *SmbShareSuite) getPodIP() (string, error) {
-	pod, err := s.getReadyPod()
-	if err != nil {
-		return "", err
-	}
-	return pod.Status.PodIP, nil
+	ctx := s.defaultContext()
+	return getAnyPodIP(ctx, s)
 }
 
 func (s *SmbShareSuite) getReadyPod() (*corev1.Pod, error) {
 	ctx := s.defaultContext()
-	l := fmt.Sprintf(
-		"samba-operator.samba.org/service=%s", s.testShareName.Name)
-	pods, err := s.tc.FetchPods(
-		ctx,
-		kube.PodFetchOptions{
-			Namespace:     s.destNamespace,
-			LabelSelector: l,
-			MaxFound:      s.maxPods,
-		})
-	if err != nil {
-		return nil, err
-	}
-	for _, pod := range pods {
-		if kube.PodIsReady(&pod) {
-			return &pod, nil
-		}
-	}
-	return nil, fmt.Errorf("no pods ready")
+	return getAnyReadyPod(ctx, s)
 }
 
 func (s *SmbShareSuite) TestPodsReady() {

@@ -9,6 +9,7 @@ import (
 	"path"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	krand "k8s.io/apimachinery/pkg/util/rand"
 
@@ -216,4 +217,29 @@ func createSMBClientIfMissing(
 		}),
 		"smbclient pod not ready",
 	)
+}
+
+func getAnyReadyPod(
+	ctx context.Context, ptc podTestClient) (*corev1.Pod, error) {
+	// ---
+	opts := ptc.getPodFetchOptions()
+	opts.MinFound = 1
+	pods, err := ptc.getTestClient().FetchPods(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+	for _, pod := range pods {
+		if kube.PodIsReady(&pod) {
+			return &pod, nil
+		}
+	}
+	return nil, fmt.Errorf("no pods ready")
+}
+
+func getAnyPodIP(ctx context.Context, ptc podTestClient) (string, error) {
+	pod, err := getAnyReadyPod(ctx, ptc)
+	if err != nil {
+		return "", err
+	}
+	return pod.Status.PodIP, nil
 }
