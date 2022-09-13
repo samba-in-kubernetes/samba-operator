@@ -475,7 +475,15 @@ func (m *SmbShareManager) Finalize(
 		return result
 	}
 
-	// TODO: transferOwnership for pvc(s)?
+	// If the share defined the PVC we'll transfer ownership.  It's probably
+	// not a best practice to embed the pvc definition and group multiple
+	// shares under one server instance, but we should at least handle it
+	// sanely in case it is done.
+	if shareNeedsPvc(instance) {
+		if result := m.finalizeDataPVC(ctx, instance); result.Yield() {
+			return result
+		}
+	}
 
 	m.logger.Info("Removing finalizer")
 	controllerutil.RemoveFinalizer(instance, shareFinalizer)
@@ -552,6 +560,24 @@ func (m *SmbShareManager) finalizeServerResources(
 			if result := m.transferOwnership(ctx, deployment, smbshare); result.Yield() {
 				return result
 			}
+		}
+	}
+	return Done
+}
+
+func (m *SmbShareManager) finalizeDataPVC(
+	ctx context.Context,
+	smbshare *sambaoperatorv1alpha1.SmbShare) Result {
+	// ---
+	destNamespace := smbshare.Namespace
+	name := pvcName(smbshare)
+	pvc, err := m.getExistingPVC(ctx, name, destNamespace)
+	if err != nil {
+		return Result{err: err}
+	}
+	if pvc != nil {
+		if result := m.transferOwnership(ctx, pvc, smbshare); result.Yield() {
+			return result
 		}
 	}
 	return Done
