@@ -25,7 +25,7 @@ _install_controller_gen() {
 }
 
 _install_revive() {
-	_install_tool github.com/mgechev/revive@latest
+	_install_tool github.com/mgechev/revive@v1.2.3
 }
 
 _install_golangci_lint() {
