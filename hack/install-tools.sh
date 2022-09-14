@@ -33,7 +33,7 @@ _install_golangci_lint() {
 }
 
 _install_yq() {
-	_install_tool github.com/mikefarah/yq/v4@latest
+	_install_tool github.com/mikefarah/yq/v4@v4.23.1
 }
 
 case "$1" in
