@@ -36,6 +36,10 @@ _install_yq() {
 	_install_tool github.com/mikefarah/yq/v4@v4.23.1
 }
 
+_install_gosec() {
+	_install_tool github.com/securego/gosec/v2/cmd/gosec@v2.13.1
+}
+
 case "$1" in
 	--kustomize)
 		_require_gobin
@@ -57,6 +61,10 @@ case "$1" in
 		_require_gobin
 		_install_yq
 		;;
+	--gosec)
+		_require_gobin
+		_install_gosec
+		;;
 	*)
 		echo "usage: GOBIN=<dir> $0 --<tool-name>"
 		echo ""
@@ -66,5 +74,6 @@ case "$1" in
 		echo "  --revive"
 		echo "  --golangci-lint"
 		echo "  --yq"
+		echo "  --gosec"
 		;;
 esac
