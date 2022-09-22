@@ -25,15 +25,15 @@ _install_controller_gen() {
 }
 
 _install_revive() {
-	_install_tool github.com/mgechev/revive@latest
+	_install_tool github.com/mgechev/revive@v1.2.3
 }
 
 _install_golangci_lint() {
-	_install_tool github.com/golangci/golangci-lint/cmd/golangci-lint@v1.43.0
+	_install_tool github.com/golangci/golangci-lint/cmd/golangci-lint@v1.46.2
 }
 
 _install_yq() {
-	_install_tool github.com/mikefarah/yq/v4@latest
+	_install_tool github.com/mikefarah/yq/v4@v4.23.1
 }
 
 case "$1" in
