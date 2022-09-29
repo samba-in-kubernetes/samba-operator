@@ -60,8 +60,9 @@ func (pp *podProbe) checkReady(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	for _, pod := range pp.pods {
-		if PodIsReady(&pod) {
+	for i := range pp.pods {
+		pod := &pp.pods[i]
+		if PodIsReady(pod) {
 			return true, nil
 		}
 	}
@@ -73,8 +74,9 @@ func (pp *podProbe) checkAllReady(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	for _, pod := range pp.pods {
-		if !PodIsReady(&pod) {
+	for i := range pp.pods {
+		pod := &pp.pods[i]
+		if !PodIsReady(pod) {
 			return false, nil
 		}
 	}
