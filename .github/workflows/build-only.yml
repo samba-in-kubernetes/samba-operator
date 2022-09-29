@@ -1,0 +1,50 @@
+---
+name: Build-only
+on:
+  push:
+    branches:
+      - '*'
+      - '!*draft'
+jobs:
+  build-on-arch:
+    name: Build on ${{ matrix.arch }}
+    strategy:
+      matrix:
+        include:
+          - arch: x86_64
+            os: [ubuntu-latest]
+          - arch: aarch64
+            os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/setup-go@v3
+        with:
+          go-version: "1.17"
+      - uses: actions/checkout@v3
+      - name: Info
+        run: go env
+      - name: Build
+        run: make
+      - name: Run checks
+        run: make check
+      - name: Run tests
+        run: make test
+  build-with-go-version:
+    name: Build with Go ${{ matrix.go-version }}
+    strategy:
+      matrix:
+        go-version: ["1.17", "1.18"]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Go ${{ matrix.go-version }}
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ matrix.go-version }}
+      - uses: actions/checkout@v2
+      - name: Build
+        run: make
+      - name: Run checks
+        run: make check
+      - name: Run tests
+        run: make test
