@@ -25,9 +25,11 @@ import (
 	kresource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types" // nolint:typecheck
 	"k8s.io/client-go/tools/record"
 	rtclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	sambaoperatorv1alpha1 "github.com/samba-in-kubernetes/samba-operator/api/v1alpha1"
@@ -1114,4 +1116,35 @@ func (m *SmbShareManager) getShareInstance(
 		GlobalConfig:   m.cfg,
 	}
 	return shareInstance, nil
+}
+
+func (m *SmbShareManager) claimOwnership(
+	ctx context.Context,
+	s *sambaoperatorv1alpha1.SmbShare,
+	obj rtclient.Object) (bool, error) {
+	// ---
+	gvk, err := apiutil.GVKForObject(s, m.scheme)
+	if err != nil {
+		return false, err
+	}
+	refs := obj.GetOwnerReferences()
+	for _, ref := range refs {
+		refgv, err := schema.ParseGroupVersion(ref.APIVersion)
+		if err != nil {
+			return false, err
+		}
+		if gvk.Group == refgv.Group && gvk.Kind == ref.Kind && s.GetName() == ref.Name {
+			// found it!  return false to indicate no changes
+			return false, nil
+		}
+	}
+	oref := metav1.OwnerReference{
+		APIVersion: gvk.GroupVersion().String(),
+		Kind:       gvk.Kind,
+		UID:        s.GetUID(),
+		Name:       s.GetName(),
+	}
+	refs = append(refs, oref)
+	obj.SetOwnerReferences(refs)
+	return true, m.client.Update(ctx, obj)
 }
