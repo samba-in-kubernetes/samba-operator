@@ -29,6 +29,9 @@ func (*fakeLogger) Error(error, string, ...interface{}) {
 // your own test cases.
 type fakeClient struct {
 	scheme *runtime.Scheme
+
+	// mockable functions
+	clientGet func(context.Context, types.NamespacedName, rtclient.Object) error
 }
 
 func (*fakeClient) Create(
@@ -59,10 +62,13 @@ func (*fakeClient) DeleteAllOf(
 	return nil
 }
 
-func (*fakeClient) Get(
-	_ context.Context,
-	_ types.NamespacedName,
-	_ rtclient.Object) error {
+func (c *fakeClient) Get(
+	ctx context.Context,
+	name types.NamespacedName,
+	obj rtclient.Object) error {
+	if c.clientGet != nil {
+		return c.clientGet(ctx, name, obj)
+	}
 	return nil
 }
 
