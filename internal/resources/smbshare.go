@@ -200,6 +200,13 @@ func (m *SmbShareManager) updateConfigMap(
 		m.logger.Info("Created config map")
 		return nil, Requeue
 	}
+	changed, err := m.claimOwnership(ctx, smbshare, cm)
+	if err != nil {
+		return nil, Result{err: err}
+	} else if changed {
+		m.logger.Info("Updated config map ownership")
+		return nil, Requeue
+	}
 	planner, changed, err := m.updateConfiguration(ctx, cm, smbshare)
 	if err != nil {
 		return nil, Result{err: err}
@@ -343,6 +350,14 @@ func (m *SmbShareManager) updateClusteredState(
 		return Requeue
 	}
 
+	changed, err := m.claimOwnership(ctx, planner.SmbShare, statefulSet)
+	if err != nil {
+		return Result{err: err}
+	} else if changed {
+		m.logger.Info("Updated stateful set ownership")
+		return Requeue
+	}
+
 	resized, err := m.updateStatefulSetSize(
 		ctx, statefulSet,
 		int32(planner.SmbShare.Spec.Scaling.MinClusterSize))
@@ -374,6 +389,14 @@ func (m *SmbShareManager) updateNonClusteredState(
 		return Requeue
 	}
 
+	changed, err := m.claimOwnership(ctx, planner.SmbShare, deployment)
+	if err != nil {
+		return Result{err: err}
+	} else if changed {
+		m.logger.Info("Updated deployment ownership")
+		return Requeue
+	}
+
 	resized, err := m.updateDeploymentSize(ctx, deployment)
 	if err != nil {
 		return Result{err: err}
@@ -388,7 +411,7 @@ func (m *SmbShareManager) updateSmbService(
 	ctx context.Context,
 	planner *pln.Planner) Result {
 	// ---
-	_, created, err := m.getOrCreateService(
+	svc, created, err := m.getOrCreateService(
 		ctx, planner, planner.SmbShare.Namespace)
 	if err != nil {
 		return Result{err: err}
@@ -396,6 +419,15 @@ func (m *SmbShareManager) updateSmbService(
 		m.logger.Info("Created service")
 		return Requeue
 	}
+
+	changed, err := m.claimOwnership(ctx, planner.SmbShare, svc)
+	if err != nil {
+		return Result{err: err}
+	} else if changed {
+		m.logger.Info("Updated service ownership")
+		return Requeue
+	}
+
 	return Done
 }
 
