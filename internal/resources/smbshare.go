@@ -472,6 +472,9 @@ func (m *SmbShareManager) Finalize(
 	destNamespace := instance.Namespace
 	cm, err := m.getConfigMap(ctx, instance, destNamespace)
 	if err == nil {
+		if result := m.transferOwnership(ctx, cm, instance); result.Yield() {
+			return result
+		}
 		// previously, we kept one configmap for many SmbShares but have moved
 		// away from that however, just to be safe, we're retaining the finalizer
 		// and check that the config is OK to remove in the case that we need to
