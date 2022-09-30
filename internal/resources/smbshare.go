@@ -923,27 +923,15 @@ func (m *SmbShareManager) updateConfiguration(
 			nil)
 		return planner, false, nil
 	}
-	security, err := m.getSecurityConfig(ctx, s)
+
+	shareInstance, err := m.getShareInstance(ctx, s)
 	if err != nil {
-		m.logger.Error(err, "failed to get SmbSecurityConfig")
-		return nil, false, err
-	}
-	common, err := m.getCommonConfig(ctx, s)
-	if err != nil {
-		m.logger.Error(err, "failed to get SmbCommonConfig")
 		return nil, false, err
 	}
 
 	// extract config from map
 	var changed bool
-	planner := pln.New(
-		pln.InstanceConfiguration{
-			SmbShare:       s,
-			SecurityConfig: security,
-			CommonConfig:   common,
-			GlobalConfig:   m.cfg,
-		},
-		cc)
+	planner := pln.New(shareInstance, cc)
 	changed, err = planner.Update()
 	if err != nil {
 		m.logger.Error(err, "unable to update samba container config")
@@ -1102,4 +1090,28 @@ func (m *SmbShareManager) setServerGroup(
 
 	s.Status.ServerGroup = serverGroup
 	return true, m.client.Status().Update(ctx, s)
+}
+
+func (m *SmbShareManager) getShareInstance(
+	ctx context.Context,
+	s *sambaoperatorv1alpha1.SmbShare) (pln.InstanceConfiguration, error) {
+	// ---
+	var shareInstance pln.InstanceConfiguration
+	security, err := m.getSecurityConfig(ctx, s)
+	if err != nil {
+		m.logger.Error(err, "failed to get SmbSecurityConfig")
+		return shareInstance, err
+	}
+	common, err := m.getCommonConfig(ctx, s)
+	if err != nil {
+		m.logger.Error(err, "failed to get SmbCommonConfig")
+		return shareInstance, err
+	}
+	shareInstance = pln.InstanceConfiguration{
+		SmbShare:       s,
+		SecurityConfig: security,
+		CommonConfig:   common,
+		GlobalConfig:   m.cfg,
+	}
+	return shareInstance, nil
 }
