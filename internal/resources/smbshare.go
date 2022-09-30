@@ -431,6 +431,7 @@ func (m *SmbShareManager) updateSmbService(
 	return Done
 }
 
+// TODO needs ownership?
 func (m *SmbShareManager) updateMetricsService(
 	ctx context.Context,
 	planner *pln.Planner) Result {
@@ -446,6 +447,7 @@ func (m *SmbShareManager) updateMetricsService(
 	return Done
 }
 
+// TODO needs ownership?
 func (m *SmbShareManager) updateMetricsServiceMonitor(
 	ctx context.Context,
 	planner *pln.Planner) Result {
