@@ -5,7 +5,7 @@ linters:
   disable-all: true
   enable:
     - asciicheck
-    - deadcode
+    # - deadcode
     - depguard
     - dupl
     - errcheck
@@ -30,7 +30,7 @@ linters:
     # - nolintlint
     - revive
     - staticcheck
-    - structcheck
+    # - structcheck
     # - tagliatelle
     # - testpackage
     - typecheck
