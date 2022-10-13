@@ -101,3 +101,24 @@ func (pl *Planner) ClusterSize() int32 {
 	}
 	return int32(pl.SmbShare.Spec.Scaling.MinClusterSize)
 }
+
+// Grouping returns the logical grouping mode and group name.
+func (pl *Planner) Grouping() (GroupMode, string) {
+	mode := GroupModeUnset
+	groupName := ""
+	if pl.SmbShare.Spec.Scaling != nil {
+		mode = GroupMode(pl.SmbShare.Spec.Scaling.GroupMode)
+		groupName = pl.SmbShare.Spec.Scaling.Group
+	}
+	// sanitize the SmbShare values. only a valid group type
+	// will return a real name.
+	switch mode {
+	case GroupModeExplicit:
+		return mode, groupName
+	// silly linter makes me fill in all the cases
+	case GroupModeNever, GroupModeUnset:
+		fallthrough
+	default:
+		return GroupModeNever, ""
+	}
+}
