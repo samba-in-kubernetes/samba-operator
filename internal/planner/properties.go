@@ -40,6 +40,19 @@ const (
 	ADMode = SecurityMode("active-directory")
 )
 
+// GroupMode describes how/if SmbShares are allowed to be grouped
+// together in on server instance
+type GroupMode string
+
+const (
+	// GroupModeNever disallows grouping shares. this is the default
+	GroupModeNever = GroupMode("never")
+	// GroupModeExplicit enables grouping with specific group naming
+	GroupModeExplicit = GroupMode("explicit")
+	// GroupModeUnset is equivalent to groupModeNever
+	GroupModeUnset = GroupMode("")
+)
+
 // InstanceName returns the instance's name.
 func (pl *Planner) InstanceName() string {
 	// for now, its the name of the Server Group
