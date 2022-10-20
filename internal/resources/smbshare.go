@@ -983,6 +983,11 @@ func (m *SmbShareManager) updateConfiguration(
 			return nil, false, err
 		}
 		if err = pln.CheckCompatible(shareInstance, otherInstance); err != nil {
+			m.recorder.Event(
+				s,
+				EventWarning,
+				ReasonInvalidConfiguration,
+				err.Error())
 			return nil, false, err
 		}
 	}
