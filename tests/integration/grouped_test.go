@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/suite"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	sambaoperatorv1alpha1 "github.com/samba-in-kubernetes/samba-operator/api/v1alpha1"
@@ -293,6 +294,262 @@ func testShareAccessByIP(
 	suite.Run(t, shareAccessSuite)
 }
 
+type InvalidGroupingsSuite struct {
+	suite.Suite
+
+	commonSources []kube.FileSource
+	destNamespace string
+
+	// cached values
+	tc *kube.TestClient
+
+	// testID is a short unique test id, pseudo-randomly generated
+	testID string
+}
+
+func (s *InvalidGroupingsSuite) defaultContext() context.Context {
+	ctx := testContext()
+	if s.testID != "" {
+		ctx = context.WithValue(ctx, TestIDKey, s.testID)
+	}
+	return ctx
+}
+
+func (s *InvalidGroupingsSuite) SetupSuite() {
+	s.testID = generateTestID()
+	s.T().Logf("test ID: %s", s.testID)
+	s.tc = kube.NewTestClient("")
+	// ensure the smbclient test pod exists
+	ctx := s.defaultContext()
+	createSMBClientIfMissing(ctx, s.Require(), s.tc)
+	createFromFiles(ctx, s.Require(), s.tc, s.commonSources)
+}
+
+func (s *InvalidGroupingsSuite) TearDownSuite() {
+	ctx := s.defaultContext()
+	deleteFromFiles(ctx, s.Require(), s.tc, s.commonSources)
+}
+
+func (s *InvalidGroupingsSuite) TestGroupNeverWithName() {
+	smbShare := &sambaoperatorv1alpha1.SmbShare{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "badmode-" + s.testID,
+			Namespace: s.destNamespace,
+		},
+		Spec: sambaoperatorv1alpha1.SmbShareSpec{
+			ShareName:      "badmode",
+			ReadOnly:       false,
+			Browseable:     true,
+			SecurityConfig: "sharesec1",
+			Scaling: &sambaoperatorv1alpha1.SmbShareScalingSpec{
+				GroupMode: "never",
+				Group:     "noway",
+			},
+			Storage: sambaoperatorv1alpha1.SmbShareStorageSpec{
+				Pvc: &sambaoperatorv1alpha1.SmbSharePvcSpec{
+					Name: "badmode",
+					Path: "badmode",
+				},
+			},
+		},
+	}
+	err := s.tc.TypedObjectClient().Create(
+		s.defaultContext(), smbShare)
+	s.Require().NoError(err)
+	defer func() {
+		err := s.tc.TypedObjectClient().Delete(
+			s.defaultContext(), smbShare)
+		s.Require().NoError(err)
+	}()
+
+	// check that there was an error from the operator
+	ctx, cancel := context.WithTimeout(
+		s.defaultContext(),
+		time.Second*60)
+	defer cancel()
+	sel := fmt.Sprintf("involvedObject.kind=SmbShare,involvedObject.name=%s,involvedObject.uid=%s", smbShare.Name, smbShare.GetUID())
+	err = poll.TryUntil(ctx, &poll.Prober{
+		RetryInterval: time.Second,
+		Cond: func() (bool, error) {
+			l, err := s.tc.Clientset().CoreV1().Events(smbShare.Namespace).List(
+				s.defaultContext(),
+				metav1.ListOptions{
+					FieldSelector: sel,
+				})
+			if err != nil {
+				return false, err
+			}
+			found := 0
+			s.T().Logf("found %d events", len(l.Items))
+			for _, event := range l.Items {
+				s.T().Logf("event: %s %s", event.Reason, event.Message)
+				if event.Reason == "InvalidConfiguration" {
+					found++
+				}
+			}
+			return found > 0, nil
+		},
+	})
+	s.Require().NoError(err, "didn't find expected events")
+}
+
+func (s *InvalidGroupingsSuite) TestGroupExplicitNoName() {
+	smbShare := &sambaoperatorv1alpha1.SmbShare{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "badmode2-" + s.testID,
+			Namespace: s.destNamespace,
+		},
+		Spec: sambaoperatorv1alpha1.SmbShareSpec{
+			ShareName:      "badmode2",
+			ReadOnly:       false,
+			Browseable:     true,
+			SecurityConfig: "sharesec1",
+			Scaling: &sambaoperatorv1alpha1.SmbShareScalingSpec{
+				GroupMode: "explicit",
+				Group:     "",
+			},
+			Storage: sambaoperatorv1alpha1.SmbShareStorageSpec{
+				Pvc: &sambaoperatorv1alpha1.SmbSharePvcSpec{
+					Name: "badmode2",
+					Path: "badmode",
+				},
+			},
+		},
+	}
+	err := s.tc.TypedObjectClient().Create(
+		s.defaultContext(), smbShare)
+	s.Require().NoError(err)
+	defer func() {
+		err := s.tc.TypedObjectClient().Delete(
+			s.defaultContext(), smbShare)
+		s.Require().NoError(err)
+	}()
+
+	// check that there was an error from the operator
+	ctx, cancel := context.WithTimeout(
+		s.defaultContext(),
+		time.Second*60)
+	defer cancel()
+	sel := fmt.Sprintf("involvedObject.kind=SmbShare,involvedObject.name=%s,involvedObject.uid=%s", smbShare.Name, smbShare.GetUID())
+	err = poll.TryUntil(ctx, &poll.Prober{
+		RetryInterval: time.Second,
+		Cond: func() (bool, error) {
+			l, err := s.tc.Clientset().CoreV1().Events(smbShare.Namespace).List(
+				s.defaultContext(),
+				metav1.ListOptions{
+					FieldSelector: sel,
+				})
+			if err != nil {
+				return false, err
+			}
+			found := 0
+			s.T().Logf("found %d events", len(l.Items))
+			for _, event := range l.Items {
+				s.T().Logf("event: %s %s", event.Reason, event.Message)
+				if event.Reason == "InvalidConfiguration" {
+					found++
+				}
+			}
+			return found > 0, nil
+		},
+	})
+	s.Require().NoError(err, "didn't find expected events")
+}
+
+func (s *InvalidGroupingsSuite) TestIncompatible() {
+	smbShare1 := &sambaoperatorv1alpha1.SmbShare{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "badmerge1-" + s.testID,
+			Namespace: s.destNamespace,
+		},
+		Spec: sambaoperatorv1alpha1.SmbShareSpec{
+			ShareName:      "badmerge1",
+			ReadOnly:       false,
+			Browseable:     true,
+			SecurityConfig: "sharesec1",
+			Scaling: &sambaoperatorv1alpha1.SmbShareScalingSpec{
+				GroupMode: "explicit",
+				Group:     "grouppls",
+			},
+			Storage: sambaoperatorv1alpha1.SmbShareStorageSpec{
+				Pvc: &sambaoperatorv1alpha1.SmbSharePvcSpec{
+					Name: "badmerge",
+					Path: "badmerge1",
+				},
+			},
+		},
+	}
+	err := s.tc.TypedObjectClient().Create(
+		s.defaultContext(), smbShare1)
+	s.Require().NoError(err)
+	defer func() {
+		err := s.tc.TypedObjectClient().Delete(
+			s.defaultContext(), smbShare1)
+		s.Require().NoError(err)
+	}()
+
+	smbShare2 := &sambaoperatorv1alpha1.SmbShare{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "badmerge2-" + s.testID,
+			Namespace: s.destNamespace,
+		},
+		Spec: sambaoperatorv1alpha1.SmbShareSpec{
+			ShareName:      "badmerge2",
+			ReadOnly:       false,
+			Browseable:     true,
+			SecurityConfig: "adsec1",
+			Scaling: &sambaoperatorv1alpha1.SmbShareScalingSpec{
+				GroupMode: "explicit",
+				Group:     "grouppls",
+			},
+			Storage: sambaoperatorv1alpha1.SmbShareStorageSpec{
+				Pvc: &sambaoperatorv1alpha1.SmbSharePvcSpec{
+					Name: "badmerge",
+					Path: "badmerge2",
+				},
+			},
+		},
+	}
+	err = s.tc.TypedObjectClient().Create(
+		s.defaultContext(), smbShare2)
+	s.Require().NoError(err)
+	defer func() {
+		err := s.tc.TypedObjectClient().Delete(
+			s.defaultContext(), smbShare2)
+		s.Require().NoError(err)
+	}()
+
+	// check that there was an error from the operator
+	ctx, cancel := context.WithTimeout(
+		s.defaultContext(),
+		time.Second*60)
+	defer cancel()
+	sel := fmt.Sprintf("involvedObject.kind=SmbShare,involvedObject.name=%s,involvedObject.uid=%s", smbShare2.Name, smbShare2.GetUID())
+	err = poll.TryUntil(ctx, &poll.Prober{
+		RetryInterval: time.Second,
+		Cond: func() (bool, error) {
+			l, err := s.tc.Clientset().CoreV1().Events(smbShare2.Namespace).List(
+				s.defaultContext(),
+				metav1.ListOptions{
+					FieldSelector: sel,
+				})
+			if err != nil {
+				return false, err
+			}
+			found := 0
+			s.T().Logf("found %d events", len(l.Items))
+			for _, event := range l.Items {
+				s.T().Logf("event: %s %s", event.Reason, event.Message)
+				if event.Reason == "InvalidConfiguration" {
+					found++
+				}
+			}
+			return found > 0, nil
+		},
+	})
+	s.Require().NoError(err, "didn't find expected events")
+}
+
 func init() {
 	groupedSharesTest := testRoot.ChildPriority("groupedShares", 6)
 	groupedSharesTest.AddSuite("first", &GroupedSharesSuite{
@@ -382,5 +639,31 @@ func init() {
 		destNamespace: testNamespace,
 		maxPods:       1,
 		minPods:       1,
+	})
+	groupedSharesTest.AddSuite("invalidGroupings", &InvalidGroupingsSuite{
+		// this test will create share resources with differing security
+		// configs. We want all the security related resources set up to
+		// ensure missing resources can't possibly cause false negatives.
+		commonSources: []kube.FileSource{
+			// the resources for local security
+			{
+				Path:      path.Join(testFilesDir, "userssecret1.yaml"),
+				Namespace: testNamespace,
+			},
+			{
+				Path:      path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
+				Namespace: testNamespace,
+			},
+			// the resources for ad security
+			{
+				Path:      path.Join(testFilesDir, "joinsecret1.yaml"),
+				Namespace: testNamespace,
+			},
+			{
+				Path:      path.Join(testFilesDir, "smbsecurityconfig2.yaml"),
+				Namespace: testNamespace,
+			},
+		},
+		destNamespace: testNamespace,
 	})
 }
