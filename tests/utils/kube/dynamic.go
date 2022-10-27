@@ -78,6 +78,48 @@ func (DirectSource) Rename(n string) string {
 	return n
 }
 
+// MutatingInputSource are input sources that can arbitrarily change the
+// objects read from the input.
+type MutatingInputSource interface {
+	InputSource
+	Apply(*unstructured.Unstructured) error
+}
+
+// MutatingSource uses another input source and applies a custom Mutate function
+// to change the objects read from the source.
+type MutatingSource struct {
+	Source InputSource
+	Mutate func(*unstructured.Unstructured) error
+}
+
+// Open returns the source.
+func (m MutatingSource) Open() (io.ReadCloser, error) {
+	return m.Source.Open()
+}
+
+// GetNamespace returns the specified namespace.
+func (m MutatingSource) GetNamespace() string {
+	return m.Source.GetNamespace()
+}
+
+// Rename adjusts the name of the resource.
+func (m MutatingSource) Rename(n string) string {
+	return m.Source.Rename(n)
+}
+
+// Apply mutations to the resource.
+func (m MutatingSource) Apply(u *unstructured.Unstructured) error {
+	return m.Mutate(u)
+}
+
+func mutateInputObject(u *unstructured.Unstructured, src InputSource) error {
+	ms, ok := src.(MutatingInputSource)
+	if !ok {
+		return nil
+	}
+	return ms.Apply(u)
+}
+
 // CreateFromFile creates new resources given a (yaml) file input.
 // It returns an error if the resource already exists.
 func (tc *TestClient) CreateFromFile(
@@ -89,6 +131,9 @@ func (tc *TestClient) CreateFromFile(
 		return n, err
 	}
 	for _, u := range objs {
+		if err := mutateInputObject(u, src); err != nil {
+			return n, err
+		}
 		newu, err := tc.dynCreate(ctx, src.GetNamespace(), u)
 		if err != nil {
 			return n, err
@@ -112,6 +157,9 @@ func (tc *TestClient) CreateFromFileIfMissing(
 		return n, err
 	}
 	for _, u := range objs {
+		if err := mutateInputObject(u, src); err != nil {
+			return n, err
+		}
 		newu, err := tc.dynCreate(ctx, src.GetNamespace(), u)
 		if kerrors.IsAlreadyExists(err) {
 			continue
