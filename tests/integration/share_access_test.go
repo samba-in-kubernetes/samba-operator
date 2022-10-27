@@ -103,6 +103,7 @@ func requireSMBLogin(
 		err := poll.TryUntil(ctx2, &poll.Prober{
 			RetryInterval: loginTestInterval,
 			Cond: func() (bool, error) {
+				_ = client.CacheFlush(ctx)
 				cmderr = client.Command(
 					ctx,
 					share,
