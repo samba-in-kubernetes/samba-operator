@@ -10,6 +10,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	krand "k8s.io/apimachinery/pkg/util/rand"
 
@@ -90,10 +91,15 @@ func createFromFilesWithSuffix(
 	for _, fs := range srcs {
 		nn, err := tc.CreateFromFileIfMissing(
 			ctx,
-			kube.FileSource{
-				Path:       fs.Path,
-				Namespace:  fs.Namespace,
-				NameSuffix: setSuffix(fs.NameSuffix, suffix),
+			kube.MutatingSource{
+				Source: kube.FileSource{
+					Path:       fs.Path,
+					Namespace:  fs.Namespace,
+					NameSuffix: setSuffix(fs.NameSuffix, suffix),
+				},
+				Mutate: func(u *unstructured.Unstructured) error {
+					return mutateSmbShare(u, suffix)
+				},
 			},
 		)
 		require.NoError(err)
@@ -242,4 +248,27 @@ func getAnyPodIP(ctx context.Context, ptc podTestClient) (string, error) {
 		return "", err
 	}
 	return pod.Status.PodIP, nil
+}
+
+func mutateSmbShare(u *unstructured.Unstructured, suffix string) error {
+	// for now we just assume anything with a spec.scaling.group property
+	// is an SmbShare. If we really need to, in the future we can verify
+	// the GVK of the unstructured obj.
+	v, ok, err := unstructured.NestedString(
+		u.Object,
+		"spec",
+		"scaling",
+		"group")
+	if err != nil {
+		return err
+	}
+	if ok && v != "" {
+		err = unstructured.SetNestedField(
+			u.Object,
+			setSuffix(v, suffix),
+			"spec",
+			"scaling",
+			"group")
+	}
+	return err
 }
