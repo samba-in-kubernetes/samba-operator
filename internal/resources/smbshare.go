@@ -116,7 +116,8 @@ func (m *SmbShareManager) Update(
 	changed, err := m.addFinalizer(ctx, instance)
 	if err != nil {
 		return Result{err: err}
-	} else if changed {
+	}
+	if changed {
 		m.logger.Info("Added finalizer")
 		return Requeue
 	}
@@ -128,7 +129,8 @@ func (m *SmbShareManager) Update(
 	changed, err = m.setServerGroup(ctx, instance)
 	if err != nil {
 		return Result{err: err}
-	} else if changed {
+	}
+	if changed {
 		m.logger.Info("Updated server group")
 		return Requeue
 	}
@@ -194,7 +196,8 @@ func (m *SmbShareManager) updateConfigMap(
 	cm, created, err := m.getOrCreateConfigMap(ctx, smbshare, destNamespace)
 	if err != nil {
 		return nil, Result{err: err}
-	} else if created {
+	}
+	if created {
 		m.logger.Info("Created config map")
 		return nil, Requeue
 	}
@@ -208,7 +211,8 @@ func (m *SmbShareManager) updateConfigMap(
 	planner, changed, err := m.updateConfiguration(ctx, cm, smbshare)
 	if err != nil {
 		return nil, Result{err: err}
-	} else if changed {
+	}
+	if changed {
 		m.logger.Info("Updated config map")
 		return nil, Requeue
 	}
@@ -223,7 +227,8 @@ func (m *SmbShareManager) updatePVC(
 		ctx, smbshare, smbshare.Namespace)
 	if err != nil {
 		return Result{err: err}
-	} else if created {
+	}
+	if created {
 		m.logger.Info("Created PVC")
 		m.recorder.Eventf(smbshare,
 			EventNormal,
@@ -329,7 +334,8 @@ func (m *SmbShareManager) updateClusteredState(
 		ctx, planner, planner.SmbShare.Namespace)
 	if err != nil {
 		return Result{err: err}
-	} else if created {
+	}
+	if created {
 		m.logger.Info("Created shared state PVC")
 		return Requeue
 	}
@@ -338,7 +344,8 @@ func (m *SmbShareManager) updateClusteredState(
 		ctx, planner, planner.SmbShare.Namespace)
 	if err != nil {
 		return Result{err: err}
-	} else if created {
+	}
+	if created {
 		// StatefulSet created successfully - return and requeue
 		m.logger.Info("Created StatefulSet")
 		m.recorder.Eventf(planner.SmbShare,
@@ -361,7 +368,8 @@ func (m *SmbShareManager) updateClusteredState(
 		int32(planner.SmbShare.Spec.Scaling.MinClusterSize))
 	if err != nil {
 		return Result{err: err}
-	} else if resized {
+	}
+	if resized {
 		m.logger.Info("Resized statefulSet")
 		return Requeue
 	}
@@ -377,7 +385,8 @@ func (m *SmbShareManager) updateNonClusteredState(
 		ctx, planner, planner.SmbShare.Namespace)
 	if err != nil {
 		return Result{err: err}
-	} else if created {
+	}
+	if created {
 		// Deployment created successfully - return and requeue
 		m.logger.Info("Created deployment")
 		m.recorder.Eventf(planner.SmbShare,
@@ -398,7 +407,8 @@ func (m *SmbShareManager) updateNonClusteredState(
 	resized, err := m.updateDeploymentSize(ctx, deployment)
 	if err != nil {
 		return Result{err: err}
-	} else if resized {
+	}
+	if resized {
 		m.logger.Info("Resized deployment")
 		return Requeue
 	}
@@ -413,7 +423,8 @@ func (m *SmbShareManager) updateSmbService(
 		ctx, planner, planner.SmbShare.Namespace)
 	if err != nil {
 		return Result{err: err}
-	} else if created {
+	}
+	if created {
 		m.logger.Info("Created service")
 		return Requeue
 	}
@@ -438,7 +449,8 @@ func (m *SmbShareManager) updateMetricsService(
 		ctx, planner, planner.SmbShare.Namespace)
 	if err != nil {
 		return Result{err: err}
-	} else if created {
+	}
+	if created {
 		m.logger.Info("Created metrics service")
 		return Requeue
 	}
@@ -454,7 +466,8 @@ func (m *SmbShareManager) updateMetricsServiceMonitor(
 		ctx, planner, planner.SmbShare.Namespace)
 	if err != nil {
 		return Result{err: err}
-	} else if created {
+	}
+	if created {
 		m.logger.Info("Created metrics servicemonitor")
 		return Requeue
 	}
@@ -509,7 +522,8 @@ func (m *SmbShareManager) finalizeConfigMap(
 		changed, err := m.pruneConfiguration(ctx, cm, smbshare)
 		if err != nil {
 			return Result{err: err}
-		} else if changed {
+		}
+		if changed {
 			m.logger.Info("Updated config map during Finalize")
 			return Requeue
 		}
