@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	loginTestTimeout  = 10 * time.Second
+	loginTestTimeout  = 30 * time.Second
 	loginTestInterval = 500 * time.Millisecond
 )
 
