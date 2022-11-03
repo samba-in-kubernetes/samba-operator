@@ -80,7 +80,7 @@ func (s *GroupedSharesSuite) SetupTest() {
 	defer cancel()
 	s.serverGroupName = s.getServerGroupName(ctx)
 	require.NoError(waitForPodExist(ctx, s), "smb server pod does not exist")
-	require.NoError(waitForPodReady(ctx, s), "smb server pod is not ready")
+	require.NoError(waitForAllPodReady(ctx, s), "smb server pod is not ready")
 }
 
 func (s *GroupedSharesSuite) TearDownSuite() {
@@ -666,4 +666,50 @@ func init() {
 		},
 		destNamespace: testNamespace,
 	})
+	if testClusteredShares {
+		groupedSharesTest.AddSuite("clustered", &GroupedSharesSuite{
+			commonSources: []kube.FileSource{
+				{
+					Path:      path.Join(testFilesDir, "userssecret1.yaml"),
+					Namespace: testNamespace,
+				},
+				{
+					Path:      path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
+					Namespace: testNamespace,
+				},
+				{
+					Path:      path.Join(testFilesDir, "cross-pvc2.yaml"),
+					Namespace: testNamespace,
+				},
+			},
+			smbShareSources: []kube.FileSource{
+				{
+					Path:      path.Join(testFilesDir, "cross-share1ctdb.yaml"),
+					Namespace: testNamespace,
+				},
+				{
+					Path:      path.Join(testFilesDir, "cross-share2ctdb.yaml"),
+					Namespace: testNamespace,
+				},
+			},
+			toDelete: []types.NamespacedName{
+				{Namespace: testNamespace, Name: "cross-share2ctdb"},
+			},
+			phaseOneShareNames: []string{
+				"Ecks Cee One",
+				"Ecks Cee Two",
+			},
+			phaseTwoShareNames: []string{
+				"Ecks Cee One",
+			},
+			goneShareName: "Ecks Cee Two", // only specify one share that was removed
+			testAuths: []smbclient.Auth{{
+				Username: "sambauser",
+				Password: "1nsecurely",
+			}},
+			destNamespace: testNamespace,
+			maxPods:       3,
+			minPods:       2,
+		})
+	}
 }

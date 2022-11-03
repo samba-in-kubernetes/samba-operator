@@ -1,0 +1,21 @@
+---
+apiVersion: samba-operator.samba.org/v1alpha1
+kind: SmbShare
+metadata:
+  name: cross-share1ctdb
+  annotations:
+    samba-operator.samba.org/node-spread: "false"
+spec:
+  shareName: "Ecks Cee One"
+  readOnly: false
+  browseable: true
+  securityConfig: sharesec1
+  scaling:
+    availabilityMode: clustered
+    minClusterSize: 3
+    groupMode: explicit
+    group: cross-clust
+  storage:
+    pvc:
+      name: cross-pvc2
+      path: one
