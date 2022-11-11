@@ -12,17 +12,25 @@ enabled cluster of Samba servers.
 
 The samba-operator is designed around the idea that what people are interested
 in are shares and the data within them; that servers are an implementation
-detail irrelevant for most users.  With
-this in mind, the samba-operator's primary resource is the SmbShare.  When
-moving beyond the most basic cases, it provides the SmbSecurityConfig resource
-for configuring Active Directory integration or specifying the users/groups for
-authentication and access. The SmbCommonConfig resource is used to define
-shared networking and Kubernetes cluster integration properties. Both
-SmbSecurityConfig and SmbCommonConfig can be referenced by multiple SmbShare
-resources.
+detail irrelevant for most users.  With this in mind, the samba-operator's
+primary resource is the [SmbShare](./resources/SmbShare.md).  When moving
+beyond the most basic cases, it provides the
+[SmbSecurityConfig](./resources/SmbSecurityConfig.md) resource for configuring
+Active Directory integration or specifying the users/groups for authentication
+and access. The [SmbCommonConfig](./resources/SmbCommonConfig.md) resource is
+used to define shared networking and Kubernetes cluster integration properties.
+Both [SmbSecurityConfig](./resources/SmbSecurityConfig.md) and
+[SmbCommonConfig](./resources/SmbCommonConfig.md) can be referenced by multiple
+[SmbShare](./resources/SmbShare.md) resources.
 
 ## User Docs
 
+* [SmbShare Resource](./resources/SmbShare.md) -
+  Document describing the SmbShare resource in detail.
+* [SmbSecurityConfig Resource](./resources/SmbSecurityConfig.md) -
+  Document describing the SmbSecurityConfig resource in detail.
+* [SmbCommonConfig Resource](./resources/SmbCommonConfig.md) -
+  Document describing the SmbCommonConfig resource in detail.
 * [Shares HOWTO](./howto.md) -
   How to configure SmbShare and supporting resources.
 * [Presentations](./presentations/README.md) -
