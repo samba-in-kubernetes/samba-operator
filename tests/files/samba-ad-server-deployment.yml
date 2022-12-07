@@ -25,6 +25,12 @@ spec:
             # https://wiki.samba.org/index.php/Samba_AD_DC_Port_Usage
             - containerPort: 53
               name: dns
+            - containerPort: 88
+              name: kerberos
+              protocol: TCP
+            - containerPort: 88
+              name: kerberosu
+              protocol: UDP
             - containerPort: 135
               name: epm
               protocol: TCP
@@ -43,7 +49,7 @@ spec:
               name: smb
               protocol: TCP
             - containerPort: 464
-              name: kerberos
+              name: kpasswd
             - containerPort: 636
               name: ldaps
               protocol: TCP
