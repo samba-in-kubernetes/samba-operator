@@ -9,7 +9,7 @@ apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbShare
 metadata:
   name: myshare
-  namespace mynamespace
+  namespace: mynamespace
 spec:
   readOnly: false
   storage:
@@ -37,7 +37,7 @@ apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbShare
 metadata:
   name: myshare
-  namespace mynamespace
+  namespace: mynamespace
 spec:
   shareName: "My Great Share"
   readOnly: false
@@ -89,7 +89,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: users1
-  namespace mynamespace
+  namespace: mynamespace
 type: Opaque
 stringData:
   demousers: |
@@ -114,7 +114,7 @@ apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbSecurityConfig
 metadata:
   name: myusers
-  namespace mynamespace
+  namespace: mynamespace
 spec:
   mode: user
   users:
@@ -126,7 +126,7 @@ apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbShare
 metadata:
   name: myshare
-  namespace mynamespace
+  namespace: mynamespace
 spec:
   securityConfig: myusers
   readOnly: false
@@ -158,7 +158,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: join1
-  namespace mynamespace
+  namespace: mynamespace
 type: Opaque
 stringData:
   # Change the value below to match the username and password for a user that
@@ -171,7 +171,7 @@ apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbSecurityConfig
 metadata:
   name: mydomain
-  namespace mynamespace
+  namespace: mynamespace
 spec:
   mode: active-directory
   realm: cooldomain.myorg.example.com
@@ -185,7 +185,7 @@ apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbShare
 metadata:
   name: myshare
-  namespace mynamespace
+  namespace: mynamespace
 spec:
   securityConfig: mydomain
   readOnly: false
@@ -238,7 +238,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: myshare-mount-creds
-  namespace mynamespace
+  namespace: mynamespace
 type: Opaque
 stringData:
   username: user1
@@ -285,7 +285,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: myshare-smb
-  namespace mynamespace
+  namespace: mynamespace
 spec:
   accessModes:
   - ReadWriteMany
@@ -315,7 +315,7 @@ apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbCommonConfig
 metadata:
   name: mypublished
-  namespace mynamespace
+  namespace: mynamespace
 spec:
   network:
     publish: external
@@ -325,7 +325,7 @@ apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbShare
 metadata:
   name: myshare
-  namespace mynamespace
+  namespace: mynamespace
 spec:
   commonConfig: mypublished
   readOnly: false
@@ -358,7 +358,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: join1
-  namespace mynamespace
+  namespace: mynamespace
 type: Opaque
 stringData:
   # Change the value below to match the username and password for a user that
@@ -371,7 +371,7 @@ apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbSecurityConfig
 metadata:
   name: mydomain
-  namespace mynamespace
+  namespace: mynamespace
 spec:
   mode: active-directory
   realm: cooldomain.myorg.example.com
@@ -387,7 +387,7 @@ apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbCommonConfig
 metadata:
   name: mypublished
-  namespace mynamespace
+  namespace: mynamespace
 spec:
   network:
     publish: external
@@ -397,7 +397,7 @@ apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbShare
 metadata:
   name: myshare
-  namespace mynamespace
+  namespace: mynamespace
 spec:
   securityConfig: mydomain
   commonConfig: mypublished
