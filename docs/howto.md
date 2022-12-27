@@ -216,7 +216,7 @@ to its documentation on how to install the csi driver.
 First create a (non provisioning) storage class to differentiate SMB shares
 from other storage.
 
-```
+```yaml
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
@@ -233,7 +233,7 @@ username/password pair that exists in your AD. When using pre-defined users &
 groups the username/password pair must match one that is defined in the JSON
 embedded in the secret associated with your SmbSecurityConfig.
 
-```
+```yaml
 apiVersion: v1
 kind: Secret
 metadata:
@@ -248,7 +248,7 @@ stringData:
 The following persistent volume will allow mounting the share.
 Note the `spec.csi.volumeAttributes.source`: `myshare` is the share's service name, `mynamespace` the namespace the `SmbShare` is in and `My Great Share` is the share's `shareName` as configured or the share's name if not.
 
-```
+```yaml
 apiVersion: v1
 kind: PersistentVolume
 metadata:
@@ -280,7 +280,7 @@ spec:
 ```
 
 Then the volume claim can be created and should bind shorty after to the persistent volume.
-```
+```yaml
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
