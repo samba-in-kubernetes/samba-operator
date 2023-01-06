@@ -9,7 +9,7 @@ apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbShare
 metadata:
   name: myshare
-  namespace mynamespace
+  namespace: mynamespace
 spec:
   readOnly: false
   storage:
@@ -37,7 +37,7 @@ apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbShare
 metadata:
   name: myshare
-  namespace mynamespace
+  namespace: mynamespace
 spec:
   shareName: "My Great Share"
   readOnly: false
@@ -89,7 +89,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: users1
-  namespace mynamespace
+  namespace: mynamespace
 type: Opaque
 stringData:
   demousers: |
@@ -114,7 +114,7 @@ apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbSecurityConfig
 metadata:
   name: myusers
-  namespace mynamespace
+  namespace: mynamespace
 spec:
   mode: user
   users:
@@ -126,7 +126,7 @@ apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbShare
 metadata:
   name: myshare
-  namespace mynamespace
+  namespace: mynamespace
 spec:
   securityConfig: myusers
   readOnly: false
@@ -158,7 +158,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: join1
-  namespace mynamespace
+  namespace: mynamespace
 type: Opaque
 stringData:
   # Change the value below to match the username and password for a user that
@@ -171,7 +171,7 @@ apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbSecurityConfig
 metadata:
   name: mydomain
-  namespace mynamespace
+  namespace: mynamespace
 spec:
   mode: active-directory
   realm: cooldomain.myorg.example.com
@@ -185,7 +185,7 @@ apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbShare
 metadata:
   name: myshare
-  namespace mynamespace
+  namespace: mynamespace
 spec:
   securityConfig: mydomain
   readOnly: false
@@ -216,7 +216,7 @@ to its documentation on how to install the csi driver.
 First create a (non provisioning) storage class to differentiate SMB shares
 from other storage.
 
-```
+```yaml
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
@@ -233,12 +233,12 @@ username/password pair that exists in your AD. When using pre-defined users &
 groups the username/password pair must match one that is defined in the JSON
 embedded in the secret associated with your SmbSecurityConfig.
 
-```
+```yaml
 apiVersion: v1
 kind: Secret
 metadata:
   name: myshare-mount-creds
-  namespace mynamespace
+  namespace: mynamespace
 type: Opaque
 stringData:
   username: user1
@@ -248,7 +248,7 @@ stringData:
 The following persistent volume will allow mounting the share.
 Note the `spec.csi.volumeAttributes.source`: `myshare` is the share's service name, `mynamespace` the namespace the `SmbShare` is in and `My Great Share` is the share's `shareName` as configured or the share's name if not.
 
-```
+```yaml
 apiVersion: v1
 kind: PersistentVolume
 metadata:
@@ -280,12 +280,12 @@ spec:
 ```
 
 Then the volume claim can be created and should bind shorty after to the persistent volume.
-```
+```yaml
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: myshare-smb
-  namespace mynamespace
+  namespace: mynamespace
 spec:
   accessModes:
   - ReadWriteMany
@@ -315,7 +315,7 @@ apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbCommonConfig
 metadata:
   name: mypublished
-  namespace mynamespace
+  namespace: mynamespace
 spec:
   network:
     publish: external
@@ -325,7 +325,7 @@ apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbShare
 metadata:
   name: myshare
-  namespace mynamespace
+  namespace: mynamespace
 spec:
   commonConfig: mypublished
   readOnly: false
@@ -358,7 +358,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: join1
-  namespace mynamespace
+  namespace: mynamespace
 type: Opaque
 stringData:
   # Change the value below to match the username and password for a user that
@@ -371,7 +371,7 @@ apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbSecurityConfig
 metadata:
   name: mydomain
-  namespace mynamespace
+  namespace: mynamespace
 spec:
   mode: active-directory
   realm: cooldomain.myorg.example.com
@@ -387,7 +387,7 @@ apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbCommonConfig
 metadata:
   name: mypublished
-  namespace mynamespace
+  namespace: mynamespace
 spec:
   network:
     publish: external
@@ -397,7 +397,7 @@ apiVersion: samba-operator.samba.org/v1alpha1
 kind: SmbShare
 metadata:
   name: myshare
-  namespace mynamespace
+  namespace: mynamespace
 spec:
   securityConfig: mydomain
   commonConfig: mypublished
