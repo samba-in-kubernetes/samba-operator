@@ -1,0 +1,38 @@
+{
+  "extends": [
+    "@commitlint/config-conventional"
+  ],
+  "rules": {
+    "type-enum": [
+      2,
+      "always",
+      [
+        "docs",
+        "resources",
+        "planner",
+        "config",
+        "ci",
+        "api",
+        "github",
+        "controllers",
+        "tests",
+	"test utils",
+
+        "tests/integration",
+	"integration tests",
+        "hack",
+        "main",
+        "dockerfile",
+	"makefile"
+	]
+    ],
+    "body-leading-blank": [
+      2,
+      "always"
+    ],
+    "footer-leading-blank": [
+      2,
+      "always"
+    ]
+  }
+}
