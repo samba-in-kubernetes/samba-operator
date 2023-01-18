@@ -20,6 +20,7 @@ jobs:
         run: make check-gitlint
   # Do a build/compile smoke test
   build:
+    needs: gitlint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/setup-go@v3
@@ -30,6 +31,7 @@ jobs:
         run: make
   # Run static/code-quality checks
   check:
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/setup-go@v3
@@ -41,6 +43,7 @@ jobs:
       - name: Run checks
         run: make check
   test:
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/setup-go@v3
@@ -50,6 +53,7 @@ jobs:
       - name: run the tests
         run: make test
   podmanbuild:
+    needs: build
     runs-on: ubuntu-20.04
     # don't run on push, since the "push" job contains the
     # image build step, so no need to do it twice.
@@ -78,6 +82,7 @@ jobs:
         # using podman explicitly for the push job
         run: make CONTAINER_CMD=podman image-build
   dockerbuild:
+    needs: build
     runs-on: ubuntu-latest
     # don't run on push, since the "push" job contains the
     # image build step, so no need to do it twice.
@@ -89,6 +94,7 @@ jobs:
         # using podman explicitly for the push job
         run: make CONTAINER_CMD=docker image-build
   test-kubernetes:
+    needs: build
     #runs-on: ubuntu-latest
     # need to explicitly use 20.04 to avoid problems with jq...
     runs-on: ubuntu-20.04
@@ -147,7 +153,7 @@ jobs:
         run: ./tests/post-test-info.sh
   # push the container to quay.io - only for pushes, not PRs
   push:
-    needs: [build, check]
+    needs: [build, check, test]
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
     steps:
