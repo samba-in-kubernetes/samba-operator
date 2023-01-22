@@ -227,6 +227,9 @@ check-yaml:
 check-gosec: gosec
 	$(GOSEC) -quiet -exclude=G101 -fmt json ./...
 
+check-gitlint: gitlint
+	$(GITLINT) -C .gitlint --commits HEAD~10..HEAD lint
+
 # find or download auxiliary build tools
 .PHONY: build-tools controller-gen kustomize revive golangci-lint yq
 build-tools: controller-gen kustomize revive golangci-lint yq
@@ -306,4 +309,11 @@ endif
 GOSEC=$(GOBIN_ALT)/gosec
 else
 GOSEC=$(shell command -v gosec ;)
+endif
+
+gitlint:
+ifeq (, $(shell command -v gitlint ;))
+	$(error "gitlint not found in PATH")
+else
+GITLINT=$(shell command -v gitlint ;)
 endif
