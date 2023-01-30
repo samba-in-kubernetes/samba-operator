@@ -5,7 +5,7 @@ An operator for Samba as a service on PVCs in kubernetes.
 ## Description
 
 This project implements the samba-operator. It it responsible for the
-the `SmbShare`, `SmbSecurityConfig`, and `SmbCommonConfig` custom resources:
+the `SmbShare`, `SmbSecurityConfig`, and `SmbCommonConfig` custom ressources:
 
 * [`SmbShare`](./config/crd/bases/samba-operator.samba.org_smbshares.yaml)
 describes an SMB Share that will be used to share data with clients.
