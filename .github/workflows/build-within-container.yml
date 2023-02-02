@@ -1,0 +1,26 @@
+name: Build within container
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+jobs:
+  build-within-container:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Enable emulation
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu qemu-user-static
+          sudo update-binfmts --display
+      - name: Require build utilities
+        run: |
+          command -v podman
+          command -v qemu-x86_64-static
+          command -v qemu-aarch64-static
+      - name: Build within AMD64 container
+        run: hack/build-within-container.sh amd64
+      - name: Build within ARM64 container
+        run: hack/build-within-container.sh arm64

@@ -1,0 +1,8 @@
+FROM centos:stream9
+WORKDIR /workspace
+RUN dnf install -y epel-release epel-next-release
+RUN dnf install -y gcc tar golang wget make yamllint
+COPY samba-operator.tar.gz .
+RUN tar xvfz samba-operator.tar.gz
+RUN go version
+RUN make
