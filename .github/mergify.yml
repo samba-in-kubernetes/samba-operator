@@ -62,10 +62,10 @@ pull_request_rules:
           - "#approved-reviews-by>=2"
           # A maintainer's contribution only needs 1 review BUT we give a grace
           # period over just two weeks for a 2nd reviewer to hopefully appear.
-      - and:
-          - "updated-at<15 days ago"
-          - "author=@maintainers"
-          - "#approved-reviews-by>=1"
+          - and:
+              - "updated-at<15 days ago"
+              - "author=@maintainers"
+              - "#approved-reviews-by>=1"
     actions:
       queue: {}
       dismiss_reviews: {}
