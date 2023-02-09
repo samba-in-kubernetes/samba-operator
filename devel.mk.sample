@@ -7,6 +7,9 @@ VERSION=0.0.1
 # Run in developer mode
 DEVELOPER=1
 
+# Use OpenShift's Client CLI
+# KUBECTL_CMD=oc
+
 # Image URL to use all building/pushing image targets
 TAG=latest
 IMG=quay.io/quayusername/samba-operator:$(TAG)

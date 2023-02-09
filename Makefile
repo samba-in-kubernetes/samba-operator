@@ -29,7 +29,7 @@ endif
 
 GO_CMD:=go
 GOFMT_CMD:=gofmt
-KUBECTL_CMD:=kubectl
+KUBECTL_CMD?=kubectl
 BUILDAH_CMD:=buildah
 YAMLLINT_CMD:=yamllint
 
