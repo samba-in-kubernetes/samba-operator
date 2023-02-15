@@ -81,7 +81,7 @@ minikube_load() {
 
 setup_minikube() {
 	install_binaries
-	image_pull "${CI_IMG_REGISTRY}" "docker.io" "kindest/kindnetd:v20210326-1e038dc5"
+	image_pull "${CI_IMG_REGISTRY}" "docker.io" "kindest/kindnetd:v20221004-44d545d1"
 
 	# Start a kuberentes cluster using minikube
 	# shellcheck disable=SC2086
@@ -94,7 +94,7 @@ setup_minikube() {
 	nodes=$(kubectl get nodes \
 			-o jsonpath='{range.items[*].metadata}{.name} {end}')
 
-	minikube_load "${nodes}" "docker.io/kindest/kindnetd:v20210326-1e038dc5"
+	minikube_load "${nodes}" "docker.io/kindest/kindnetd:v20221004-44d545d1"
 
 	echo "Wait for k8s cluster..."
 	for ((retry = 0; retry <= 20; retry = retry + 2)); do
