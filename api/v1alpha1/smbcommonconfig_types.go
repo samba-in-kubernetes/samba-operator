@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -54,6 +55,10 @@ type SmbCommonNetworkSpec struct {
 type SmbCommonConfigPodSettings struct {
 	// NodeSelector values will be assigned to a PodSpec's NodeSelector.
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+
+	// Affinity values will be used as defaults for pods created by the
+	// samba operator.
+	Affinity *corev1.Affinity `json:"affinity,omitempty"`
 }
 
 // SmbCommonConfigStatus defines the observed state of SmbCommonConfig
