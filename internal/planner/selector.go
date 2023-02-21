@@ -17,6 +17,14 @@ var builtinDefaultNodeSelector = map[string]string{
 // NodeSelector returns a mapping of k8s label names to values that are
 // used to select what nodes resources are scheduled to run on.
 func (pl *Planner) NodeSelector() (map[string]string, error) {
+	// do we have node selector values specified in the smb common config?
+	if pl.CommonConfig != nil && pl.CommonConfig.Spec.PodSettings != nil {
+		ps := pl.CommonConfig.Spec.PodSettings
+		if len(ps.NodeSelector) > 0 {
+			return ps.NodeSelector, nil
+		}
+	}
+	// get node selector from operator configuration
 	if pl.GlobalConfig.DefaultNodeSelector == "" {
 		return builtinDefaultNodeSelector, nil
 	}
