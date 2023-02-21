@@ -39,6 +39,8 @@ func buildDeployment(cfg *conf.OperatorConfig,
 	labels := labelsForSmbServer(planner)
 	var size int32 = 1
 
+	podSpec := buildPodSpec(planner, cfg, pvcName)
+	podSpec.Affinity = affinityForSmbPod(planner)
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      planner.InstanceName(),
@@ -58,7 +60,7 @@ func buildDeployment(cfg *conf.OperatorConfig,
 					Labels:      labels,
 					Annotations: annotationsForSmbPod(cfg),
 				},
-				Spec: buildPodSpec(planner, cfg, pvcName),
+				Spec: podSpec,
 			},
 		},
 	}
@@ -119,4 +121,11 @@ func annotationsForSmbPod(cfg *conf.OperatorConfig) map[string]string {
 
 func withMetricsExporter(cfg *conf.OperatorConfig) bool {
 	return strings.ToLower(cfg.MetricsExporterMode) == "enabled"
+}
+
+func affinityForSmbPod(planner *pln.Planner) *corev1.Affinity {
+	if planner.CommonConfig != nil && planner.CommonConfig.Spec.PodSettings != nil {
+		return planner.CommonConfig.Spec.PodSettings.Affinity
+	}
+	return nil
 }
