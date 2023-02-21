@@ -31,7 +31,9 @@ func buildStatefulSet(
 	size := planner.ClusterSize()
 	podSpec := buildClusteredPodSpec(planner, dataPVCName, statePVCName)
 	if planner.NodeSpread() {
-		podSpec.Affinity = buildOneSmbdPerNodeAffinity(labels, serviceLabel)
+		podSpec.Affinity = buildOneSmbdPerNodeAffinity(planner, labels, serviceLabel)
+	} else {
+		podSpec.Affinity = affinityForSmbPod(planner)
 	}
 	statefulSet := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -56,11 +58,15 @@ func buildStatefulSet(
 	return statefulSet
 }
 
-func buildOneSmbdPerNodeAffinity(labels map[string]string, key string) *corev1.Affinity {
+func buildOneSmbdPerNodeAffinity(
+	planner *pln.Planner,
+	labels map[string]string,
+	key string) *corev1.Affinity {
+	// ---
 	topoKey := "kubernetes.io/hostname"
 	value := labels[key]
 
-	aaTerms := []corev1.PodAffinityTerm{{
+	onePodPerNode := corev1.PodAffinityTerm{
 		TopologyKey: topoKey,
 		LabelSelector: &metav1.LabelSelector{
 			MatchExpressions: []metav1.LabelSelectorRequirement{{
@@ -71,11 +77,17 @@ func buildOneSmbdPerNodeAffinity(labels map[string]string, key string) *corev1.A
 				},
 			}},
 		},
-	}}
-	return &corev1.Affinity{
-		PodAntiAffinity: &corev1.PodAntiAffinity{
-			RequiredDuringSchedulingIgnoredDuringExecution: aaTerms,
-			// ^ what a mouthful!
-		},
 	}
+
+	affinity := affinityForSmbPod(planner)
+	if affinity == nil {
+		affinity = &corev1.Affinity{
+			PodAntiAffinity: &corev1.PodAntiAffinity{},
+		}
+	}
+	affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution = append(
+		affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution,
+		onePodPerNode)
+	// ^ what a mouthful!
+	return affinity
 }
