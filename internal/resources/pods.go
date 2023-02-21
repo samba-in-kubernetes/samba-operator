@@ -113,6 +113,8 @@ func buildADPodSpec(
 		buildMustJoinCtr(planner, joinEnv, joinVols),
 	}
 	podSpec.Containers = containers
+	// we have no logger to log the json syntax error to. have to ignore it for now
+	podSpec.NodeSelector, _ = planner.NodeSelector()
 	return podSpec
 }
 
@@ -148,6 +150,8 @@ func buildUserPodSpec(
 	podSpec.Volumes = getVolumes(volumes.all())
 	podSpec.Containers = buildSmbdCtrs(planner, podEnv, volumes)
 	podSpec.InitContainers = initContainers
+	// we have no logger to log the json syntax error to. have to ignore it for now
+	podSpec.NodeSelector, _ = planner.NodeSelector()
 	return podSpec
 }
 
@@ -261,6 +265,8 @@ func buildClusteredUserPodSpec(
 	podSpec.Volumes = getVolumes(volumes.all())
 	podSpec.InitContainers = initContainers
 	podSpec.Containers = containers
+	// we have no logger to log the json syntax error to. have to ignore it for now
+	podSpec.NodeSelector, _ = planner.NodeSelector()
 	return podSpec
 }
 
@@ -416,6 +422,8 @@ func buildClusteredADPodSpec(
 	podSpec.Volumes = getVolumes(volumes.all())
 	podSpec.InitContainers = initContainers
 	podSpec.Containers = containers
+	// we have no logger to log the json syntax error to. have to ignore it for now
+	podSpec.NodeSelector, _ = planner.NodeSelector()
 	return podSpec
 }
 
