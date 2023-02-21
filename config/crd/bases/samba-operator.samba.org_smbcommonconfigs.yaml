@@ -40,6 +40,15 @@ spec:
                         - external
                       type: string
                   type: object
+                podSettings:
+                  description: PodSettings are configuration values that are applied to pods that the operator may create in order to host shares. The values specified under PodSettings allow admins and users to customize how pods are scheduled in a kubernetes cluster.
+                  properties:
+                    nodeSelector:
+                      additionalProperties:
+                        type: string
+                      description: NodeSelector values will be assigned to a PodSpec's NodeSelector.
+                      type: object
+                  type: object
               type: object
             status:
               description: SmbCommonConfigStatus defines the observed state of SmbCommonConfig
