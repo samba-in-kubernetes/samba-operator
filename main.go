@@ -35,6 +35,7 @@ import (
 	sambaoperatorv1alpha1 "github.com/samba-in-kubernetes/samba-operator/api/v1alpha1"
 	"github.com/samba-in-kubernetes/samba-operator/controllers"
 	"github.com/samba-in-kubernetes/samba-operator/internal/conf"
+	pln "github.com/samba-in-kubernetes/samba-operator/internal/planner"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -96,6 +97,15 @@ func main() {
 		os.Exit(1)
 	}
 	setupLog.Info("loaded configuration successfully", "config", conf.Get())
+
+	planner := pln.New(pln.InstanceConfiguration{
+		GlobalConfig: conf.Get(),
+	}, nil)
+	if _, err := planner.NodeSelector(); err != nil {
+		setupLog.Error(err, "invalid node selector configuration value",
+			"note", "value must be a JSON object containing strings")
+		os.Exit(1)
+	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
