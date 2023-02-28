@@ -214,7 +214,7 @@ rules:
   - apiGroups:
       - security.openshift.io
     resourceNames:
-      - anyuid
+      - samba
     resources:
       - securitycontextconstraints
     verbs:
