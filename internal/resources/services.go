@@ -26,7 +26,7 @@ import (
 var svcSelectorKey = "samba-operator.samba.org/service"
 
 func newServiceForSmb(planner *pln.Planner, ns string) *corev1.Service {
-	labels := labelsForSmbServer(planner.InstanceName())
+	labels := labelsForSmbServer(planner)
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      planner.InstanceName(),

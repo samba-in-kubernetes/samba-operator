@@ -27,14 +27,16 @@ import (
 )
 
 var (
-	serviceLabel = "samba-operator.samba.org/service"
+	serviceLabel        = "samba-operator.samba.org/service"
+	commonConfigLabel   = "samba-operator.samba.org/common-config-from"
+	securityConfigLabel = "samba-operator.samba.org/security-config-from"
 )
 
 // buildDeployment returns a samba server deployment object
 func buildDeployment(cfg *conf.OperatorConfig,
 	planner *pln.Planner, pvcName, ns string) *appsv1.Deployment {
 	// construct a deployment based on the following labels
-	labels := labelsForSmbServer(planner.InstanceName())
+	labels := labelsForSmbServer(planner)
 	var size int32 = 1
 
 	deployment := &appsv1.Deployment{
@@ -65,7 +67,18 @@ func buildDeployment(cfg *conf.OperatorConfig,
 
 // labelsForSmbServer returns the labels for selecting the resources
 // belonging to the given CR name.
-func labelsForSmbServer(name string) map[string]string {
+func labelsForSmbServer(planner *pln.Planner) map[string]string {
+	labels := labelsForManagedResource(planner.InstanceName())
+	if planner.CommonConfig != nil {
+		labels[commonConfigLabel] = labelValue(planner.CommonConfig.Name)
+	}
+	if planner.SecurityConfig != nil {
+		labels[securityConfigLabel] = labelValue(planner.SecurityConfig.Name)
+	}
+	return labels
+}
+
+func labelsForManagedResource(name string) map[string]string {
 	return map[string]string{
 		// top level labes
 		"app": "samba",
