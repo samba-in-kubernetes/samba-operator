@@ -4,8 +4,10 @@
 package integration
 
 import (
+	"math/rand"
 	"os"
 	"strconv"
+	"time"
 )
 
 var (
@@ -62,4 +64,9 @@ func init() {
 	if b, err := strconv.ParseBool(shuffleEnv); b && err == nil {
 		testShuffleOrder = true
 	}
+
+	// ensure that tests run with a random seed. This can be removed once
+	// we're certain we run only with Go 1.20+ OR we ought to make this
+	// settable for test reproduction purposes.
+	rand.Seed(time.Now().UnixNano())
 }
