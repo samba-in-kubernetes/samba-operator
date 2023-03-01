@@ -91,7 +91,7 @@ func (m *SmbShareManager) getOrCreateMetricsService(
 		return nil, false, err
 	}
 	inst := pl.SmbShare
-	labels := labelsForSmbServer(metricsInstanceName(pl))
+	labels := labelsForManagedResource(metricsInstanceName(pl))
 	srvWant := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: srvKey.Namespace,
@@ -168,7 +168,7 @@ func (m *SmbShareManager) getOrCreateMetricsServiceMonitor(
 		return nil, false, err
 	}
 	inst := pl.SmbShare
-	labels := labelsForSmbServer(metricsInstanceName(pl))
+	labels := labelsForManagedResource(metricsInstanceName(pl))
 	smWant := &monitoringv1.ServiceMonitor{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: smKey.Namespace,

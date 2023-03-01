@@ -27,7 +27,7 @@ func buildStatefulSet(
 	planner *pln.Planner,
 	dataPVCName, statePVCName, ns string) *appsv1.StatefulSet {
 	// ---
-	labels := labelsForSmbServer(planner.InstanceName())
+	labels := labelsForSmbServer(planner)
 	size := planner.ClusterSize()
 	podSpec := buildClusteredPodSpec(planner, dataPVCName, statePVCName)
 	if planner.NodeSpread() {
