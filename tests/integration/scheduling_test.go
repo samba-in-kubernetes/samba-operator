@@ -61,7 +61,17 @@ func (s *CommonSelectorSuite) labelANode(ctx context.Context) {
 		LabelSelector: "kubernetes.io/os=linux,kubernetes.io/arch=amd64,!node-role.kubernetes.io/control-plane",
 	})
 	s.Require().NoError(err)
-	s.Require().Greater(len(nodesList.Items), 0)
+	nodesAvail := len(nodesList.Items)
+	// did we find enough nodes for the test?
+	if nodesAvail < 2 {
+		// were we told we should have enough? Fail if we should have had enough
+		if nodesAvail < testMinNodeCount {
+			s.T().Fatalf(
+				"fewer available nodes than expected. matched %d, expected at least %d",
+				nodesAvail, testMinNodeCount)
+		}
+		s.T().Skip("test requires at least 2 nodes")
+	}
 	idx := rand.Intn(len(nodesList.Items))
 	targetNode := nodesList.Items[idx]
 	targetNode.Labels["mytestid"] = s.testID
