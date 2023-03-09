@@ -42,6 +42,9 @@ func buildDeployment(cfg *conf.OperatorConfig,
 			Name:      planner.InstanceName(),
 			Namespace: ns,
 			Labels:    labels,
+			Annotations: map[string]string{
+				"openshift.io/scc": sambaSccName,
+			},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &size,
@@ -91,6 +94,7 @@ func annotationsForSmbPod(cfg *conf.OperatorConfig) map[string]string {
 	annotations := map[string]string{
 		"kubectl.kubernetes.io/default-logs-container": name,
 		"kubectl.kubernetes.io/default-container":      name,
+		"openshift.io/scc":                             sambaSccName,
 	}
 	if withMetricsExporter(cfg) {
 		for k, v := range annotationsForSmbMetricsPod() {

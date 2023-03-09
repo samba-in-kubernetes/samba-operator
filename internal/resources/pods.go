@@ -783,10 +783,20 @@ func metaPodEnv() []corev1.EnvVar {
 
 func defaultPodSpec(planner *pln.Planner) corev1.PodSpec {
 	shareProcessNamespace := true
+	sambaServiceAccountName, automountServiceAccountToken := podServiceAccount(planner)
 	return corev1.PodSpec{
-		ServiceAccountName:    planner.GlobalConfig.ServiceAccountName,
-		ShareProcessNamespace: &shareProcessNamespace,
+		ServiceAccountName:           sambaServiceAccountName,
+		AutomountServiceAccountToken: automountServiceAccountToken,
+		ShareProcessNamespace:        &shareProcessNamespace,
 	}
+}
+
+func podServiceAccount(planner *pln.Planner) (string, *bool) {
+	if planner.GlobalConfig.ClusterType == conf.ClusterTypeOpenShift {
+		automountServiceAccountToken := true
+		return sambaServiceAccountName, &automountServiceAccountToken
+	}
+	return "default", nil
 }
 
 func ctdbHostnameEnv(_ *pln.Planner) []corev1.EnvVar {

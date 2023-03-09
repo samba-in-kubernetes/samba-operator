@@ -6,121 +6,55 @@ import (
 	"context"
 	"strings"
 
-	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	rtclient "sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	sambaoperatorv1alpha1 "github.com/samba-in-kubernetes/samba-operator/api/v1alpha1"
 	"github.com/samba-in-kubernetes/samba-operator/internal/conf"
 )
 
 const (
-	openshiftFinalizer        = "samba-operator.samba.org/openshiftFinalizer"
-	serviceAccountName        = "samba"
-	sccRoleName               = "samba-scc-role"
-	sccRoleBindingName        = "samba-scc-rolebinding"
-	metricsRoleName           = "samba-metrics-role"
-	metricsRoleBindingName    = "samba-metrics-rolebinding"
-	clusterMonitoringLabelKey = "openshift.io/cluster-monitoring"
+	sambaServiceAccountName     = "samba"
+	sambaSccName                = "samba"
+	sambaSccRoleName            = "samba-scc-role"
+	sambaSccRoleBindingName     = "samba-scc-rolebinding"
+	sambaMetricsRoleName        = "samba-metrics-role"
+	sambaMetricsRoleBindingName = "samba-metrics-rolebinding"
 )
 
-// OpenShiftManager is used to manage OpenShift's related resources: SCC,
-// ServiceAccount (if not exists) and enable Role and RoleBinding referencing
-// to OpenShift's 'samba' SCC.
-type OpenShiftManager struct {
-	client      rtclient.Client
-	logger      logr.Logger
-	cfg         *conf.OperatorConfig
-	ClusterType string
-}
-
-// NewOpenShiftManager creates a ServiceAccountManager instance
-func NewOpenShiftManager(
-	clnt rtclient.Client,
-	log logr.Logger,
-	cfg *conf.OperatorConfig) *OpenShiftManager {
-	return &OpenShiftManager{
-		client: clnt,
-		logger: log,
-		cfg:    cfg,
+var (
+	namespaceLabels = map[string]string{
+		"openshift.io/cluster-monitoring":                "true",
+		"pod-security.kubernetes.io/enforce":             "privileged",
+		"pod-security.kubernetes.io/audit":               "privileged",
+		"pod-security.kubernetes.io/warn":                "privileged",
+		"security.openshift.io/scc.podSecurityLabelSync": "false",
 	}
-}
+)
 
 // Process is called by the controller on reconciliation of
 // SmbCommonConfig
-func (m *OpenShiftManager) Process(
+func (m *SmbShareManager) updateForOpenshift(
 	ctx context.Context,
-	nsname types.NamespacedName) Result {
+	smbshare *sambaoperatorv1alpha1.SmbShare) Result {
 	// Do-nothing if not on OpenShift
-	m.resolveClusterType(ctx)
-	if m.ClusterType != conf.ClusterTypeOpenShift {
+	m.updateClusterType(ctx)
+	if m.cfg.ClusterType != conf.ClusterTypeOpenShift {
 		return Done
 	}
 
-	// require resource
-	cc := &sambaoperatorv1alpha1.SmbCommonConfig{}
-	err := m.client.Get(ctx, nsname, cc)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			// Request object not found. Not a fatal error.
-			return Done
-		}
-		m.logger.Error(err,
-			"Failed to get SmbCommonConfig",
-			"SmbCommonConfig.Namespace", nsname.Namespace,
-			"SmbCommonConfig.Name", nsname.Name)
-		return Result{err: err}
-	}
-
-	// now that we have the resource. determine if its live or pending deletion
-	if cc.GetDeletionTimestamp() != nil {
-		// its being deleted
-		if controllerutil.ContainsFinalizer(cc, openshiftFinalizer) {
-			// and our finalizer is present
-			return m.Finalize(ctx, cc)
-		}
-		return Done
-	}
-	// resource is alive
-	return m.Update(ctx, cc)
-}
-
-// Cache cluster type
-func (m *OpenShiftManager) resolveClusterType(ctx context.Context) {
-	if IsOpenShiftCluster(ctx, m.client, m.cfg) {
-		m.ClusterType = conf.ClusterTypeOpenShift
-	} else {
-		m.ClusterType = conf.ClusterTypeDefault
-	}
-}
-
-// Update should be called when a SmbCommonConfig resource changes.
-// nolint:funlen
-func (m *OpenShiftManager) Update(
-	ctx context.Context,
-	cc *sambaoperatorv1alpha1.SmbCommonConfig) Result {
-	// ---
+	requireAnnotationsOf(smbshare)
 	m.logger.Info(
-		"Updating state for SmbCommonConfig on OpenShift",
-		"SmbCommonConfig.Namespace", cc.Namespace,
-		"SmbCommonConfig.Name", cc.Name,
-		"SmbCommonConfig.UID", cc.UID)
+		"Updating state for SmbShare on OpenShift",
+		"SmbShare.Namespace", smbshare.Namespace,
+		"SmbShare.Name", smbshare.Name,
+		"SmbShare.Annotations", smbshare.Annotations)
 
-	changed, err := m.addFinalizer(ctx, cc)
-	if err != nil {
-		return Result{err: err}
-	}
-	if changed {
-		m.logger.Info("Added OpenShift finalizer")
-		return Requeue
-	}
-
-	ns, updated, err := m.getOrUpdateNamespace(ctx, cc.Namespace)
+	ns, updated, err := m.getOrUpdateNamespaceOf(ctx, smbshare)
 	if err != nil {
 		return Result{err: err}
 	}
@@ -131,7 +65,7 @@ func (m *OpenShiftManager) Update(
 		return Requeue
 	}
 
-	sa, created, err := m.getOrCreateServiceAccount(ctx)
+	sa, created, err := m.getOrCreateServiceAccountOf(ctx, smbshare)
 	if err != nil {
 		return Result{err: err}
 	}
@@ -142,7 +76,7 @@ func (m *OpenShiftManager) Update(
 		return Requeue
 	}
 
-	sccRole, created, err := m.getOrCreateSCCRole(ctx)
+	sccRole, created, err := m.getOrCreateSCCRoleOf(ctx, smbshare)
 	if err != nil {
 		return Result{err: err}
 	}
@@ -153,7 +87,7 @@ func (m *OpenShiftManager) Update(
 		return Requeue
 	}
 
-	sccRoleBind, created, err := m.getOrCreateSCCRoleBinding(ctx, sa, sccRole)
+	sccRoleBind, created, err := m.getOrCreateSCCRoleBindingOf(ctx, smbshare, sa, sccRole)
 	if err != nil {
 		return Result{err: err}
 	}
@@ -164,7 +98,7 @@ func (m *OpenShiftManager) Update(
 		return Requeue
 	}
 
-	metricsRole, created, err := m.getOrCreateMetricsRole(ctx)
+	metricsRole, created, err := m.getOrCreateMetricsRoleOf(ctx, smbshare)
 	if err != nil {
 		return Result{err: err}
 	}
@@ -176,7 +110,7 @@ func (m *OpenShiftManager) Update(
 	}
 
 	metricsRoleBind, created, err :=
-		m.getOrCreateMetricsRoleBinding(ctx, metricsRole)
+		m.getOrCreateMetricsRoleBindingOf(ctx, smbshare, metricsRole)
 	if err != nil {
 		return Result{err: err}
 	}
@@ -187,8 +121,9 @@ func (m *OpenShiftManager) Update(
 		return Requeue
 	}
 
-	m.logger.Info("Done updating SmbCommonConfig resources on OpenShift",
-		"Namespace.Name", ns.Name,
+	m.logger.Info("Done updating SmbShare resources for OpenShift",
+		"SmbShare.Namespace", smbshare.Namespace,
+		"SmbShare.Name", smbshare.Name,
 		"ServiceAccount.Name", sa.Name,
 		"SCCRole.Namespace", sccRole.Namespace,
 		"SCCRole.Name", sccRole.Name,
@@ -198,19 +133,41 @@ func (m *OpenShiftManager) Update(
 	return Done
 }
 
+func requireAnnotationsOf(smbshare *sambaoperatorv1alpha1.SmbShare) {
+	if smbshare.Annotations == nil {
+		smbshare.Annotations = map[string]string{}
+	}
+	smbshare.Annotations["openshift.io/scc"] = sambaSccName
+}
+
+// Cache cluster type
+func (m *SmbShareManager) updateClusterType(ctx context.Context) {
+	if m.cfg.ClusterType == "" {
+		if IsOpenShiftCluster(ctx, m.client, m.cfg) {
+			m.cfg.ClusterType = conf.ClusterTypeOpenShift
+		} else {
+			m.cfg.ClusterType = conf.ClusterTypeDefault
+		}
+	}
+}
+
 // Finalize should be called when there's a finalizer on the resource
 // and we need to do some cleanup.
-func (m *OpenShiftManager) Finalize(
+func (m *SmbShareManager) finalizeForOpenshift(
 	ctx context.Context,
-	cc *sambaoperatorv1alpha1.SmbCommonConfig) Result {
+	smbshare *sambaoperatorv1alpha1.SmbShare) Result {
 	// ---
+	// Do-nothing if not on OpenShift
+	m.updateClusterType(ctx)
+	if m.cfg.ClusterType != conf.ClusterTypeOpenShift {
+		return Done
+	}
 	m.logger.Info(
-		"Finalize state for SmbCommonConfig on OpenShift",
-		"SmbCommonConfig.Namespace", cc.Namespace,
-		"SmbCommonConfig.Name", cc.Name,
-		"SmbCommonConfig.UID", cc.UID)
+		"Finalize state for SmbShare on OpenShift",
+		"SmbCommonConfig.Namespace", smbshare.GetNamespace(),
+		"SmbCommonConfig.Name", smbshare.GetName())
 
-	metricsRoleBind, metricsRoleBindKey, err := m.getMetricsRoleBinding(ctx)
+	metricsRoleBind, metricsRoleBindKey, err := m.getMetricsRoleBindingOf(ctx, smbshare)
 	if err == nil {
 		err = m.client.Delete(ctx, metricsRoleBind, &rtclient.DeleteOptions{})
 		if err != nil {
@@ -226,7 +183,7 @@ func (m *OpenShiftManager) Finalize(
 			"key", metricsRoleBindKey)
 	}
 
-	metricsRole, metricsRoleKey, err := m.getMetricsRole(ctx)
+	metricsRole, metricsRoleKey, err := m.getMetricsRoleOf(ctx, smbshare)
 	if err == nil {
 		err = m.client.Delete(ctx, metricsRole, &rtclient.DeleteOptions{})
 		if err != nil {
@@ -241,7 +198,7 @@ func (m *OpenShiftManager) Finalize(
 			"key", metricsRoleKey)
 	}
 
-	sccRoleBind, sccRoleBindKey, err := m.getSCCRoleBinding(ctx)
+	sccRoleBind, sccRoleBindKey, err := m.getSCCRoleBindingOf(ctx, smbshare)
 	if err == nil {
 		err = m.client.Delete(ctx, sccRoleBind, &rtclient.DeleteOptions{})
 		if err != nil {
@@ -256,7 +213,7 @@ func (m *OpenShiftManager) Finalize(
 			"key", sccRoleBindKey)
 	}
 
-	sccRole, sccRoleKey, err := m.getSCCRole(ctx)
+	sccRole, sccRoleKey, err := m.getSCCRoleOf(ctx, smbshare)
 	if err == nil {
 		err = m.client.Delete(ctx, sccRole, &rtclient.DeleteOptions{})
 		if err != nil {
@@ -270,7 +227,7 @@ func (m *OpenShiftManager) Finalize(
 		m.logger.Error(err, "Failed to get SCC Role", "key", sccRoleKey)
 	}
 
-	sa, saKey, err := m.getServiceAccount(ctx)
+	sa, saKey, err := m.getServiceAccountOf(ctx, smbshare)
 	if err == nil {
 		err = m.client.Delete(ctx, sa, &rtclient.DeleteOptions{})
 		if err != nil {
@@ -283,48 +240,57 @@ func (m *OpenShiftManager) Finalize(
 	} else if !errors.IsNotFound(err) {
 		m.logger.Error(err, "Failed to get ServiceAccount", "key", saKey)
 	}
-
-	m.logger.Info("Removing OpenShift finalizer")
-	controllerutil.RemoveFinalizer(cc, openshiftFinalizer)
-	err = m.client.Update(ctx, cc)
-	if err != nil {
-		return Result{err: err}
-	}
 	return Done
 }
 
-// getOrUpdateNamespace expects operator's namespace to exist with proper
-// labels for OpenShift deployment
-func (m *OpenShiftManager) getOrUpdateNamespace(
-	ctx context.Context, nsname string) (*corev1.Namespace, bool, error) {
+func (m *SmbShareManager) getOrUpdateNamespaceOf(
+	ctx context.Context,
+	smbshare *sambaoperatorv1alpha1.SmbShare) (*corev1.Namespace, bool, error) {
 	// ---
-	nsCurr, err := m.getNamespace(ctx, nsname)
+	nsCurr, err := m.getNamespace(ctx, smbshare.GetNamespace())
 	if err != nil {
-		m.logger.Error(err, "Failed to get Namespace", "nsname", nsname)
+		m.logger.Error(err, "Failed to get Namespace", "nsname", smbshare.GetNamespace())
 		return nil, false, err
 	}
-	labelKey := clusterMonitoringLabelKey
-	labelVal := "true"
-	if nsCurr.Labels[labelKey] == labelVal {
+	if hasNamespaceLabels(nsCurr) {
 		return nsCurr, false, nil // OK
 	}
 	nsWant := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   nsname,
+			Name:   smbshare.GetNamespace(),
 			Labels: nsCurr.Labels,
 		},
 	}
 	nsCurr.Spec.DeepCopyInto(&nsWant.Spec)
-	nsWant.Labels[labelKey] = labelVal
+	addNamespaceLabels(nsWant)
 	err = m.client.Update(ctx, nsWant)
 	if err != nil {
-		m.logger.Error(err, "Failed to update Namespace", "nsname", nsname)
+		m.logger.Error(err, "Failed to update Namespace", "nsname", smbshare.GetNamespace())
 		return nil, false, err
 	}
 	return nsWant, true, nil
 }
 
-func (m *OpenShiftManager) getNamespace(
+func hasNamespaceLabels(ns *corev1.Namespace) bool {
+	for labelName, labelVal := range namespaceLabels {
+		curLabelVal, ok := ns.Labels[labelName]
+		if !ok {
+			return false
+		}
+		if curLabelVal != labelVal {
+			return false
+		}
+	}
+	return true
+}
+
+func addNamespaceLabels(ns *corev1.Namespace) {
+	for labelName, labelVal := range namespaceLabels {
+		ns.Labels[labelName] = labelVal
+	}
+}
+
+func (m *SmbShareManager) getNamespace(
 	ctx context.Context, nsname string) (*corev1.Namespace, error) {
 	// ---
 	nsKey := types.NamespacedName{Name: nsname}
@@ -336,10 +302,12 @@ func (m *OpenShiftManager) getNamespace(
 	return ns, err
 }
 
-func (m *OpenShiftManager) getOrCreateServiceAccount(
-	ctx context.Context) (*corev1.ServiceAccount, bool, error) {
+func (m *SmbShareManager) getOrCreateServiceAccountOf(
+	ctx context.Context,
+	smbshare *sambaoperatorv1alpha1.SmbShare) (
+	*corev1.ServiceAccount, bool, error) {
 	// ---
-	saCurr, saKey, err := m.getServiceAccount(ctx)
+	saCurr, saKey, err := m.getServiceAccountOf(ctx, smbshare)
 	if err == nil {
 		return saCurr, false, nil // OK
 	}
@@ -347,11 +315,13 @@ func (m *OpenShiftManager) getOrCreateServiceAccount(
 		m.logger.Error(err, "Failed to get ServiceAccount", "key", saKey)
 		return nil, false, err
 	}
+	automountServiceAccountToken := true
 	saWant := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: saKey.Namespace,
 			Name:      saKey.Name,
 		},
+		AutomountServiceAccountToken: &automountServiceAccountToken,
 	}
 	err = m.client.Create(ctx, saWant, &rtclient.CreateOptions{})
 	if err != nil {
@@ -366,10 +336,12 @@ func (m *OpenShiftManager) getOrCreateServiceAccount(
 	return saWant, true, nil
 }
 
-func (m *OpenShiftManager) getServiceAccount(
-	ctx context.Context) (*corev1.ServiceAccount, types.NamespacedName, error) {
+func (m *SmbShareManager) getServiceAccountOf(
+	ctx context.Context,
+	smbshare *sambaoperatorv1alpha1.SmbShare) (
+	*corev1.ServiceAccount, types.NamespacedName, error) {
 	// ---
-	saKey := m.serviceAccountNsname()
+	saKey := serviceAccountNsname(smbshare)
 	sa := &corev1.ServiceAccount{}
 	err := m.client.Get(ctx, saKey, sa)
 	if err != nil {
@@ -378,20 +350,19 @@ func (m *OpenShiftManager) getServiceAccount(
 	return sa, saKey, nil
 }
 
-func (m *OpenShiftManager) serviceAccountNsname() types.NamespacedName {
-	if len(m.cfg.ServiceAccountName) > 0 {
-		return types.NamespacedName{Name: m.cfg.ServiceAccountName}
-	}
+func serviceAccountNsname(smbshare *sambaoperatorv1alpha1.SmbShare) types.NamespacedName {
 	return types.NamespacedName{
-		Namespace: m.cfg.PodNamespace,
-		Name:      serviceAccountName,
+		Namespace: smbshare.GetNamespace(),
+		Name:      sambaServiceAccountName,
 	}
 }
 
-func (m *OpenShiftManager) getOrCreateSCCRole(
-	ctx context.Context) (*rbacv1.Role, bool, error) {
+func (m *SmbShareManager) getOrCreateSCCRoleOf(
+	ctx context.Context,
+	smbshare *sambaoperatorv1alpha1.SmbShare) (
+	*rbacv1.Role, bool, error) {
 	// ---
-	roleCurr, roleKey, err := m.getSCCRole(ctx)
+	roleCurr, roleKey, err := m.getSCCRoleOf(ctx, smbshare)
 	if err == nil {
 		return roleCurr, false, err // OK
 	}
@@ -406,11 +377,17 @@ func (m *OpenShiftManager) getOrCreateSCCRole(
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
-				// TODO: ask John if he prefers import openshift for those vals
+
 				APIGroups:     []string{"security.openshift.io"},
 				Resources:     []string{"securitycontextconstraints"},
-				ResourceNames: []string{"samba"},
+				ResourceNames: []string{sambaSccName},
 				Verbs:         []string{"use"},
+			},
+			{
+
+				APIGroups: []string{""},
+				Resources: []string{"namespaces", "services", "pods"},
+				Verbs:     []string{"get", "list", "watch"},
 			},
 		},
 	}
@@ -426,10 +403,12 @@ func (m *OpenShiftManager) getOrCreateSCCRole(
 	return roleWant, true, nil
 }
 
-func (m *OpenShiftManager) getSCCRole(
-	ctx context.Context) (*rbacv1.Role, types.NamespacedName, error) {
+func (m *SmbShareManager) getSCCRoleOf(
+	ctx context.Context,
+	smbshare *sambaoperatorv1alpha1.SmbShare) (
+	*rbacv1.Role, types.NamespacedName, error) {
 	// ---
-	roleKey := m.sccRoleNsname()
+	roleKey := sccRoleNsnameOf(smbshare)
 	role := &rbacv1.Role{}
 	err := m.client.Get(ctx, roleKey, role)
 	if err != nil {
@@ -438,12 +417,13 @@ func (m *OpenShiftManager) getSCCRole(
 	return role, roleKey, nil
 }
 
-func (m *OpenShiftManager) getOrCreateSCCRoleBinding(
+func (m *SmbShareManager) getOrCreateSCCRoleBindingOf(
 	ctx context.Context,
+	smbshare *sambaoperatorv1alpha1.SmbShare,
 	sa *corev1.ServiceAccount,
 	role *rbacv1.Role) (*rbacv1.RoleBinding, bool, error) {
 	// ---
-	roleBindCurr, roleBindKey, err := m.getSCCRoleBinding(ctx)
+	roleBindCurr, roleBindKey, err := m.getSCCRoleBindingOf(ctx, smbshare)
 	if err == nil {
 		return roleBindCurr, false, err // OK
 	}
@@ -453,7 +433,7 @@ func (m *OpenShiftManager) getOrCreateSCCRoleBinding(
 	}
 	roleBindWant := &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: roleBindKey.Namespace,
+			Namespace: smbshare.GetNamespace(),
 			Name:      roleBindKey.Name,
 		},
 		Subjects: []rbacv1.Subject{
@@ -481,10 +461,12 @@ func (m *OpenShiftManager) getOrCreateSCCRoleBinding(
 	return roleBindWant, true, nil
 }
 
-func (m *OpenShiftManager) getSCCRoleBinding(
-	ctx context.Context) (*rbacv1.RoleBinding, types.NamespacedName, error) {
+func (m *SmbShareManager) getSCCRoleBindingOf(
+	ctx context.Context,
+	smbshare *sambaoperatorv1alpha1.SmbShare) (
+	*rbacv1.RoleBinding, types.NamespacedName, error) {
 	// ---
-	roleBindKey := m.sccRoleBindingNsname()
+	roleBindKey := sccRoleBindingNsnameOf(smbshare)
 	roleBind := &rbacv1.RoleBinding{}
 	err := m.client.Get(ctx, roleBindKey, roleBind)
 	if err != nil {
@@ -493,34 +475,26 @@ func (m *OpenShiftManager) getSCCRoleBinding(
 	return roleBind, roleBindKey, nil
 }
 
-func (m *OpenShiftManager) addFinalizer(
-	ctx context.Context, o rtclient.Object) (bool, error) {
-	// ---
-	if controllerutil.ContainsFinalizer(o, openshiftFinalizer) {
-		return false, nil
-	}
-	controllerutil.AddFinalizer(o, openshiftFinalizer)
-	return true, m.client.Update(ctx, o)
-}
-
-func (m *OpenShiftManager) sccRoleNsname() types.NamespacedName {
+func sccRoleNsnameOf(smbshare *sambaoperatorv1alpha1.SmbShare) types.NamespacedName {
 	return types.NamespacedName{
-		Namespace: m.cfg.PodNamespace,
-		Name:      sccRoleName,
+		Namespace: smbshare.GetNamespace(),
+		Name:      sambaSccRoleName,
 	}
 }
 
-func (m *OpenShiftManager) sccRoleBindingNsname() types.NamespacedName {
+func sccRoleBindingNsnameOf(smbshare *sambaoperatorv1alpha1.SmbShare) types.NamespacedName {
 	return types.NamespacedName{
-		Namespace: m.cfg.PodNamespace,
-		Name:      sccRoleBindingName,
+		Namespace: smbshare.GetNamespace(),
+		Name:      sambaSccRoleBindingName,
 	}
 }
 
-func (m *OpenShiftManager) getOrCreateMetricsRole(
-	ctx context.Context) (*rbacv1.Role, bool, error) {
+func (m *SmbShareManager) getOrCreateMetricsRoleOf(
+	ctx context.Context,
+	smbshare *sambaoperatorv1alpha1.SmbShare) (
+	*rbacv1.Role, bool, error) {
 	// ---
-	roleCurr, roleKey, err := m.getMetricsRole(ctx)
+	roleCurr, roleKey, err := m.getMetricsRoleOf(ctx, smbshare)
 	if err == nil {
 		return roleCurr, false, err // OK
 	}
@@ -554,10 +528,12 @@ func (m *OpenShiftManager) getOrCreateMetricsRole(
 	return roleWant, true, nil
 }
 
-func (m *OpenShiftManager) getMetricsRole(
-	ctx context.Context) (*rbacv1.Role, types.NamespacedName, error) {
+func (m *SmbShareManager) getMetricsRoleOf(
+	ctx context.Context,
+	smbshare *sambaoperatorv1alpha1.SmbShare) (
+	*rbacv1.Role, types.NamespacedName, error) {
 	// ---
-	roleKey := m.metricsRoleNsname()
+	roleKey := metricsRoleNsnameOf(smbshare)
 	role := &rbacv1.Role{}
 	err := m.client.Get(ctx, roleKey, role)
 	if err != nil {
@@ -566,11 +542,13 @@ func (m *OpenShiftManager) getMetricsRole(
 	return role, roleKey, nil
 }
 
-func (m *OpenShiftManager) getOrCreateMetricsRoleBinding(
+func (m *SmbShareManager) getOrCreateMetricsRoleBindingOf(
 	ctx context.Context,
-	role *rbacv1.Role) (*rbacv1.RoleBinding, bool, error) {
+	smbshare *sambaoperatorv1alpha1.SmbShare,
+	role *rbacv1.Role) (
+	*rbacv1.RoleBinding, bool, error) {
 	// ---
-	roleBindCurr, roleBindKey, err := m.getMetricsRoleBinding(ctx)
+	roleBindCurr, roleBindKey, err := m.getMetricsRoleBindingOf(ctx, smbshare)
 	if err == nil {
 		return roleBindCurr, false, err // OK
 	}
@@ -610,11 +588,12 @@ func (m *OpenShiftManager) getOrCreateMetricsRoleBinding(
 	return roleBindWant, true, nil
 }
 
-func (m *OpenShiftManager) getMetricsRoleBinding(
-	ctx context.Context) (
+func (m *SmbShareManager) getMetricsRoleBindingOf(
+	ctx context.Context,
+	smbshare *sambaoperatorv1alpha1.SmbShare) (
 	*rbacv1.RoleBinding, types.NamespacedName, error) {
 	// ---
-	roleBindKey := m.metricsRoleBindingNsname()
+	roleBindKey := metricsRoleBindingNsnameOf(smbshare)
 	roleBind := &rbacv1.RoleBinding{}
 	err := m.client.Get(ctx, roleBindKey, roleBind)
 	if err != nil {
@@ -623,17 +602,17 @@ func (m *OpenShiftManager) getMetricsRoleBinding(
 	return roleBind, roleBindKey, nil
 }
 
-func (m *OpenShiftManager) metricsRoleNsname() types.NamespacedName {
+func metricsRoleNsnameOf(smbshare *sambaoperatorv1alpha1.SmbShare) types.NamespacedName {
 	return types.NamespacedName{
-		Namespace: m.cfg.PodNamespace,
-		Name:      metricsRoleName,
+		Namespace: smbshare.GetNamespace(),
+		Name:      sambaMetricsRoleName,
 	}
 }
 
-func (m *OpenShiftManager) metricsRoleBindingNsname() types.NamespacedName {
+func metricsRoleBindingNsnameOf(smbshare *sambaoperatorv1alpha1.SmbShare) types.NamespacedName {
 	return types.NamespacedName{
-		Namespace: m.cfg.PodNamespace,
-		Name:      metricsRoleBindingName,
+		Namespace: smbshare.GetNamespace(),
+		Name:      sambaMetricsRoleBindingName,
 	}
 }
 

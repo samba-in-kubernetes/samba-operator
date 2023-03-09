@@ -122,6 +122,10 @@ func (m *SmbShareManager) Update(
 		return Requeue
 	}
 
+	if result := m.updateForOpenshift(ctx, instance); result.Yield() {
+		return result
+	}
+
 	// assign the share to a Server Group. The server group represents
 	// the resources needed to create samba servers (possibly a cluster)
 	// and prerequisite resources. The serverGroup name used to name
@@ -489,6 +493,10 @@ func (m *SmbShareManager) Finalize(
 	}
 
 	if result := m.finalizeServerResources(ctx, instance); result.Yield() {
+		return result
+	}
+
+	if result := m.finalizeForOpenshift(ctx, instance); result.Yield() {
 		return result
 	}
 
