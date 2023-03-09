@@ -9,6 +9,13 @@ import (
 	"github.com/spf13/viper"
 )
 
+const (
+	// ClusterTypeDefault defines the default value for cluster type
+	ClusterTypeDefault = "default"
+	// ClusterTypeOpenShift defines the type-name for OpenShift clusters
+	ClusterTypeOpenShift = "openshift"
+)
+
 // DefaultOperatorConfig holds the default values of OperatorConfig.
 var DefaultOperatorConfig = OperatorConfig{
 	SmbdContainerImage:        "quay.io/samba.org/samba-server:latest",
@@ -25,6 +32,7 @@ var DefaultOperatorConfig = OperatorConfig{
 	MetricsExporterMode:       "disabled",
 	ImagePullPolicy:           "IfNotPresent",
 	DefaultNodeSelector:       "",
+	ClusterType:               "",
 }
 
 // OperatorConfig is a type holding general configuration values.
@@ -83,6 +91,10 @@ type OperatorConfig struct {
 	// a set of key-value pairs that will be used for all default node
 	// selection. If left blank, internal defaults will be used.
 	DefaultNodeSelector string `mapstructure:"default-node-selector"`
+	// ClusterType is a string which defines the type of underlying K8S
+	// cluster (minikube, OpenShift etc). If not provided, the operator will
+	// try to figure it out.
+	ClusterType string `mapstructure:"cluster-type"`
 }
 
 // Validate the OperatorConfig returning an error if the config is not
@@ -134,6 +146,7 @@ func NewSource() *Source {
 	v.SetDefault("pod-ip", d.PodIP)
 	v.SetDefault("image-pull-policy", d.ImagePullPolicy)
 	v.SetDefault("default-node-selector", d.DefaultNodeSelector)
+	v.SetDefault("cluster-type", d.ClusterType)
 	return &Source{v: v}
 }
 
