@@ -44,7 +44,7 @@ type SmbCommonConfigReconciler struct {
 // +kubebuilder:rbac:groups=core,resources=pods;endpoints;services;namespaces,verbs=get;list;watch;update
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings,verbs=get;list;watch;create;update;delete
 // +kubebuilder:rbac:groups=security.openshift.io,resources=securitycontextconstraints,verbs=get;list;use
-// +kubebuilder:rbac:groups=security.openshift.io,resourceNames=anyuid,resources=securitycontextconstraints,verbs=get;list;create;update
+// +kubebuilder:rbac:groups=security.openshift.io,resourceNames=samba,resources=securitycontextconstraints,verbs=get;list;create;update
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;create;update
 // +kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors;prometheusrules,verbs=get;list;watch;create;update
 
