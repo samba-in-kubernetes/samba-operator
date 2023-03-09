@@ -41,7 +41,7 @@ const (
 
 // OpenShiftManager is used to manage OpenShift's related resources: SCC,
 // ServiceAccount (if not exists) and enable Role and RoleBinding referencing
-// to OpenShift's 'anyuid' SCC.
+// to OpenShift's 'samba' SCC.
 type OpenShiftManager struct {
 	client      rtclient.Client
 	logger      logr.Logger
@@ -419,7 +419,7 @@ func (m *OpenShiftManager) getOrCreateSCCRole(
 				// TODO: ask John if he prefers import openshift for those vals
 				APIGroups:     []string{"security.openshift.io"},
 				Resources:     []string{"securitycontextconstraints"},
-				ResourceNames: []string{"anyuid"},
+				ResourceNames: []string{"samba"},
 				Verbs:         []string{"use"},
 			},
 		},
