@@ -482,6 +482,7 @@ func buildSmbdCtr(
 				},
 			},
 		},
+		SecurityContext: ctrPrivSecurityContext(),
 	}
 }
 
@@ -589,6 +590,7 @@ func buildSvcWatchCtr(
 		Name:            "svc-watch",
 		Env:             env,
 		VolumeMounts:    mounts,
+		SecurityContext: ctrPrivSecurityContext(),
 	}
 }
 
@@ -621,6 +623,7 @@ func buildEnsureShareCtr(
 		Args:            planner.Args().EnsureSharePaths(),
 		Env:             env,
 		VolumeMounts:    mounts,
+		SecurityContext: ctrPrivSecurityContext(),
 	}
 }
 
@@ -837,4 +840,11 @@ func imagePullPolicy(pl *pln.Planner) corev1.PullPolicy {
 		pullPolicy = corev1.PullIfNotPresent
 	}
 	return pullPolicy
+}
+
+func ctrPrivSecurityContext() *corev1.SecurityContext {
+	return &corev1.SecurityContext{
+		Privileged:   &[]bool{true}[0],
+		RunAsNonRoot: &[]bool{false}[0],
+	}
 }
