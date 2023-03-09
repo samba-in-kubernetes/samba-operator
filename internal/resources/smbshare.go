@@ -184,7 +184,11 @@ func (m *SmbShareManager) Update(
 		return result
 	}
 
-	m.logger.Info("Done updating SmbShare resources")
+	m.logger.Info(
+		"Done updating SmbShare resources",
+		"SmbShare.Namespace", instance.Namespace,
+		"SmbShare.Name", instance.Name,
+		"Annotations", instance.Annotations)
 	return Done
 }
 
