@@ -32,7 +32,7 @@ import (
 type SmbCommonConfigReconciler struct {
 	client.Client
 	Log         logr.Logger
-	ClusterType resources.ClusterType
+	ClusterType string
 }
 
 //revive:disable kubebuilder directives
@@ -60,7 +60,7 @@ func (r *SmbCommonConfigReconciler) Reconcile(
 	// 1) Unknown cluster type due to first-time reconcile
 	// 2) Known to be running over OpenShift by in-memory cached state from
 	//    previous reconcile loop.
-	if r.ClusterType != "" && r.ClusterType != resources.ClusterTypeOpenshift {
+	if r.ClusterType != "" && r.ClusterType != conf.ClusterTypeOpenShift {
 		return ctrl.Result{}, nil
 	}
 

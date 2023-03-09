@@ -19,16 +19,6 @@ import (
 	"github.com/samba-in-kubernetes/samba-operator/internal/conf"
 )
 
-// ClusterType reperesnts the sub-kind of k8s cluster type.
-type ClusterType string
-
-const (
-	// ClusterTypeDefault defines the default value for cluster type
-	ClusterTypeDefault = "default"
-	// ClusterTypeOpenshift defines the type-name for OpenShift clusters
-	ClusterTypeOpenshift = "openshift"
-)
-
 const (
 	openshiftFinalizer        = "samba-operator.samba.org/openshiftFinalizer"
 	serviceAccountName        = "samba"
@@ -46,7 +36,7 @@ type OpenShiftManager struct {
 	client      rtclient.Client
 	logger      logr.Logger
 	cfg         *conf.OperatorConfig
-	ClusterType ClusterType
+	ClusterType string
 }
 
 // NewOpenShiftManager creates a ServiceAccountManager instance
@@ -68,7 +58,7 @@ func (m *OpenShiftManager) Process(
 	nsname types.NamespacedName) Result {
 	// Do-nothing if not on OpenShift
 	m.resolveClusterType(ctx)
-	if m.ClusterType != ClusterTypeOpenshift {
+	if m.ClusterType != conf.ClusterTypeOpenShift {
 		return Done
 	}
 
@@ -103,9 +93,9 @@ func (m *OpenShiftManager) Process(
 // Cache cluster type
 func (m *OpenShiftManager) resolveClusterType(ctx context.Context) {
 	if IsOpenShiftCluster(ctx, m.client, m.cfg) {
-		m.ClusterType = ClusterTypeOpenshift
+		m.ClusterType = conf.ClusterTypeOpenShift
 	} else {
-		m.ClusterType = ClusterTypeDefault
+		m.ClusterType = conf.ClusterTypeDefault
 	}
 }
 
@@ -657,24 +647,24 @@ func IsOpenShiftCluster(ctx context.Context,
 		Name:      cfg.PodName,
 	}
 	clusterType, err := resolveClusterTypeByPod(ctx, reader, key)
-	return (err == nil) && (clusterType == ClusterTypeOpenshift)
+	return (err == nil) && (clusterType == conf.ClusterTypeOpenShift)
 }
 
 // resolveClusterTypeByPod finds the kind of K8s cluster via annotation of one
 // of its running pods.
 func resolveClusterTypeByPod(ctx context.Context,
 	reader rtclient.Reader,
-	podKey rtclient.ObjectKey) (ClusterType, error) {
+	podKey rtclient.ObjectKey) (string, error) {
 	pod, err := getPod(ctx, reader, podKey)
 	if err != nil {
-		return ClusterTypeDefault, err
+		return conf.ClusterTypeDefault, err
 	}
 	for key := range pod.Annotations {
-		if strings.Contains(key, ClusterTypeOpenshift) {
-			return ClusterTypeOpenshift, nil
+		if strings.Contains(key, conf.ClusterTypeOpenShift) {
+			return conf.ClusterTypeOpenShift, nil
 		}
 	}
-	return ClusterTypeDefault, nil
+	return conf.ClusterTypeDefault, nil
 }
 
 func getPod(ctx context.Context,
