@@ -60,10 +60,12 @@ pull_request_rules:
       - or:
           # Any contributor's PR can be automerged with 2 (or more) reviews.
           - "#approved-reviews-by>=2"
-          # A maintainer's contribution only needs 1 review BUT we give a grace
-          # period over just two weeks for a 2nd reviewer to hopefully appear.
+          # A maintainer's contribution that has already aged long enough to
+          # earn the "priority-review" label can be merged immediately.
+          # The label can also be applied manually in case of an important
+          # bugfix, etc.
           - and:
-              - "updated-at<15 days ago"
+              - "label=priority-review"
               - "author=@maintainers"
               - "#approved-reviews-by>=1"
     actions:
@@ -77,3 +79,17 @@ pull_request_rules:
       comment:
         message: "This pull request now has conflicts with the target branch.
         Please resolve these conflicts and force push the updated branch."
+  # Label PRs that have been sitting there unchanged, aging like a fine wine
+  #
+  # NOTE: the updated-at "counter" resets every time the PR is changed so
+  # reacting to a reviewer's feedback and fixing a typo (for example) will
+  # reset the counter. Thus we now apply a label once we hit the 15 day window
+  # so that we know that PR had, at some time, sat unchanged for that long.
+  - name: Label aged PRs
+    conditions:
+      - "updated-at<15 days ago"
+      - "-draft"
+    actions:
+      label:
+        add:
+          - "priority-review"
