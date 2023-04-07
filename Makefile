@@ -313,7 +313,12 @@ endif
 
 gitlint:
 ifeq (, $(shell command -v gitlint ;))
-	$(error "gitlint not found in PATH")
+	@echo "gitlint not found in PATH, checking $(GOBIN_ALT)"
+ifeq (, $(shell command -v $(GOBIN_ALT)/gitlint ;))
+	@$(call installtool, --gitlint)
+	@echo "gitlint installed in $(GOBIN_ALT)"
+endif
+GITLINT=$(GOBIN_ALT)/gitlint
 else
 GITLINT=$(shell command -v gitlint ;)
 endif
