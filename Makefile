@@ -228,7 +228,7 @@ check-gosec: gosec
 	$(GOSEC) -quiet -exclude=G101 -fmt json ./...
 
 check-gitlint: gitlint
-	$(GITLINT) -C .gitlint --commits master.. lint
+	$(GITLINT) -C .gitlint --commits origin/master.. lint
 
 # find or download auxiliary build tools
 .PHONY: build-tools controller-gen kustomize revive golangci-lint yq
