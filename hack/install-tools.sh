@@ -6,6 +6,7 @@
 #
 set -e
 GO_CMD=${GO_CMD:-$(command -v go)}
+PY_CMD="${PY_CMD:-$(command -v python3)}"
 GOBIN=${GOBIN:-${GOPATH}/bin}
 
 _require_gobin() {
@@ -40,6 +41,13 @@ _install_gosec() {
 	_install_tool github.com/securego/gosec/v2/cmd/gosec@v2.13.1
 }
 
+_install_gitlint() {
+	_require_gobin
+	"${PY_CMD}" -m venv "${GOBIN}/.py"
+	"${GOBIN}/.py/bin/pip" install "gitlint==0.19.1"
+	ln -s "${GOBIN}/.py/bin/gitlint"  "${GOBIN}/gitlint"
+}
+
 case "$1" in
 	--kustomize)
 		_require_gobin
@@ -65,15 +73,19 @@ case "$1" in
 		_require_gobin
 		_install_gosec
 		;;
+	--gitlint)
+		_install_gitlint
+		;;
 	*)
 		echo "usage: GOBIN=<dir> $0 --<tool-name>"
 		echo ""
-		echo "availabel tools:"
+		echo "available tools:"
 		echo "  --kustomize"
 		echo "  --controller-gen"
 		echo "  --revive"
 		echo "  --golangci-lint"
 		echo "  --yq"
 		echo "  --gosec"
+		echo "  --gitlint"
 		;;
 esac
