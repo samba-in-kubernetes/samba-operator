@@ -29,6 +29,18 @@ jobs:
         run: go install github.com/mgechev/revive@latest
       - name: Run checks
         run: make check
+  check-commits:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Ensure branches
+        run: git fetch
+      - name: Lint git commit messages
+        run: make check-gitlint
   test:
     runs-on: ubuntu-latest
     steps:
