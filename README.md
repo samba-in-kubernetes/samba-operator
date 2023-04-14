@@ -1,4 +1,4 @@
-# Samba Operator
+# The Samba Operator
 
 An operator for Samba as a service on PVCs in kubernetes.
 
