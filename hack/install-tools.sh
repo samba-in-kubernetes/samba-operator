@@ -5,15 +5,29 @@
 #   GOBIN=<dir> install-tools.sh --<tool-name>
 #
 set -e
-GO_CMD=${GO_CMD:-$(command -v go)}
-PY_CMD="${PY_CMD:-$(command -v python3)}"
-GOBIN=${GOBIN:-${GOPATH}/bin}
 
 _require_gobin() {
 	mkdir -p "${GOBIN}"
 }
 
+_require_go() {
+	if [ -z "$GO_CMD" ]; then
+		echo "error: go command required, but not found" >&2
+		echo "(set GO_CMD to specify go command)" >&2
+		exit 5
+	fi
+}
+
+_require_py() {
+	if [ -z "$PY_CMD" ]; then
+		echo "error: python3 command required, but not found" >&2
+		echo "(set PY_CMD to specify python command)" >&2
+		exit 5
+	fi
+}
+
 _install_tool() {
+	_require_go
 	GOBIN="${GOBIN}" ${GO_CMD} install "$1"
 }
 
@@ -43,10 +57,24 @@ _install_gosec() {
 
 _install_gitlint() {
 	_require_gobin
+	_require_py
 	"${PY_CMD}" -m venv "${GOBIN}/.py"
 	"${GOBIN}/.py/bin/pip" install "gitlint==0.19.1"
 	ln -s "${GOBIN}/.py/bin/gitlint"  "${GOBIN}/gitlint"
 }
+
+GOBIN="${GOBIN:-${GOPATH}/bin}"
+
+if [ -z "$GO_CMD" ]; then
+    if ! GO_CMD="$(command -v go)"; then
+        echo "warning: failed to find go command" >&2
+    fi
+fi
+if [ -z "$PY_CMD" ]; then
+    if ! PY_CMD="$(command -v python3)"; then
+        echo "warning: failed to find python3 command" >&2
+    fi
+fi
 
 case "$1" in
 	--kustomize)
