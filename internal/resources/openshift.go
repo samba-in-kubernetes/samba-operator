@@ -325,13 +325,19 @@ func (m *SmbShareManager) getOrCreateServiceAccountOf(
 	}
 	err = m.client.Create(ctx, saWant, &rtclient.CreateOptions{})
 	if err != nil {
-		if errors.IsAlreadyExists(err) {
-			m.logger.Info("ServiceAccount already exists", "key", saKey)
-		} else {
+		if !errors.IsAlreadyExists(err) {
 			m.logger.Error(err, "Failed to create ServiceAccount",
 				"key", saKey)
+			return nil, false, err
 		}
-		return nil, false, err
+		m.logger.Info("Retry to get ServiceAccount", "key", saKey)
+		saCurr, saKey, err = m.getServiceAccountOf(ctx, smbshare)
+		if err != nil {
+			m.logger.Error(err, "Failed to get existing ServiceAccount",
+				"key", saKey)
+			return nil, false, err
+		}
+		return saCurr, false, err
 	}
 	return saWant, true, nil
 }
@@ -393,12 +399,18 @@ func (m *SmbShareManager) getOrCreateSCCRoleOf(
 	}
 	err = m.client.Create(ctx, roleWant, &rtclient.CreateOptions{})
 	if err != nil {
-		if errors.IsAlreadyExists(err) {
-			m.logger.Info("SCC Role already exists", "key", roleKey)
-		} else {
+		if !errors.IsAlreadyExists(err) {
 			m.logger.Error(err, "Failed to create SCC Role", "key", roleKey)
+			return nil, false, err
 		}
-		return nil, false, err
+		m.logger.Info("Retry to get SCC Role", "key", roleKey)
+		roleCurr, roleKey, err = m.getSCCRoleOf(ctx, smbshare)
+		if err != nil {
+			m.logger.Error(err, "Failed to get existing SCC Role",
+				"key", roleKey)
+			return nil, false, err
+		}
+		return roleCurr, false, err
 	}
 	return roleWant, true, nil
 }
@@ -450,13 +462,19 @@ func (m *SmbShareManager) getOrCreateSCCRoleBindingOf(
 	}
 	err = m.client.Create(ctx, roleBindWant, &rtclient.CreateOptions{})
 	if err != nil {
-		if errors.IsAlreadyExists(err) {
-			m.logger.Info("SCC RoleBinding already exists", "key", roleBindKey)
-		} else {
+		if !errors.IsAlreadyExists(err) {
 			m.logger.Error(err, "Failed to create RoleBinding",
 				"key", roleBindKey)
+			return nil, false, err
 		}
-		return nil, false, err
+		m.logger.Info("Retry to get RoleBinding", "key", roleBindKey)
+		roleBindCurr, roleBindKey, err = m.getSCCRoleBindingOf(ctx, smbshare)
+		if err != nil {
+			m.logger.Error(err, "Failed to get existing RoleBinding",
+				"key", roleBindKey)
+			return nil, false, err
+		}
+		return roleBindCurr, false, nil
 	}
 	return roleBindWant, true, nil
 }
@@ -517,13 +535,19 @@ func (m *SmbShareManager) getOrCreateMetricsRoleOf(
 	}
 	err = m.client.Create(ctx, roleWant, &rtclient.CreateOptions{})
 	if err != nil {
-		if errors.IsAlreadyExists(err) {
-			m.logger.Info("Metrics Role already exists", "key", roleKey)
-		} else {
+		if !errors.IsAlreadyExists(err) {
 			m.logger.Error(err, "Failed to create Metrics Role",
 				"key", roleKey)
+			return nil, false, err
 		}
-		return nil, false, err
+		m.logger.Info("Retry to get Metrics Role", "key", roleKey)
+		roleCurr, roleKey, err = m.getMetricsRoleOf(ctx, smbshare)
+		if err != nil {
+			m.logger.Error(err, "Failed to get existing Metrics Role",
+				"key", roleKey)
+			return nil, false, err
+		}
+		return roleCurr, false, err
 	}
 	return roleWant, true, nil
 }
@@ -576,14 +600,19 @@ func (m *SmbShareManager) getOrCreateMetricsRoleBindingOf(
 	}
 	err = m.client.Create(ctx, roleBindWant, &rtclient.CreateOptions{})
 	if err != nil {
-		if errors.IsAlreadyExists(err) {
-			m.logger.Info("Metrics RoleBinding already exists",
-				"key", roleBindKey)
-		} else {
+		if !errors.IsAlreadyExists(err) {
 			m.logger.Error(err, "Failed to create Metrics RoleBinding",
 				"key", roleBindKey)
+			return nil, false, err
 		}
-		return nil, false, err
+		m.logger.Info("Retry to get Metrics RoleBinding", "key", roleBindKey)
+		roleBindCurr, roleBindKey, err = m.getMetricsRoleBindingOf(ctx, smbshare)
+		if err != nil {
+			m.logger.Error(err, "Failed to get existing Metrics RoleBinding",
+				"key", roleBindKey)
+			return nil, false, err
+		}
+		return roleBindCurr, false, err
 	}
 	return roleBindWant, true, nil
 }
