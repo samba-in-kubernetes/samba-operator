@@ -124,13 +124,19 @@ func (m *SmbShareManager) getOrCreateMetricsService(
 	}
 	err = m.client.Create(ctx, srvWant, &rtclient.CreateOptions{})
 	if err != nil {
-		if errors.IsAlreadyExists(err) {
-			m.logger.Info("Metrics Service already exists", "key", srvKey)
-		} else {
+		if !errors.IsAlreadyExists(err) {
 			m.logger.Error(err, "Failed to create metrics Service",
 				"key", srvKey)
+			return nil, false, err
 		}
-		return nil, false, err
+		m.logger.Info("Retry to get metrics Service", "key", srvKey)
+		srvCurr, srvKey, err = m.getMetricsServiceOf(ctx, pl, ns)
+		if err != nil {
+			m.logger.Error(err, "Failed to get existing metrics Service",
+				"key", srvKey)
+			return nil, false, err
+		}
+		return srvCurr, false, err
 	}
 	return srvWant, true, nil
 }
@@ -201,14 +207,19 @@ func (m *SmbShareManager) getOrCreateMetricsServiceMonitor(
 	}
 	err = m.client.Create(ctx, smWant, &rtclient.CreateOptions{})
 	if err != nil {
-		if errors.IsAlreadyExists(err) {
-			m.logger.Info("Metrics ServiceMonitor already exists",
-				"key", smKey)
-		} else {
+		if !errors.IsAlreadyExists(err) {
 			m.logger.Error(err, "Failed to create metrics ServiceMonitor",
 				"key", smKey)
+			return nil, false, err
 		}
-		return nil, false, err
+		m.logger.Info("Retry to get metrics ServiceMonitor", "key", smKey)
+		smCurr, smKey, err = m.getMetricsServiceMonitorOf(ctx, pl, ns)
+		if err != nil {
+			m.logger.Error(err, "Failed to get existing metrics ServiceMonitor",
+				"key", smKey)
+			return nil, false, err
+		}
+		return smCurr, false, nil
 	}
 	return smWant, true, nil
 }
