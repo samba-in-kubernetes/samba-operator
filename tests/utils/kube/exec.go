@@ -2,6 +2,7 @@ package kube
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -115,7 +116,7 @@ func (te *TestExec) Call(pc PodCommand, ch CommandHandler) error {
 			pc.ContainerName,
 			err)
 	}
-	err = exec.Stream(streamOpts)
+	err = exec.StreamWithContext(context.TODO(), streamOpts)
 	if err != nil {
 		return fmt.Errorf(
 			"failed executing command (pod:%s/%s container:%s): %w",

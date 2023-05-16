@@ -65,7 +65,8 @@ func (*fakeClient) DeleteAllOf(
 func (c *fakeClient) Get(
 	ctx context.Context,
 	name types.NamespacedName,
-	obj rtclient.Object) error {
+	obj rtclient.Object,
+	_ ...rtclient.GetOption) error {
 	if c.clientGet != nil {
 		return c.clientGet(ctx, name, obj)
 	}
@@ -87,6 +88,15 @@ func (*fakeClient) Patch(
 	return nil
 }
 
+func (*fakeClient) SubResource(
+	_ string) rtclient.SubResourceClient {
+	return &fakeSubResource{}
+}
+
+func (c *fakeClient) Scheme() *runtime.Scheme {
+	return c.scheme
+}
+
 func (*fakeClient) Status() rtclient.StatusWriter {
 	return nil
 }
@@ -95,6 +105,36 @@ func (*fakeClient) RESTMapper() meta.RESTMapper {
 	return nil
 }
 
-func (c *fakeClient) Scheme() *runtime.Scheme {
-	return c.scheme
+// fakeSubResource does nothing.
+type fakeSubResource struct{}
+
+func (*fakeSubResource) Get(
+	_ context.Context,
+	_ rtclient.Object,
+	_ rtclient.Object,
+	_ ...rtclient.SubResourceGetOption) error {
+	return nil
+}
+
+func (*fakeSubResource) Create(
+	_ context.Context,
+	_ rtclient.Object,
+	_ rtclient.Object,
+	_ ...rtclient.SubResourceCreateOption) error {
+	return nil
+}
+
+func (*fakeSubResource) Update(
+	_ context.Context,
+	_ rtclient.Object,
+	_ ...rtclient.SubResourceUpdateOption) error {
+	return nil
+}
+
+func (*fakeSubResource) Patch(
+	_ context.Context,
+	_ rtclient.Object,
+	_ rtclient.Patch,
+	_ ...rtclient.SubResourcePatchOption) error {
+	return nil
 }
