@@ -469,14 +469,14 @@ func buildSmbdCtr(
 		}},
 		VolumeMounts: mounts,
 		ReadinessProbe: &corev1.Probe{
-			Handler: corev1.Handler{
+			ProbeHandler: corev1.ProbeHandler{
 				TCPSocket: &corev1.TCPSocketAction{
 					Port: intstr.FromInt(portnum),
 				},
 			},
 		},
 		LivenessProbe: &corev1.Probe{
-			Handler: corev1.Handler{
+			ProbeHandler: corev1.ProbeHandler{
 				TCPSocket: &corev1.TCPSocketAction{
 					Port: intstr.FromInt(portnum),
 				},
@@ -510,7 +510,7 @@ func buildWinbinddCtr(
 		Env:             env,
 		VolumeMounts:    mounts,
 		LivenessProbe: &corev1.Probe{
-			Handler: corev1.Handler{
+			ProbeHandler: corev1.ProbeHandler{
 				Exec: &corev1.ExecAction{
 					Command: []string{
 						"samba-container",
@@ -537,7 +537,7 @@ func buildCTDBDaemonCtr(
 		Env:             env,
 		VolumeMounts:    mounts,
 		ReadinessProbe: &corev1.Probe{
-			Handler: corev1.Handler{
+			ProbeHandler: corev1.ProbeHandler{
 				Exec: &corev1.ExecAction{
 					Command: planner.Args().CTDBNodeStatus(),
 				},
