@@ -21,7 +21,7 @@ NODE_COUNT=${NODE_COUNT:-"3"}
 MEMORY=${MEMORY:-"4096"}
 CPUS=${CPUS:-"2"}
 NUM_DISKS=${NUM_DISKS:-"2"}
-DISK_SIZE=${DISK_SIZE:-"10g"}
+DISK_SIZE=${DISK_SIZE:-"15g"}
 DISK_CONFIG=${DISK_CONFIG:-" --extra-disks=${NUM_DISKS} --disk-size=${DISK_SIZE}"}
 
 image_pull() {
