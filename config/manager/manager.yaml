@@ -44,7 +44,7 @@ spec:
           envFrom:
             - configMapRef:
                 name: controller-cfg
-          image: quay.io/samba.org/samba-operator:v0.2
+          image: quay.io/samba.org/samba-operator:v0.3
           imagePullPolicy: Always
           name: manager
           resources:
