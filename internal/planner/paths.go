@@ -32,7 +32,13 @@ func (planner *Planner) Paths() *Paths {
 
 // ShareMountPath returns the mount path.
 func (p *Paths) ShareMountPath() string {
-	return path.Join("/mnt", string(p.planner.SmbShare.UID))
+	// retain the previous approach to using UID for compatibility with
+	// older versions ONLY if grouping is disabled.
+	gmode, gname := p.planner.Grouping()
+	if gmode == GroupModeNever {
+		return path.Join("/mnt", string(p.planner.SmbShare.UID))
+	}
+	return path.Join("/mnt", gname)
 }
 
 // Share path.

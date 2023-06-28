@@ -20,7 +20,6 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -30,8 +29,7 @@ import (
 // SmbCommonConfigReconciler reconciles a SmbCommonConfig object
 type SmbCommonConfigReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	Log logr.Logger
 }
 
 //revive:disable kubebuilder directives
@@ -39,6 +37,11 @@ type SmbCommonConfigReconciler struct {
 // nolint:lll
 // +kubebuilder:rbac:groups=samba-operator.samba.org,resources=smbcommonconfigs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=samba-operator.samba.org,resources=smbcommonconfigs/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=core,resources=serviceaccounts,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=pods;endpoints;services;namespaces,verbs=get;list;watch;update
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings,verbs=get;list;watch;create;update;delete
+// +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;create;update
+// +kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors;prometheusrules,verbs=get;list;watch;create;update
 
 //revive:enable
 
@@ -46,10 +49,8 @@ type SmbCommonConfigReconciler struct {
 func (r *SmbCommonConfigReconciler) Reconcile(
 	_ context.Context, req ctrl.Request) (ctrl.Result, error) {
 	// ---
-	_ = r.Log.WithValues("smbcommonconfig", req.NamespacedName)
-
-	// your logic here
-
+	log := r.Log.WithValues("smbcommonconfig", req.NamespacedName)
+	log.Info("Reconcile SmbCommonConfig")
 	return ctrl.Result{}, nil
 }
 

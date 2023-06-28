@@ -11,31 +11,43 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v3
         with:
-          go-version: "1.16"
-      - uses: actions/checkout@v2
+          go-version: "1.18"
+      - uses: actions/checkout@v3
       - name: Build
         run: make
   # Run static/code-quality checks
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v3
         with:
-          go-version: "1.16"
-      - uses: actions/checkout@v2
+          go-version: "1.18"
+      - uses: actions/checkout@v3
       - name: Install revive
         run: go install github.com/mgechev/revive@latest
       - name: Run checks
         run: make check
+  check-commits:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Ensure branches
+        run: git fetch
+      - name: Lint git commit messages
+        run: make check-gitlint
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v3
         with:
-          go-version: "1.16"
-      - uses: actions/checkout@v2
+          go-version: "1.18"
+      - uses: actions/checkout@v3
       - name: run the tests
         run: make test
   podmanbuild:
@@ -44,7 +56,7 @@ jobs:
     # image build step, so no need to do it twice.
     if: github.event_name == 'pull_request'
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Install fuse-overlayfs
         run: sudo apt-get -y install fuse-overlayfs
       - name: Setup podman config
@@ -72,7 +84,7 @@ jobs:
     # image build step, so no need to do it twice.
     if: github.event_name == 'pull_request'
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: build container image
         # note: forcing use of podman here since we are
         # using podman explicitly for the push job
@@ -85,10 +97,10 @@ jobs:
       CONTAINER_CMD: docker
       PR_NUM: ${{ github.event.pull_request.number }}
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
         with:
-          go-version: "1.16"
+          go-version: "1.18"
       - name: Install k3d
         run: curl -L --silent --fail "https://raw.githubusercontent.com/rancher/k3d/main/install.sh" | bash
       # The TAG env var can interfere with the k3d install script.
@@ -140,7 +152,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: log in to quay.io
         # using docker for now, since podman has an issue with space
         # consumption: image build fails with no space left on device...

@@ -29,7 +29,7 @@ endif
 
 GO_CMD:=go
 GOFMT_CMD:=gofmt
-KUBECTL_CMD:=kubectl
+KUBECTL_CMD?=kubectl
 BUILDAH_CMD:=buildah
 YAMLLINT_CMD:=yamllint
 
@@ -206,9 +206,9 @@ bundle-build:
 	@false
 	# See vcs history for how this could be restored or adapted in the future.
 
-.PHONY: check check-revive check-golangci-lint check-format check-yaml
+.PHONY: check check-revive check-golangci-lint check-format check-yaml check-gosec
 
-check: check-revive check-golangci-lint check-format vet check-yaml
+check: check-revive check-golangci-lint check-format vet check-yaml check-gosec
 
 check-format:
 	! $(GOFMT_CMD) $(CHECK_GOFMT_FLAGS) . | sed 's,^,formatting error: ,' | grep 'go$$'
@@ -223,6 +223,12 @@ check-golangci-lint: golangci-lint
 
 check-yaml:
 	$(YAMLLINT_CMD) -c ./.yamllint.yaml ./
+
+check-gosec: gosec
+	$(GOSEC) -quiet -exclude=G101 -fmt json ./...
+
+check-gitlint: gitlint
+	$(GITLINT) -C .gitlint --commits origin/master.. lint
 
 # find or download auxiliary build tools
 .PHONY: build-tools controller-gen kustomize revive golangci-lint yq
@@ -291,4 +297,28 @@ endif
 YQ=$(GOBIN_ALT)/yq
 else
 YQ=$(shell command -v yq ;)
+endif
+
+gosec:
+ifeq (, $(shell command -v gosec ;))
+	@echo "gosec not found in PATH, checking $(GOBIN_ALT)"
+ifeq (, $(shell command -v $(GOBIN_ALT)/gosec ;))
+	@$(call installtool, --gosec)
+	@echo "gosec installed in $(GOBIN_ALT)"
+endif
+GOSEC=$(GOBIN_ALT)/gosec
+else
+GOSEC=$(shell command -v gosec ;)
+endif
+
+gitlint:
+ifeq (, $(shell command -v gitlint ;))
+	@echo "gitlint not found in PATH, checking $(GOBIN_ALT)"
+ifeq (, $(shell command -v $(GOBIN_ALT)/gitlint ;))
+	@$(call installtool, --gitlint)
+	@echo "gitlint installed in $(GOBIN_ALT)"
+endif
+GITLINT=$(GOBIN_ALT)/gitlint
+else
+GITLINT=$(shell command -v gitlint ;)
 endif

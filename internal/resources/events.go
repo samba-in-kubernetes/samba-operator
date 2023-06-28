@@ -27,4 +27,5 @@ const (
 	ReasonCreatedPersistentVolumeClaim = "CreatedPersistentVolumeClaim"
 	ReasonCreatedDeployment            = "CreatedDeployment"
 	ReasonCreatedStatefulSet           = "CreatedStatefulSet"
+	ReasonInvalidConfiguration         = "InvalidConfiguration"
 )

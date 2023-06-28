@@ -81,11 +81,11 @@ func (pl *Planner) idmapOptions() smbcc.SmbOptions {
 // Update the held configuration based on the state of the instance
 // configuration.
 func (pl *Planner) Update() (changed bool, err error) {
-	globals, found := pl.ConfigState.Globals[smbcc.Globals]
+	_, found := pl.ConfigState.Globals[smbcc.Globals]
 	if !found {
 		globalOptions := smbcc.NewGlobalOptions()
 		globalOptions.SmbPort = pl.GlobalConfig.SmbdPort
-		globals = smbcc.NewGlobals(globalOptions)
+		globals := smbcc.NewGlobals(globalOptions)
 		pl.ConfigState.Globals[smbcc.Globals] = globals
 		changed = true
 	}
@@ -93,18 +93,15 @@ func (pl *Planner) Update() (changed bool, err error) {
 	share, found := pl.ConfigState.Shares[shareKey]
 	if !found {
 		share = smbcc.NewSimpleShare(pl.Paths().Share())
-		if !pl.SmbShare.Spec.Browseable {
-			share.Options[smbcc.BrowseableParam] = smbcc.No
-		}
-		if pl.SmbShare.Spec.ReadOnly {
-			share.Options[smbcc.ReadOnlyParam] = smbcc.Yes
-		}
 		pl.ConfigState.Shares[shareKey] = share
+		changed = true
+	}
+	if c := applyShareValues(share, pl.SmbShare.Spec); c {
 		changed = true
 	}
 	cfgKey := pl.instanceID()
 	cfg, found := pl.ConfigState.Configs[cfgKey]
-	if !found || cfg.Shares[0] != shareKey {
+	if !found {
 		cfg = smbcc.ConfigSection{
 			Shares:       []smbcc.Key{shareKey},
 			Globals:      []smbcc.Key{smbcc.Globals},
@@ -118,8 +115,14 @@ func (pl *Planner) Update() (changed bool, err error) {
 		if pl.IsClustered() {
 			cfg.InstanceFeatures = []smbcc.FeatureFlag{smbcc.CTDB}
 		}
-		pl.ConfigState.Configs[cfgKey] = cfg
 		changed = true
+	}
+	if !hasShare(&cfg, shareKey) {
+		cfg.Shares = append(cfg.Shares, shareKey)
+		changed = true
+	}
+	if changed {
+		pl.ConfigState.Configs[cfgKey] = cfg
 	}
 	if len(pl.ConfigState.Users) == 0 {
 		pl.ConfigState.Users = smbcc.NewDefaultUsers()
@@ -142,4 +145,67 @@ func (pl *Planner) Update() (changed bool, err error) {
 		}
 	}
 	return
+}
+
+// Prune the target share from the configuration.
+func (pl *Planner) Prune() (changed bool, err error) {
+	cfgKey := pl.instanceID()
+	shareKey := smbcc.Key(pl.shareName())
+
+	if cfg, found := pl.ConfigState.Configs[cfgKey]; found {
+		if removeShare(&cfg, shareKey) {
+			pl.ConfigState.Configs[cfgKey] = cfg
+			changed = true
+		}
+	}
+	if _, found := pl.ConfigState.Shares[shareKey]; found {
+		delete(pl.ConfigState.Shares, shareKey)
+		changed = true
+	}
+	return
+}
+
+func applyShareValues(share smbcc.ShareConfig, spec api.SmbShareSpec) bool {
+	changed := false
+
+	setBrowsable := smbcc.Yes
+	if !spec.Browseable {
+		setBrowsable = smbcc.No
+	}
+
+	setReadOnly := smbcc.No
+	if spec.ReadOnly {
+		setReadOnly = smbcc.Yes
+	}
+
+	if share.Options[smbcc.BrowseableParam] != setBrowsable {
+		share.Options[smbcc.BrowseableParam] = setBrowsable
+		changed = true
+	}
+
+	if share.Options[smbcc.ReadOnlyParam] != setReadOnly {
+		share.Options[smbcc.ReadOnlyParam] = setReadOnly
+		changed = true
+	}
+
+	return changed
+}
+
+func hasShare(cfg *smbcc.ConfigSection, k smbcc.Key) bool {
+	for i := range cfg.Shares {
+		if cfg.Shares[i] == k {
+			return true
+		}
+	}
+	return false
+}
+
+func removeShare(cfg *smbcc.ConfigSection, k smbcc.Key) bool {
+	for i := range cfg.Shares {
+		if cfg.Shares[i] == k {
+			cfg.Shares = append(cfg.Shares[:i], cfg.Shares[i+1:]...)
+			return true
+		}
+	}
+	return false
 }

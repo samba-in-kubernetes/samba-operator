@@ -14,12 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Command to start the samba-operator.
 package main
 
 import (
 	"os"
 	goruntime "runtime"
 
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	flag "github.com/spf13/pflag"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -33,6 +35,7 @@ import (
 	sambaoperatorv1alpha1 "github.com/samba-in-kubernetes/samba-operator/api/v1alpha1"
 	"github.com/samba-in-kubernetes/samba-operator/controllers"
 	"github.com/samba-in-kubernetes/samba-operator/internal/conf"
+	pln "github.com/samba-in-kubernetes/samba-operator/internal/planner"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -50,6 +53,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(corev1.AddToScheme(scheme))
 	utilruntime.Must(rbacv1.AddToScheme(scheme))
+	utilruntime.Must(monitoringv1.AddToScheme(scheme))
 
 	utilruntime.Must(sambaoperatorv1alpha1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
@@ -93,6 +97,15 @@ func main() {
 		os.Exit(1)
 	}
 	setupLog.Info("loaded configuration successfully", "config", conf.Get())
+
+	planner := pln.New(pln.InstanceConfiguration{
+		GlobalConfig: conf.Get(),
+	}, nil)
+	if _, err := planner.NodeSelector(); err != nil {
+		setupLog.Error(err, "invalid node selector configuration value",
+			"note", "value must be a JSON object containing strings")
+		os.Exit(1)
+	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,

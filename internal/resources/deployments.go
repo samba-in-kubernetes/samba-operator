@@ -27,21 +27,28 @@ import (
 )
 
 var (
-	serviceLabel = "samba-operator.samba.org/service"
+	serviceLabel        = "samba-operator.samba.org/service"
+	commonConfigLabel   = "samba-operator.samba.org/common-config-from"
+	securityConfigLabel = "samba-operator.samba.org/security-config-from"
 )
 
 // buildDeployment returns a samba server deployment object
 func buildDeployment(cfg *conf.OperatorConfig,
 	planner *pln.Planner, pvcName, ns string) *appsv1.Deployment {
 	// construct a deployment based on the following labels
-	labels := labelsForSmbServer(planner.InstanceName())
+	labels := labelsForSmbServer(planner)
 	var size int32 = 1
 
+	podSpec := buildPodSpec(planner, cfg, pvcName)
+	podSpec.Affinity = affinityForSmbPod(planner)
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      planner.InstanceName(),
 			Namespace: ns,
 			Labels:    labels,
+			Annotations: map[string]string{
+				"openshift.io/scc": sambaSccName,
+			},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &size,
@@ -53,7 +60,7 @@ func buildDeployment(cfg *conf.OperatorConfig,
 					Labels:      labels,
 					Annotations: annotationsForSmbPod(cfg),
 				},
-				Spec: buildPodSpec(planner, cfg, pvcName),
+				Spec: podSpec,
 			},
 		},
 	}
@@ -62,7 +69,18 @@ func buildDeployment(cfg *conf.OperatorConfig,
 
 // labelsForSmbServer returns the labels for selecting the resources
 // belonging to the given CR name.
-func labelsForSmbServer(name string) map[string]string {
+func labelsForSmbServer(planner *pln.Planner) map[string]string {
+	labels := labelsForManagedResource(planner.InstanceName())
+	if planner.CommonConfig != nil {
+		labels[commonConfigLabel] = labelValue(planner.CommonConfig.Name)
+	}
+	if planner.SecurityConfig != nil {
+		labels[securityConfigLabel] = labelValue(planner.SecurityConfig.Name)
+	}
+	return labels
+}
+
+func labelsForManagedResource(name string) map[string]string {
 	return map[string]string{
 		// top level labes
 		"app": "samba",
@@ -91,6 +109,7 @@ func annotationsForSmbPod(cfg *conf.OperatorConfig) map[string]string {
 	annotations := map[string]string{
 		"kubectl.kubernetes.io/default-logs-container": name,
 		"kubectl.kubernetes.io/default-container":      name,
+		"openshift.io/scc":                             sambaSccName,
 	}
 	if withMetricsExporter(cfg) {
 		for k, v := range annotationsForSmbMetricsPod() {
@@ -102,4 +121,11 @@ func annotationsForSmbPod(cfg *conf.OperatorConfig) map[string]string {
 
 func withMetricsExporter(cfg *conf.OperatorConfig) bool {
 	return strings.ToLower(cfg.MetricsExporterMode) == "enabled"
+}
+
+func affinityForSmbPod(planner *pln.Planner) *corev1.Affinity {
+	if planner.CommonConfig != nil && planner.CommonConfig.Spec.PodSettings != nil {
+		return planner.CommonConfig.Spec.PodSettings.Affinity
+	}
+	return nil
 }

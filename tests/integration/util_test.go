@@ -5,11 +5,24 @@ package integration
 
 import (
 	"context"
+	"fmt"
 	"path"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/types"
+	krand "k8s.io/apimachinery/pkg/util/rand"
+
 	"github.com/samba-in-kubernetes/samba-operator/tests/utils/kube"
 	"github.com/stretchr/testify/require"
+)
+
+type TestContextKey string
+
+const (
+	TestIDKey    = TestContextKey("testID")
+	TestShareKey = TestContextKey("testShare")
 )
 
 var (
@@ -17,18 +30,28 @@ var (
 	waitForPodsTime  = 120 * time.Second
 	waitForReadyTime = 200 * time.Second
 	waitForClearTime = 200 * time.Millisecond
+	clientCreateTime = 120 * time.Second
+	// waitForCleanupTime is twice the wait for pods time
+	waitForCleanupTime = 240 * time.Second
 )
 
 type checker interface {
 	NoError(err error, m ...interface{})
 }
 
+func testContext() context.Context {
+	return context.Background()
+}
+
 func createFromFiles(
-	require checker, tc *kube.TestClient, srcs []kube.FileSource) {
+	ctx context.Context,
+	require checker,
+	tc *kube.TestClient,
+	srcs []kube.FileSource) {
 	// ---
 	for _, fs := range srcs {
 		_, err := tc.CreateFromFileIfMissing(
-			context.TODO(),
+			ctx,
 			fs,
 		)
 		require.NoError(err)
@@ -36,15 +59,80 @@ func createFromFiles(
 }
 
 func deleteFromFiles(
-	require checker, tc *kube.TestClient, srcs []kube.FileSource) {
+	ctx context.Context,
+	require checker,
+	tc *kube.TestClient,
+	srcs []kube.FileSource) {
 	// ---
 	for _, fs := range srcs {
 		err := tc.DeleteResourceMatchingFile(
-			context.TODO(),
+			ctx,
 			fs,
 		)
 		require.NoError(err)
 	}
+}
+
+func setSuffix(s, suffix string) string {
+	return s + "-" + suffix
+}
+
+func createFromFilesWithSuffix(
+	ctx context.Context,
+	require checker,
+	tc *kube.TestClient,
+	srcs []kube.FileSource,
+	suffix string) []types.NamespacedName {
+	// ---
+	if suffix == "" {
+		require.NoError(fmt.Errorf("suffix not provided"))
+	}
+	names := []types.NamespacedName{}
+	for _, fs := range srcs {
+		nn, err := tc.CreateFromFileIfMissing(
+			ctx,
+			kube.MutatingSource{
+				Source: kube.FileSource{
+					Path:       fs.Path,
+					Namespace:  fs.Namespace,
+					NameSuffix: setSuffix(fs.NameSuffix, suffix),
+				},
+				Mutate: func(u *unstructured.Unstructured) error {
+					return mutateSmbShare(u, suffix)
+				},
+			},
+		)
+		require.NoError(err)
+		names = append(names, nn...)
+	}
+	return names
+}
+
+func deleteFromFilesWithSuffix(
+	ctx context.Context,
+	require checker,
+	tc *kube.TestClient,
+	srcs []kube.FileSource,
+	suffix string) {
+	// ---
+	if suffix == "" {
+		require.NoError(fmt.Errorf("suffix not provided"))
+	}
+	for _, fs := range srcs {
+		err := tc.DeleteResourceMatchingFile(
+			ctx,
+			kube.FileSource{
+				Path:       fs.Path,
+				Namespace:  fs.Namespace,
+				NameSuffix: setSuffix(fs.NameSuffix, suffix),
+			},
+		)
+		require.NoError(err)
+	}
+}
+
+func generateTestID() string {
+	return krand.String(6)
 }
 
 type withClient interface {
@@ -56,9 +144,9 @@ type podTestClient interface {
 	getPodFetchOptions() kube.PodFetchOptions
 }
 
-func waitForPodExist(s podTestClient) error {
+func waitForPodExist(ctx context.Context, s podTestClient) error {
 	ctx, cancel := context.WithDeadline(
-		context.TODO(),
+		ctx,
 		time.Now().Add(waitForPodsTime))
 	defer cancel()
 	return kube.WaitForAnyPodExists(
@@ -68,9 +156,9 @@ func waitForPodExist(s podTestClient) error {
 	)
 }
 
-func waitForPodReady(s podTestClient) error {
+func waitForPodReady(ctx context.Context, s podTestClient) error {
 	ctx, cancel := context.WithDeadline(
-		context.TODO(),
+		ctx,
 		time.Now().Add(waitForReadyTime))
 	defer cancel()
 	return kube.WaitForAnyPodReady(
@@ -80,9 +168,9 @@ func waitForPodReady(s podTestClient) error {
 	)
 }
 
-func waitForAllPodReady(s podTestClient) error {
+func waitForAllPodReady(ctx context.Context, s podTestClient) error {
 	ctx, cancel := context.WithDeadline(
-		context.TODO(),
+		ctx,
 		time.Now().Add(waitForReadyTime))
 	defer cancel()
 	return kube.WaitForAllPodReady(
@@ -92,10 +180,11 @@ func waitForAllPodReady(s podTestClient) error {
 	)
 }
 
-func createSMBClientIfMissing(require *require.Assertions, tc *kube.TestClient) {
+func createSMBClientIfMissing(
+	ctx context.Context, require *require.Assertions, tc *kube.TestClient) {
 	// ---
 	_, err := tc.CreateFromFileIfMissing(
-		context.TODO(),
+		ctx,
 		kube.FileSource{
 			Path:      path.Join(testFilesDir, "data1.yaml"),
 			Namespace: testNamespace,
@@ -103,7 +192,7 @@ func createSMBClientIfMissing(require *require.Assertions, tc *kube.TestClient) 
 	require.NoError(err)
 
 	_, err = tc.CreateFromFileIfMissing(
-		context.TODO(),
+		ctx,
 		kube.FileSource{
 			Path:      path.Join(testFilesDir, "client-test-pod.yaml"),
 			Namespace: testNamespace,
@@ -111,13 +200,13 @@ func createSMBClientIfMissing(require *require.Assertions, tc *kube.TestClient) 
 	require.NoError(err)
 
 	// ensure the smbclient test pod exists and is ready
-	ctx, cancel := context.WithDeadline(
-		context.TODO(),
-		time.Now().Add(120*time.Second))
+	ctx2, cancel := context.WithTimeout(
+		ctx,
+		clientCreateTime)
 	defer cancel()
 	l := "app=samba-operator-test-smbclient"
 	require.NoError(kube.WaitForAnyPodExists(
-		ctx,
+		ctx2,
 		kube.NewTestClient(""),
 		kube.PodFetchOptions{
 			Namespace:     testNamespace,
@@ -126,7 +215,7 @@ func createSMBClientIfMissing(require *require.Assertions, tc *kube.TestClient) 
 		"smbclient pod does not exist",
 	)
 	require.NoError(kube.WaitForAnyPodReady(
-		ctx,
+		ctx2,
 		kube.NewTestClient(""),
 		kube.PodFetchOptions{
 			Namespace:     testNamespace,
@@ -134,4 +223,52 @@ func createSMBClientIfMissing(require *require.Assertions, tc *kube.TestClient) 
 		}),
 		"smbclient pod not ready",
 	)
+}
+
+func getAnyReadyPod(
+	ctx context.Context, ptc podTestClient) (*corev1.Pod, error) {
+	// ---
+	opts := ptc.getPodFetchOptions()
+	opts.MinFound = 1
+	pods, err := ptc.getTestClient().FetchPods(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+	for _, pod := range pods {
+		if kube.PodIsReady(&pod) {
+			return &pod, nil
+		}
+	}
+	return nil, fmt.Errorf("no pods ready")
+}
+
+func getAnyPodIP(ctx context.Context, ptc podTestClient) (string, error) {
+	pod, err := getAnyReadyPod(ctx, ptc)
+	if err != nil {
+		return "", err
+	}
+	return pod.Status.PodIP, nil
+}
+
+func mutateSmbShare(u *unstructured.Unstructured, suffix string) error {
+	// for now we just assume anything with a spec.scaling.group property
+	// is an SmbShare. If we really need to, in the future we can verify
+	// the GVK of the unstructured obj.
+	v, ok, err := unstructured.NestedString(
+		u.Object,
+		"spec",
+		"scaling",
+		"group")
+	if err != nil {
+		return err
+	}
+	if ok && v != "" {
+		err = unstructured.SetNestedField(
+			u.Object,
+			setSuffix(v, suffix),
+			"spec",
+			"scaling",
+			"group")
+	}
+	return err
 }

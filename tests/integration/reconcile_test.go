@@ -7,12 +7,14 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 	"k8s.io/apimachinery/pkg/types"
 
 	sambaoperatorv1alpha1 "github.com/samba-in-kubernetes/samba-operator/api/v1alpha1"
 	"github.com/samba-in-kubernetes/samba-operator/tests/utils/kube"
+	"github.com/samba-in-kubernetes/samba-operator/tests/utils/poll"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -23,26 +25,55 @@ var (
 type limitAvailModeChangeSuite struct {
 	suite.Suite
 
-	fileSources      []kube.FileSource
-	smbShareResource types.NamespacedName
-	nextMode         string
-	expectBackend    string
+	commonSources   []kube.FileSource
+	smbShareSources []kube.FileSource
+	nextMode        string
+	expectBackend   string
 
 	// cached values
 	tc *kube.TestClient
+
+	// testID is a short unique test id, pseudo-randomly generated
+	testID string
+	// testShareName is the name of the SmbShare being tested by this
+	// test instance
+	testShareName types.NamespacedName
+}
+
+func (s *limitAvailModeChangeSuite) defaultContext() context.Context {
+	return testContext()
 }
 
 func (s *limitAvailModeChangeSuite) SetupSuite() {
+	s.testID = generateTestID()
+	s.T().Logf("test ID: %s", s.testID)
 	// ensure the smbclient test pod exists
 	require := s.Require()
 	s.tc = kube.NewTestClient("")
-	createFromFiles(require, s.tc, s.fileSources)
-	require.NoError(waitForPodExist(s), "smb server pod does not exist")
-	require.NoError(waitForPodReady(s), "smb server pod is not ready")
+	ctx := s.defaultContext()
+	createFromFiles(ctx, require, s.tc, s.commonSources)
+	names := createFromFilesWithSuffix(
+		ctx,
+		s.Require(),
+		s.tc,
+		s.smbShareSources,
+		s.testID,
+	)
+	s.Require().Len(names, 1, "expected one smb share resource")
+	s.testShareName = names[0]
+	require.NoError(waitForPodExist(ctx, s), "smb server pod does not exist")
+	require.NoError(waitForPodReady(ctx, s), "smb server pod is not ready")
 }
 
 func (s *limitAvailModeChangeSuite) TearDownSuite() {
-	deleteFromFiles(s.Require(), s.tc, s.fileSources)
+	ctx := s.defaultContext()
+	deleteFromFiles(ctx, s.Require(), s.tc, s.commonSources)
+	deleteFromFilesWithSuffix(
+		ctx,
+		s.Require(),
+		s.tc,
+		s.smbShareSources,
+		s.testID)
 }
 
 func (s *limitAvailModeChangeSuite) getTestClient() *kube.TestClient {
@@ -51,19 +82,20 @@ func (s *limitAvailModeChangeSuite) getTestClient() *kube.TestClient {
 
 func (s *limitAvailModeChangeSuite) getPodFetchOptions() kube.PodFetchOptions {
 	l := fmt.Sprintf(
-		"samba-operator.samba.org/service=%s", s.smbShareResource.Name)
+		"samba-operator.samba.org/service=%s", s.testShareName.Name)
 	return kube.PodFetchOptions{
-		Namespace:     s.smbShareResource.Namespace,
+		Namespace:     s.testShareName.Namespace,
 		LabelSelector: l,
 		MaxFound:      3,
 	}
 }
 
 func (s *limitAvailModeChangeSuite) TestAvailModeUnchanged() {
+	ctx := s.defaultContext()
 	require := s.Require()
 	smbShare := &sambaoperatorv1alpha1.SmbShare{}
 	err := s.tc.TypedObjectClient().Get(
-		context.TODO(), s.smbShareResource, smbShare)
+		ctx, s.testShareName, smbShare)
 	require.NoError(err)
 	require.NotNil(smbShare.Annotations)
 	require.Contains(smbShare.Annotations[backendAnnotation], s.expectBackend)
@@ -74,12 +106,12 @@ func (s *limitAvailModeChangeSuite) TestAvailModeUnchanged() {
 	smbShare.Spec.Scaling.MinClusterSize = 2
 
 	err = s.tc.TypedObjectClient().Update(
-		context.TODO(), smbShare)
+		ctx, smbShare)
 	require.NoError(err)
-	require.NoError(waitForPodExist(s), "smb server pod does not exist")
-	require.NoError(waitForPodReady(s), "smb server pod is not ready")
+	require.NoError(waitForPodExist(ctx, s), "smb server pod does not exist")
+	require.NoError(waitForPodReady(ctx, s), "smb server pod is not ready")
 	err = s.tc.TypedObjectClient().Get(
-		context.TODO(), s.smbShareResource, smbShare)
+		ctx, s.testShareName, smbShare)
 	require.NoError(err)
 	require.NotNil(smbShare.Annotations)
 	require.Contains(smbShare.Annotations[backendAnnotation], s.expectBackend)
@@ -88,25 +120,56 @@ func (s *limitAvailModeChangeSuite) TestAvailModeUnchanged() {
 type scaleoutClusterSuite struct {
 	suite.Suite
 
-	fileSources      []kube.FileSource
-	smbShareResource types.NamespacedName
+	commonSources   []kube.FileSource
+	smbShareSources []kube.FileSource
+	maxPods         int
+	minPods         int
 
 	// cached values
 	tc *kube.TestClient
+
+	// testID is a short unique test id, pseudo-randomly generated
+	testID string
+	// testShareName is the name of the SmbShare being tested by this
+	// test instance
+	testShareName types.NamespacedName
+}
+
+func (s *scaleoutClusterSuite) defaultContext() context.Context {
+	return testContext()
 }
 
 func (s *scaleoutClusterSuite) SetupSuite() {
+	s.testID = generateTestID()
+	s.T().Logf("test ID: %s", s.testID)
 	// ensure the smbclient test pod exists
+	ctx := s.defaultContext()
 	require := s.Require()
 	s.tc = kube.NewTestClient("")
-	createSMBClientIfMissing(require, s.tc)
-	createFromFiles(require, s.tc, s.fileSources)
-	require.NoError(waitForPodExist(s), "smb server pod does not exist")
-	require.NoError(waitForPodReady(s), "smb server pod is not ready")
+	createSMBClientIfMissing(ctx, require, s.tc)
+	createFromFiles(ctx, require, s.tc, s.commonSources)
+	names := createFromFilesWithSuffix(
+		ctx,
+		s.Require(),
+		s.tc,
+		s.smbShareSources,
+		s.testID,
+	)
+	s.Require().Len(names, 1, "expected one smb share resource")
+	s.testShareName = names[0]
+	require.NoError(waitForPodExist(ctx, s), "smb server pod does not exist")
+	require.NoError(waitForPodReady(ctx, s), "smb server pod is not ready")
 }
 
 func (s *scaleoutClusterSuite) TearDownSuite() {
-	deleteFromFiles(s.Require(), s.tc, s.fileSources)
+	ctx := s.defaultContext()
+	deleteFromFiles(ctx, s.Require(), s.tc, s.commonSources)
+	deleteFromFilesWithSuffix(
+		ctx,
+		s.Require(),
+		s.tc,
+		s.smbShareSources,
+		s.testID)
 }
 
 func (s *scaleoutClusterSuite) getTestClient() *kube.TestClient {
@@ -115,103 +178,138 @@ func (s *scaleoutClusterSuite) getTestClient() *kube.TestClient {
 
 func (s *scaleoutClusterSuite) getPodFetchOptions() kube.PodFetchOptions {
 	l := fmt.Sprintf(
-		"samba-operator.samba.org/service=%s", s.smbShareResource.Name)
+		"samba-operator.samba.org/service=%s", s.testShareName.Name)
 	return kube.PodFetchOptions{
-		Namespace:     s.smbShareResource.Namespace,
+		Namespace:     s.testShareName.Namespace,
 		LabelSelector: l,
-		MaxFound:      3,
+		MaxFound:      s.maxPods,
+		MinFound:      s.minPods,
 	}
 }
 
 func (s *scaleoutClusterSuite) TestScaleoutClusterSuite() {
+	ctx := s.defaultContext()
 	require := s.Require()
 	smbShare := &sambaoperatorv1alpha1.SmbShare{}
 	err := s.tc.TypedObjectClient().Get(
-		context.TODO(), s.smbShareResource, smbShare)
+		ctx, s.testShareName, smbShare)
 	require.NoError(err)
 
 	// Increase Cluster Size by 1 and check result
 	newClusterSize := smbShare.Spec.Scaling.MinClusterSize + 1
 	smbShare.Spec.Scaling.MinClusterSize = newClusterSize
 	err = s.tc.TypedObjectClient().Update(
-		context.TODO(), smbShare)
+		ctx, smbShare)
 	require.NoError(err)
-	require.NoError(waitForPodExist(s), "smb server pod does not exist")
-	require.NoError(waitForPodReady(s), "smb server pod is not ready")
 
-	l, err := s.tc.Clientset().AppsV1().StatefulSets(s.smbShareResource.Namespace).List(
-		context.TODO(),
-		metav1.ListOptions{
-			LabelSelector: fmt.Sprintf("samba-operator.samba.org/service=%s",
-				s.smbShareResource.Name),
-		})
-	require.NoError(err)
-	// Only one stateful set should be available for this smbshare.
-	require.Len(l.Items, 1)
-	require.Equal(int32(newClusterSize), *l.Items[0].Spec.Replicas, "Clustersize not as expected")
+	ctx2, cancel := context.WithTimeout(s.defaultContext(), 3*time.Second)
+	defer cancel()
+	s.Require().NoError(poll.TryUntil(ctx2, &poll.Prober{
+		RetryInterval: time.Second,
+		Cond: func() (bool, error) {
+			return s.checkStatefulSet(ctx, int32(newClusterSize)), nil
+		},
+	}))
+
+	s.minPods = newClusterSize
+	require.NoError(waitForPodExist(ctx, s), "smb server pod does not exist")
 }
 
-func allReconcileSuites() map[string]suite.TestingSuite {
-	m := map[string]suite.TestingSuite{}
-	if testClusteredShares {
-		m["limitAvailModeChangeStandard"] = &limitAvailModeChangeSuite{
-			fileSources: []kube.FileSource{
-				{
-					Path:      path.Join(testFilesDir, "userssecret1.yaml"),
-					Namespace: testNamespace,
-				},
-				{
-					Path:      path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
-					Namespace: testNamespace,
-				},
-				{
-					Path:       path.Join(testFilesDir, "smbshare1.yaml"),
-					Namespace:  testNamespace,
-					NameSuffix: "-bk",
-				},
-			},
-			smbShareResource: types.NamespacedName{testNamespace, "tshare1-bk"},
-			expectBackend:    "standard",
-			nextMode:         "clustered",
-		}
-		m["limitAvailModeChangeClustered"] = &limitAvailModeChangeSuite{
-			fileSources: []kube.FileSource{
-				{
-					Path:      path.Join(testFilesDir, "userssecret1.yaml"),
-					Namespace: testNamespace,
-				},
-				{
-					Path:      path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
-					Namespace: testNamespace,
-				},
-				{
-					Path:       path.Join(testFilesDir, "smbshare_ctdb1.yaml"),
-					Namespace:  testNamespace,
-					NameSuffix: "-bk",
-				},
-			},
-			smbShareResource: types.NamespacedName{testNamespace, "cshare1-bk"},
-			expectBackend:    "clustered",
-			nextMode:         "standard",
-		}
-		m["scaleoutCluster"] = &scaleoutClusterSuite{
-			fileSources: []kube.FileSource{
-				{
-					Path:      path.Join(testFilesDir, "userssecret1.yaml"),
-					Namespace: testNamespace,
-				},
-				{
-					Path:      path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
-					Namespace: testNamespace,
-				},
-				{
-					Path:       path.Join(testFilesDir, "smbshare_ctdb1.yaml"),
-					Namespace:  testNamespace,
-					NameSuffix: "-soc",
-				},
-			},
-			smbShareResource: types.NamespacedName{testNamespace, "cshare1-soc"},
-		}
+func (s *scaleoutClusterSuite) checkStatefulSet(
+	ctx context.Context, cSize int32) bool {
+	l, err := s.tc.Clientset().AppsV1().StatefulSets(s.testShareName.Namespace).List(
+		ctx,
+		metav1.ListOptions{
+			LabelSelector: fmt.Sprintf("samba-operator.samba.org/service=%s",
+				s.testShareName.Name),
+		})
+	if err != nil {
+		s.T().Logf("StatefulSet couldn't be listed")
+		return false
 	}
-	return m
+
+	if len(l.Items) != 1 {
+		// Only one stateful set should be available for this smbshare.
+		s.T().Logf("StatefulSet count does not match")
+		return false
+	}
+	if *l.Items[0].Spec.Replicas != cSize {
+		// Replicas field should reflect updated MinClusterSize
+		s.T().Logf("StatefulSet Replicas not yet updated")
+		return false
+	}
+	return true
+}
+
+func init() {
+	if !testClusteredShares {
+		return
+	}
+
+	reconTests := testRoot.ChildPriority("reconciliation", 4)
+	reconTests.AddSuite("limitAvailModeChangeStandard", &limitAvailModeChangeSuite{
+		commonSources: []kube.FileSource{
+			{
+				Path:      path.Join(testFilesDir, "userssecret1.yaml"),
+				Namespace: testNamespace,
+			},
+			{
+				Path:      path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
+				Namespace: testNamespace,
+			},
+		},
+		smbShareSources: []kube.FileSource{
+			{
+				Path:      path.Join(testFilesDir, "smbshare1.yaml"),
+				Namespace: testNamespace,
+			},
+		},
+		expectBackend: "standard",
+		nextMode:      "clustered",
+	},
+	)
+
+	reconTests.AddSuite("limitAvailModeChangeClustered", &limitAvailModeChangeSuite{
+		commonSources: []kube.FileSource{
+			{
+				Path:      path.Join(testFilesDir, "userssecret1.yaml"),
+				Namespace: testNamespace,
+			},
+			{
+				Path:      path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
+				Namespace: testNamespace,
+			},
+		},
+		smbShareSources: []kube.FileSource{
+			{
+				Path:      path.Join(testFilesDir, "smbshare_ctdb1.yaml"),
+				Namespace: testNamespace,
+			},
+		},
+		expectBackend: "clustered",
+		nextMode:      "standard",
+	},
+	)
+
+	reconTests.AddSuite("scaleoutCluster", &scaleoutClusterSuite{
+		commonSources: []kube.FileSource{
+			{
+				Path:      path.Join(testFilesDir, "userssecret1.yaml"),
+				Namespace: testNamespace,
+			},
+			{
+				Path:      path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
+				Namespace: testNamespace,
+			},
+		},
+		smbShareSources: []kube.FileSource{
+			{
+				Path:      path.Join(testFilesDir, "smbshare_ctdb1.yaml"),
+				Namespace: testNamespace,
+			},
+		},
+		maxPods: 3,
+		minPods: 2,
+	},
+	)
 }

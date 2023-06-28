@@ -1,3 +1,4 @@
+// Package smbclient is used to execute smbclient commands.
 package smbclient
 
 import (

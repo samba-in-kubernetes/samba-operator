@@ -126,3 +126,11 @@ func (*SambaContainerArgs) CTDBNodeStatus() []string {
 func (*SambaContainerArgs) EnsureSharePaths() []string {
 	return []string{"ensure-share-paths"}
 }
+
+// UpdateConfigWatch container arguments generator.
+func (*SambaContainerArgs) UpdateConfigWatch() []string {
+	return []string{
+		"update-config",
+		"--watch",
+	}
+}

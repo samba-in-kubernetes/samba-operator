@@ -36,17 +36,29 @@ type resourceSnapshot struct {
 type ShareCreateDeleteSuite struct {
 	suite.Suite
 
-	fileSources      []kube.FileSource
-	smbShareResource types.NamespacedName
-	destNamespace    string
-	maxPods          int
-	minPods          int
+	commonSources   []kube.FileSource
+	smbShareSources []kube.FileSource
+	destNamespace   string
+	maxPods         int
+	minPods         int
 
 	// cached values
 	tc *kube.TestClient
+
+	// testID is a short unique test id, pseudo-randomly generated
+	testID string
+	// testShareName is the name of the SmbShare being tested by this
+	// test instance
+	testShareName types.NamespacedName
+}
+
+func (s *ShareCreateDeleteSuite) defaultContext() context.Context {
+	return testContext()
 }
 
 func (s *ShareCreateDeleteSuite) SetupSuite() {
+	s.testID = generateTestID()
+	s.T().Logf("test ID: %s", s.testID)
 	s.tc = kube.NewTestClient("")
 }
 
@@ -63,7 +75,7 @@ func (s *ShareCreateDeleteSuite) SetupTest() {
 }
 
 func (s *ShareCreateDeleteSuite) TearDownSuite() {
-	deleteFromFiles(s.Require(), s.tc, s.fileSources)
+	deleteFromFiles(s.defaultContext(), s.Require(), s.tc, s.commonSources)
 }
 
 func (s *ShareCreateDeleteSuite) getTestClient() *kube.TestClient {
@@ -72,7 +84,7 @@ func (s *ShareCreateDeleteSuite) getTestClient() *kube.TestClient {
 
 func (s *ShareCreateDeleteSuite) getPodFetchOptions() kube.PodFetchOptions {
 	l := fmt.Sprintf(
-		"samba-operator.samba.org/service=%s", s.smbShareResource.Name)
+		"samba-operator.samba.org/service=%s", s.testShareName.Name)
 	return kube.PodFetchOptions{
 		Namespace:     s.destNamespace,
 		LabelSelector: l,
@@ -83,7 +95,7 @@ func (s *ShareCreateDeleteSuite) getPodFetchOptions() kube.PodFetchOptions {
 
 func (s *ShareCreateDeleteSuite) waitForNoSmbServices() error {
 	ctx, cancel := context.WithDeadline(
-		context.TODO(),
+		s.defaultContext(),
 		time.Now().Add(waitForPodsTime))
 	defer cancel()
 	err := poll.TryUntil(ctx, &poll.Prober{
@@ -104,6 +116,8 @@ func (s *ShareCreateDeleteSuite) waitForNoSmbServices() error {
 			if err != nil {
 				return false, err
 			}
+			s.T().Logf("found samba server pod in namespace: %s",
+				s.destNamespace)
 			return false, nil
 		},
 	})
@@ -115,43 +129,103 @@ func (s *ShareCreateDeleteSuite) getCurrentResources() resourceSnapshot {
 		err     error
 		rs      resourceSnapshot
 		opts    metav1.ListOptions
-		ctx     = context.TODO()
+		ctx     = s.defaultContext()
 		require = s.Require()
 	)
 
-	rs.pods, err = s.tc.Clientset().CoreV1().
+	rs.pods = &corev1.PodList{}
+	pods, err := s.tc.Clientset().CoreV1().
 		Pods(s.destNamespace).List(ctx, opts)
 	require.NoError(err)
-	rs.services, err = s.tc.Clientset().CoreV1().
+	for _, pod := range pods.Items {
+		if pod.GetDeletionTimestamp().IsZero() {
+			rs.pods.Items = append(rs.pods.Items, pod)
+		}
+	}
+
+	rs.services = &corev1.ServiceList{}
+	services, err := s.tc.Clientset().CoreV1().
 		Services(s.destNamespace).List(ctx, opts)
 	require.NoError(err)
-	rs.secrets, err = s.tc.Clientset().CoreV1().
+	for _, service := range services.Items {
+		if service.GetDeletionTimestamp().IsZero() {
+			rs.services.Items = append(rs.services.Items, service)
+		}
+	}
+
+	rs.secrets = &corev1.SecretList{}
+	secrets, err := s.tc.Clientset().CoreV1().
 		Secrets(s.destNamespace).List(ctx, opts)
 	require.NoError(err)
-	rs.configMaps, err = s.tc.Clientset().CoreV1().
+	for _, secret := range secrets.Items {
+		if secret.GetDeletionTimestamp().IsZero() {
+			rs.secrets.Items = append(rs.secrets.Items, secret)
+		}
+	}
+
+	rs.configMaps = &corev1.ConfigMapList{}
+	configMaps, err := s.tc.Clientset().CoreV1().
 		ConfigMaps(s.destNamespace).List(ctx, opts)
 	require.NoError(err)
-	rs.pvcs, err = s.tc.Clientset().CoreV1().
+	for _, configMap := range configMaps.Items {
+		if configMap.GetDeletionTimestamp().IsZero() {
+			rs.configMaps.Items = append(rs.configMaps.Items, configMap)
+		}
+	}
+
+	rs.pvcs = &corev1.PersistentVolumeClaimList{}
+	pvcs, err := s.tc.Clientset().CoreV1().
 		PersistentVolumeClaims(s.destNamespace).List(ctx, opts)
 	require.NoError(err)
-	rs.deployments, err = s.tc.Clientset().AppsV1().
+	for _, pvc := range pvcs.Items {
+		if pvc.GetDeletionTimestamp().IsZero() {
+			rs.pvcs.Items = append(rs.pvcs.Items, pvc)
+		}
+	}
+
+	rs.deployments = &appsv1.DeploymentList{}
+	deployments, err := s.tc.Clientset().AppsV1().
 		Deployments(s.destNamespace).List(ctx, opts)
 	require.NoError(err)
-	rs.statefulSets, err = s.tc.Clientset().AppsV1().
+	for _, deployment := range deployments.Items {
+		if deployment.GetDeletionTimestamp().IsZero() {
+			rs.deployments.Items = append(rs.deployments.Items, deployment)
+		}
+	}
+
+	rs.statefulSets = &appsv1.StatefulSetList{}
+	statefulSets, err := s.tc.Clientset().AppsV1().
 		StatefulSets(s.destNamespace).List(ctx, opts)
 	require.NoError(err)
+	for _, statefulSet := range statefulSets.Items {
+		if statefulSet.GetDeletionTimestamp().IsZero() {
+			rs.statefulSets.Items = append(rs.statefulSets.Items, statefulSet)
+		}
+	}
 
 	return rs
 }
 
 func (s *ShareCreateDeleteSuite) TestCreateAndDelete() {
 	var err error
+	ctx := s.defaultContext()
 	require := s.Require()
 	existing := s.getCurrentResources()
 
-	createFromFiles(require, s.tc, s.fileSources)
-	require.NoError(waitForPodExist(s))
-	require.NoError(waitForAllPodReady(s))
+	s.T().Log("creating prerequisite resources")
+	createFromFiles(ctx, require, s.tc, s.commonSources)
+	s.T().Log("creating smb share resource")
+	names := createFromFilesWithSuffix(
+		ctx,
+		s.Require(),
+		s.tc,
+		s.smbShareSources,
+		s.testID,
+	)
+	s.Require().Len(names, 1, "expected one smb share resource")
+	s.testShareName = names[0]
+	require.NoError(waitForPodExist(ctx, s))
+	require.NoError(waitForAllPodReady(ctx, s))
 
 	rs1 := s.getCurrentResources()
 	require.Greater(len(rs1.pods.Items), len(existing.pods.Items))
@@ -164,24 +238,26 @@ func (s *ShareCreateDeleteSuite) TestCreateAndDelete() {
 	require.GreaterOrEqual(
 		len(rs1.statefulSets.Items), len(existing.statefulSets.Items))
 
-	ctx, cancel := context.WithDeadline(
-		context.TODO(),
+	ctx2, cancel := context.WithDeadline(
+		ctx,
 		time.Now().Add(waitForPodsTime))
 	defer cancel()
 
 	// remove smbshare
+	s.T().Log("removing smb share resource")
 	smbShare := &sambaoperatorv1alpha1.SmbShare{}
-	smbShare.Namespace = s.smbShareResource.Namespace
-	smbShare.Name = s.smbShareResource.Name
-	err = s.tc.TypedObjectClient().Delete(ctx, smbShare)
+	smbShare.Namespace = s.testShareName.Namespace
+	smbShare.Name = s.testShareName.Name
+	err = s.tc.TypedObjectClient().Delete(ctx2, smbShare)
 	require.NoError(err)
 
 	// wait for smbshare to go away
-	require.NoError(poll.TryUntil(ctx, &poll.Prober{
+	s.T().Log("waiting for server resources to be removed")
+	require.NoError(poll.TryUntil(ctx2, &poll.Prober{
 		Cond: func() (bool, error) {
 			smbShare := &sambaoperatorv1alpha1.SmbShare{}
 			err := s.tc.TypedObjectClient().Get(
-				ctx, s.smbShareResource, smbShare)
+				ctx2, s.testShareName, smbShare)
 			if err == nil {
 				// found is false ... we're waiting for it to go away
 				return false, nil
@@ -197,27 +273,72 @@ func (s *ShareCreateDeleteSuite) TestCreateAndDelete() {
 	err = s.waitForNoSmbServices()
 	require.NoError(err)
 
-	deleteFromFiles(require, s.tc, s.fileSources)
-	time.Sleep(waitForClearTime)
+	s.T().Log("removing prerequisite resources")
+	deleteFromFiles(ctx, require, s.tc, s.commonSources)
 
-	rs2 := s.getCurrentResources()
-	require.Equal(len(rs2.pods.Items), len(existing.pods.Items))
-	require.Equal(len(rs2.configMaps.Items), len(existing.configMaps.Items))
-	require.Equal(len(rs2.secrets.Items), len(existing.secrets.Items))
-	require.Equal(len(rs2.services.Items), len(existing.services.Items))
-	require.Equal(len(rs2.pvcs.Items), len(existing.pvcs.Items))
-	require.Equal(
-		len(rs2.deployments.Items), len(existing.deployments.Items))
-	require.Equal(
-		len(rs2.statefulSets.Items), len(existing.statefulSets.Items))
+	s.requireResourcesDone(&existing)
 }
 
-func allShareCreateDeleteSuites() map[string]suite.TestingSuite {
-	m := map[string]suite.TestingSuite{}
-	ns := testNamespace
+func (s *ShareCreateDeleteSuite) requireResourcesDone(base *resourceSnapshot) {
+	ctx, cancel := context.WithTimeout(s.defaultContext(), loginTestTimeout)
+	defer cancel()
+	s.Require().NoError(poll.TryUntil(ctx, &poll.Prober{
+		RetryInterval: time.Second,
+		Cond: func() (bool, error) {
+			return s.checkResourcesDone(base), nil
+		},
+	}))
+}
 
-	m["simple"] = &ShareCreateDeleteSuite{
-		fileSources: []kube.FileSource{
+func (s *ShareCreateDeleteSuite) checkResourcesDone(
+	base *resourceSnapshot) bool {
+	curr := s.getCurrentResources()
+	podsDiff := len(curr.pods.Items) - len(base.pods.Items)
+	if podsDiff != 0 {
+		s.T().Logf("%d pods still exist", podsDiff)
+		return false
+	}
+	configMapsDiff := len(curr.configMaps.Items) - len(base.configMaps.Items)
+	if configMapsDiff != 0 {
+		s.T().Logf("%d configMaps still exist", configMapsDiff)
+		return false
+	}
+	secretsDiff := len(curr.secrets.Items) - len(base.secrets.Items)
+	if secretsDiff != 0 {
+		s.T().Logf("%d secrets still exist", secretsDiff)
+		return false
+	}
+	servicesDiff := len(curr.services.Items) - len(base.services.Items)
+	if servicesDiff != 0 {
+		s.T().Logf("%d services still exist", servicesDiff)
+		return false
+	}
+	pvcsDiff := len(curr.pvcs.Items) - len(base.pvcs.Items)
+	if pvcsDiff != 0 {
+		s.T().Logf("%d pvcs still exist", pvcsDiff)
+		return false
+	}
+	deploymentsDiff :=
+		len(curr.deployments.Items) - len(base.deployments.Items)
+	if deploymentsDiff != 0 {
+		s.T().Logf("%d deployments still exist", deploymentsDiff)
+		return false
+	}
+	statefulSetsDiff :=
+		len(curr.statefulSets.Items) - len(base.statefulSets.Items)
+	if statefulSetsDiff != 0 {
+		s.T().Logf("%d statefulSets still exist", statefulSetsDiff)
+		return false
+	}
+	return true
+}
+
+func init() {
+	ns := testNamespace
+	createDeleteTests := testRoot.ChildPriority("createDelete", 2)
+
+	createDeleteTests.AddSuite("simple", &ShareCreateDeleteSuite{
+		commonSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "userssecret1.yaml"),
 				Namespace: ns,
@@ -226,18 +347,21 @@ func allShareCreateDeleteSuites() map[string]suite.TestingSuite {
 				Path:      path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
 				Namespace: ns,
 			},
+		},
+		smbShareSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "smbshare1.yaml"),
 				Namespace: ns,
 			},
 		},
-		destNamespace:    ns,
-		smbShareResource: types.NamespacedName{ns, "tshare1"},
-		maxPods:          1,
-		minPods:          1,
-	}
-	m["domainMember"] = &ShareCreateDeleteSuite{
-		fileSources: []kube.FileSource{
+		destNamespace: ns,
+		maxPods:       1,
+		minPods:       1,
+	},
+	)
+
+	createDeleteTests.AddSuite("domainMember", &ShareCreateDeleteSuite{
+		commonSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "joinsecret1.yaml"),
 				Namespace: testNamespace,
@@ -246,20 +370,22 @@ func allShareCreateDeleteSuites() map[string]suite.TestingSuite {
 				Path:      path.Join(testFilesDir, "smbsecurityconfig2.yaml"),
 				Namespace: testNamespace,
 			},
+		},
+		smbShareSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "smbshare2.yaml"),
 				Namespace: testNamespace,
 			},
 		},
-		destNamespace:    ns,
-		smbShareResource: types.NamespacedName{testNamespace, "tshare2"},
-		maxPods:          1,
-		minPods:          1,
-	}
+		destNamespace: ns,
+		maxPods:       1,
+		minPods:       1,
+	},
+	)
 
 	// should we use a namespace other than default for this test?
-	m["altNamespace"] = &ShareCreateDeleteSuite{
-		fileSources: []kube.FileSource{
+	createDeleteTests.AddSuite("altNamespace", &ShareCreateDeleteSuite{
+		commonSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "userssecret1.yaml"),
 				Namespace: "default",
@@ -268,20 +394,22 @@ func allShareCreateDeleteSuites() map[string]suite.TestingSuite {
 				Path:      path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
 				Namespace: "default",
 			},
+		},
+		smbShareSources: []kube.FileSource{
 			{
 				Path:      path.Join(testFilesDir, "smbshare3.yaml"),
 				Namespace: "default",
 			},
 		},
-		destNamespace:    "default",
-		smbShareResource: types.NamespacedName{"default", "tshare3"},
-		maxPods:          1,
-		minPods:          1,
-	}
+		destNamespace: "default",
+		maxPods:       1,
+		minPods:       1,
+	},
+	)
 
 	if testClusteredShares {
-		m["clustered"] = &ShareCreateDeleteSuite{
-			fileSources: []kube.FileSource{
+		createDeleteTests.AddSuite("clustered", &ShareCreateDeleteSuite{
+			commonSources: []kube.FileSource{
 				{
 					Path:      path.Join(testFilesDir, "userssecret1.yaml"),
 					Namespace: ns,
@@ -290,19 +418,21 @@ func allShareCreateDeleteSuites() map[string]suite.TestingSuite {
 					Path:      path.Join(testFilesDir, "smbsecurityconfig1.yaml"),
 					Namespace: ns,
 				},
+			},
+			smbShareSources: []kube.FileSource{
 				{
-					Path:       path.Join(testFilesDir, "smbshare_ctdb1.yaml"),
-					Namespace:  ns,
-					NameSuffix: "-cleanme",
+					Path:      path.Join(testFilesDir, "smbshare_ctdb1.yaml"),
+					Namespace: ns,
 				},
 			},
-			destNamespace:    ns,
-			smbShareResource: types.NamespacedName{ns, "cshare1-cleanme"},
-			maxPods:          3,
-			minPods:          2,
-		}
-		m["clusteredDomainMember"] = &ShareCreateDeleteSuite{
-			fileSources: []kube.FileSource{
+			destNamespace: ns,
+			maxPods:       3,
+			minPods:       2,
+		},
+		)
+
+		createDeleteTests.AddSuite("clusteredDomainMember", &ShareCreateDeleteSuite{
+			commonSources: []kube.FileSource{
 				{
 					Path:      path.Join(testFilesDir, "joinsecret1.yaml"),
 					Namespace: ns,
@@ -311,18 +441,17 @@ func allShareCreateDeleteSuites() map[string]suite.TestingSuite {
 					Path:      path.Join(testFilesDir, "smbsecurityconfig2.yaml"),
 					Namespace: ns,
 				},
+			},
+			smbShareSources: []kube.FileSource{
 				{
-					Path:       path.Join(testFilesDir, "smbshare_ctdb2.yaml"),
-					Namespace:  ns,
-					NameSuffix: "-cleanme",
+					Path:      path.Join(testFilesDir, "smbshare_ctdb2.yaml"),
+					Namespace: ns,
 				},
 			},
-			destNamespace:    ns,
-			smbShareResource: types.NamespacedName{ns, "cshare2-cleanme"},
-			maxPods:          3,
-			minPods:          2,
-		}
+			destNamespace: ns,
+			maxPods:       3,
+			minPods:       2,
+		},
+		)
 	}
-
-	return m
 }

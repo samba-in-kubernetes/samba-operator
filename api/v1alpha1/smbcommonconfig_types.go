@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -27,13 +28,16 @@ import (
 // SmbCommonConfigSpec values act as a template for properties of the services
 // that will host shares.
 type SmbCommonConfigSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
 	// Network specifies what kind of networking shares associated with
 	// this config will use.
 	// +kubebuilder:validation:Required
 	Network SmbCommonNetworkSpec `json:"network,omitempty"`
+
+	// PodSettings are configuration values that are applied to pods that
+	// the operator may create in order to host shares. The values specified
+	// under PodSettings allow admins and users to customize how pods
+	// are scheduled in a kubernetes cluster.
+	PodSettings *SmbCommonConfigPodSettings `json:"podSettings,omitempty"`
 }
 
 // SmbCommonNetworkSpec values define networking properties for the services
@@ -44,6 +48,17 @@ type SmbCommonNetworkSpec struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:Enum:=cluster;external
 	Publish string `json:"publish,omitempty"`
+}
+
+// SmbCommonConfigPodSettings contains values pertaining to the customization
+// of pods created by the samba operator.
+type SmbCommonConfigPodSettings struct {
+	// NodeSelector values will be assigned to a PodSpec's NodeSelector.
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+
+	// Affinity values will be used as defaults for pods created by the
+	// samba operator.
+	Affinity *corev1.Affinity `json:"affinity,omitempty"`
 }
 
 // SmbCommonConfigStatus defines the observed state of SmbCommonConfig

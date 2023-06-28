@@ -31,9 +31,23 @@ const (
 	joinJSONVolName   = "join-data"
 )
 
+type volMountTag uint
+
+const (
+	// add `tagUnset  = volMountTag(0)` once needed
+	tagData   = volMountTag(0x1)
+	tagConfig = volMountTag(0x2)
+	tagMeta   = volMountTag(0x4)
+	tagCTDB   = volMountTag(0x8)
+
+	tagCTDBConfig = tagCTDB | tagConfig
+	tagCTDBMeta   = tagCTDB | tagMeta
+)
+
 type volMount struct {
 	volume corev1.Volume
 	mount  corev1.VolumeMount
+	tag    volMountTag
 }
 
 func getVolumes(vols []volMount) []corev1.Volume {
@@ -50,6 +64,85 @@ func getMounts(vols []volMount) []corev1.VolumeMount {
 		m[i] = vols[i].mount
 	}
 	return m
+}
+
+type volKeeper struct {
+	vols []volMount
+}
+
+// newVolKeeper returns an empty volKeeper.
+func newVolKeeper() *volKeeper {
+	return &volKeeper{vols: []volMount{}}
+}
+
+// add a single volMount. Returns the current volKeeper.
+func (vk *volKeeper) add(v volMount) *volKeeper {
+	vk.vols = append(vk.vols, v)
+	return vk
+}
+
+// extend the volumes kept. Returns the current volKeeper.
+func (vk *volKeeper) extend(vs []volMount) *volKeeper {
+	vk.vols = append(vk.vols, vs...)
+	return vk
+}
+
+// validate the volume/mounts are in a good state, returning an
+// error describing the issue or nil on no error.
+func (vk *volKeeper) validate() error {
+	vnames := map[string]bool{}
+	for _, vmnt := range vk.vols {
+		if vmnt.volume.Name != vmnt.mount.Name {
+			return fmt.Errorf(
+				"volume/mount name mismatch: %s != %s",
+				vmnt.volume.Name,
+				vmnt.mount.Name)
+		}
+		if vnames[vmnt.volume.Name] {
+			return fmt.Errorf(
+				"duplicate volume name found: %s",
+				vmnt.volume.Name)
+		}
+		vnames[vmnt.volume.Name] = true
+	}
+	return nil
+}
+
+// mustValidate panics if the volKeeper or the contained volume/mounts
+// are in a bad state. See validate for details. Returns the current
+// volkeeper for chaining.
+func (vk *volKeeper) mustValidate() *volKeeper {
+	// call check to validate certain programmer level invariants
+	// are good. Ideally, this is exercised by a unit test.
+	if err := vk.validate(); err != nil {
+		panic(err)
+	}
+	return vk
+}
+
+// all volumes tracked by the volKeeper.
+func (vk *volKeeper) all() []volMount {
+	return vk.mustValidate().vols
+}
+
+// clone an existing volKeeper, returning the new instance.
+func (vk *volKeeper) clone() *volKeeper {
+	vk2 := &volKeeper{vols: make([]volMount, len(vk.vols))}
+	copy(vk2.vols, vk.vols)
+	return vk2
+}
+
+// exclude volume mounts by returning a new volKeeper with all volMounts that
+// match the given tag removed.
+func (vk *volKeeper) exclude(t volMountTag) *volKeeper {
+	vk2 := &volKeeper{vols: []volMount{}}
+	for _, vmnt := range vk.vols {
+		if vmnt.tag&t == t {
+			continue
+		}
+		vk2.vols = append(vk2.vols, vmnt)
+	}
+	return vk2
 }
 
 func shareVolumeAndMount(planner *pln.Planner, pvcName string) volMount {
@@ -69,6 +162,7 @@ func shareVolumeAndMount(planner *pln.Planner, pvcName string) volMount {
 		MountPath: planner.Paths().ShareMountPath(),
 		Name:      pvcVolName,
 	}
+	vmnt.tag = tagData
 	return vmnt
 }
 
@@ -88,6 +182,7 @@ func configVolumeAndMount(planner *pln.Planner) volMount {
 		MountPath: planner.Paths().ContainerConfigDir(),
 		Name:      configMapName,
 	}
+	vmnt.tag = tagConfig
 	return vmnt
 }
 
@@ -112,6 +207,7 @@ func userConfigVolumeAndMount(planner *pln.Planner) volMount {
 		MountPath: planner.Paths().UsersConfigDir(),
 		Name:      userSecretVolName,
 	}
+	vmnt.tag = tagConfig
 	return vmnt
 }
 
@@ -132,6 +228,7 @@ func sambaStateVolumeAndMount(planner *pln.Planner) volMount {
 		MountPath: planner.Paths().SambaStateDir(),
 		Name:      stateVolName,
 	}
+	vmnt.tag = tagMeta
 	return vmnt
 }
 
@@ -151,6 +248,7 @@ func osRunVolumeAndMount(planner *pln.Planner) volMount {
 		MountPath: planner.Paths().OSRunDir(),
 		Name:      osRunVolName,
 	}
+	vmnt.tag = tagMeta
 	return vmnt
 }
 
@@ -170,6 +268,7 @@ func wbSocketsVolumeAndMount(planner *pln.Planner) volMount {
 		MountPath: planner.Paths().WinbindSocketsDir(),
 		Name:      wbSocketsVolName,
 	}
+	vmnt.tag = tagMeta
 	return vmnt
 }
 
@@ -195,6 +294,7 @@ func joinJSONFileVolumeAndMount(planner *pln.Planner, index int) volMount {
 		MountPath: planner.Paths().JoinJSONSourceDir(index),
 		Name:      vname,
 	}
+	vmnt.tag = tagConfig
 	return vmnt
 }
 
@@ -215,6 +315,7 @@ func svcWatchVolumeAndMount(dir string) volMount {
 		MountPath: dir,
 		Name:      name,
 	}
+	vmnt.tag = tagMeta
 	return vmnt
 }
 
@@ -233,6 +334,7 @@ func ctdbConfigVolumeAndMount(_ *pln.Planner) volMount {
 		MountPath: "/etc/ctdb",
 		Name:      name,
 	}
+	vmnt.tag = tagCTDBConfig
 	return vmnt
 }
 
@@ -254,6 +356,7 @@ func ctdbPersistentVolumeAndMount(_ *pln.Planner) volMount {
 		MountPath: "/var/lib/ctdb/persistent",
 		Name:      name,
 	}
+	vmnt.tag = tagCTDBMeta
 	return vmnt
 }
 
@@ -272,6 +375,7 @@ func ctdbVolatileVolumeAndMount(_ *pln.Planner) volMount {
 		MountPath: "/var/lib/ctdb/volatile",
 		Name:      name,
 	}
+	vmnt.tag = tagCTDBMeta
 	return vmnt
 }
 
@@ -291,6 +395,7 @@ func ctdbSocketsVolumeAndMount(_ *pln.Planner) volMount {
 		MountPath: "/var/run/ctdb",
 		Name:      name,
 	}
+	vmnt.tag = tagCTDBMeta
 	return vmnt
 }
 
@@ -315,6 +420,7 @@ func ctdbSharedStateVolumeAndMount(
 		MountPath: "/var/lib/ctdb/shared",
 		Name:      pvcVolName,
 	}
+	vmnt.tag = tagCTDBMeta
 	return vmnt
 }
 

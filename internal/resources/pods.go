@@ -52,33 +52,30 @@ func buildADPodSpec(
 	_ *conf.OperatorConfig,
 	pvcName string) corev1.PodSpec {
 	// ---
-	volumes := []volMount{}
-	smbAllVols := []volMount{}
+	volumes := newVolKeeper()
+	smbInitVols := newVolKeeper()
 
 	configVol := configVolumeAndMount(planner)
-	volumes = append(volumes, configVol)
-	smbAllVols = append(smbAllVols, configVol)
+	volumes.add(configVol)
+	smbInitVols.add(configVol)
 
 	stateVol := sambaStateVolumeAndMount(planner)
-	volumes = append(volumes, stateVol)
-	smbAllVols = append(smbAllVols, stateVol)
+	volumes.add(stateVol)
+	smbInitVols.add(stateVol)
 
 	// for smb server containers (not init containers)
 	wbSockVol := wbSocketsVolumeAndMount(planner)
-	volumes = append(volumes, wbSockVol)
-	smbServerVols := dupVolMounts(smbAllVols)
-	smbServerVols = append(smbServerVols, wbSockVol)
+	volumes.add(wbSockVol)
+	smbServerVols := smbInitVols.clone().add(wbSockVol)
 
 	// for smbd only
 	shareVol := shareVolumeAndMount(planner, pvcName)
-	volumes = append(volumes, shareVol)
-	smbdVols := dupVolMounts(smbServerVols)
-	smbdVols = append(smbdVols, shareVol)
+	volumes.add(shareVol)
+	smbdVols := smbServerVols.clone().add(shareVol)
 
 	jsrc := getJoinSources(planner)
-	volumes = append(volumes, jsrc.volumes...)
-	joinVols := dupVolMounts(smbAllVols)
-	joinVols = append(joinVols, jsrc.volumes...)
+	volumes.extend(jsrc.volumes)
+	joinVols := smbInitVols.clone().extend(jsrc.volumes)
 
 	podEnv := defaultPodEnv(planner)
 	// nolint:gocritic
@@ -98,10 +95,9 @@ func buildADPodSpec(
 		watchVol := svcWatchVolumeAndMount(
 			planner.Paths().ServiceWatchStateDir(),
 		)
-		volumes = append(volumes, watchVol)
-		svcWatchVols := []volMount{watchVol}
-		dnsRegVols := dupVolMounts(smbServerVols)
-		dnsRegVols = append(dnsRegVols, watchVol)
+		volumes.add(watchVol)
+		svcWatchVols := newVolKeeper().add(watchVol)
+		dnsRegVols := smbServerVols.clone().add(watchVol)
 		containers = append(
 			containers,
 			buildSvcWatchCtr(planner, svcWatchEnv(planner), svcWatchVols),
@@ -110,13 +106,15 @@ func buildADPodSpec(
 	}
 
 	podSpec := defaultPodSpec(planner)
-	podSpec.Volumes = getVolumes(volumes)
+	podSpec.Volumes = getVolumes(volumes.all())
 	podSpec.InitContainers = []corev1.Container{
-		buildInitCtr(planner, podEnv, smbAllVols),
+		buildInitCtr(planner, podEnv, smbInitVols),
 		buildEnsureShareCtr(planner, podEnv, smbdVols),
 		buildMustJoinCtr(planner, joinEnv, joinVols),
 	}
 	podSpec.Containers = containers
+	// we have no logger to log the json syntax error to. have to ignore it for now
+	podSpec.NodeSelector, _ = planner.NodeSelector()
 	return podSpec
 }
 
@@ -125,33 +123,35 @@ func buildUserPodSpec(
 	_ *conf.OperatorConfig,
 	pvcName string) corev1.PodSpec {
 	// ---
-	vols := []volMount{}
+	volumes := newVolKeeper()
 	initContainers := []corev1.Container{}
 
 	shareVol := shareVolumeAndMount(planner, pvcName)
-	vols = append(vols, shareVol)
+	volumes.add(shareVol)
 
 	stateVol := sambaStateVolumeAndMount(planner)
-	vols = append(vols, stateVol)
+	volumes.add(stateVol)
 
 	configVol := configVolumeAndMount(planner)
-	vols = append(vols, configVol)
+	volumes.add(configVol)
 
 	podEnv := defaultPodEnv(planner)
 	initContainers = append(initContainers,
-		buildEnsureShareCtr(planner, podEnv, vols))
+		buildEnsureShareCtr(planner, podEnv, volumes))
 
 	osRunVol := osRunVolumeAndMount(planner)
-	vols = append(vols, osRunVol)
+	volumes.add(osRunVol)
 
 	if planner.UserSecuritySource().Configured {
 		v := userConfigVolumeAndMount(planner)
-		vols = append(vols, v)
+		volumes.add(v)
 	}
 	podSpec := defaultPodSpec(planner)
-	podSpec.Volumes = getVolumes(vols)
-	podSpec.Containers = buildSmbdCtrs(planner, podEnv, vols)
+	podSpec.Volumes = getVolumes(volumes.all())
+	podSpec.Containers = buildSmbdCtrs(planner, podEnv, volumes)
 	podSpec.InitContainers = initContainers
+	// we have no logger to log the json syntax error to. have to ignore it for now
+	podSpec.NodeSelector, _ = planner.NodeSelector()
 	return podSpec
 }
 
@@ -160,41 +160,41 @@ func buildClusteredUserPodSpec(
 	dataPVCName, statePVCName string) corev1.PodSpec {
 	// ---
 	var (
-		volumes        []volMount
-		podCfgVols     []volMount
+		volumes        = newVolKeeper()
+		podCfgVols     = newVolKeeper()
 		initContainers []corev1.Container
 		containers     []corev1.Container
 	)
 
 	shareVol := shareVolumeAndMount(planner, dataPVCName)
-	volumes = append(volumes, shareVol)
+	volumes.add(shareVol)
 
 	configVol := configVolumeAndMount(planner)
-	volumes = append(volumes, configVol)
-	podCfgVols = append(podCfgVols, configVol)
+	volumes.add(configVol)
+	podCfgVols.add(configVol)
 
 	stateVol := sambaStateVolumeAndMount(planner)
-	volumes = append(volumes, stateVol)
+	volumes.add(stateVol)
 
 	ctdbConfigVol := ctdbConfigVolumeAndMount(planner)
-	volumes = append(volumes, ctdbConfigVol)
+	volumes.add(ctdbConfigVol)
 
 	ctdbPeristentVol := ctdbPersistentVolumeAndMount(planner)
-	volumes = append(volumes, ctdbPeristentVol)
+	volumes.add(ctdbPeristentVol)
 
 	ctdbVolatileVol := ctdbVolatileVolumeAndMount(planner)
-	volumes = append(volumes, ctdbVolatileVol)
+	volumes.add(ctdbVolatileVol)
 
 	ctdbSocketsVol := ctdbSocketsVolumeAndMount(planner)
-	volumes = append(volumes, ctdbSocketsVol)
+	volumes.add(ctdbSocketsVol)
 
 	ctdbSharedVol := ctdbSharedStateVolumeAndMount(planner, statePVCName)
-	volumes = append(volumes, ctdbSharedVol)
+	volumes.add(ctdbSharedVol)
 
 	if planner.UserSecuritySource().Configured {
 		v := userConfigVolumeAndMount(planner)
-		volumes = append(volumes, v)
-		podCfgVols = append(podCfgVols, v)
+		volumes.add(v)
+		podCfgVols.add(v)
 	}
 
 	podEnv := defaultPodEnv(planner)
@@ -203,63 +203,55 @@ func buildClusteredUserPodSpec(
 
 	initContainers = append(
 		initContainers,
-		buildInitCtr(planner, podEnv, append(
-			podCfgVols,
-			stateVol,
-			ctdbSharedVol, // needed to decide if real init or not
-		)))
+		buildInitCtr(
+			planner,
+			podEnv,
+			// ctdbSharedVol is needed to decide if real init or not
+			podCfgVols.clone().add(stateVol).add(ctdbSharedVol),
+		))
 
 	initContainers = append(
 		initContainers,
-		buildEnsureShareCtr(planner, podEnv, append(
-			podCfgVols,
-			stateVol,
-			shareVol,
-		)))
+		buildEnsureShareCtr(
+			planner,
+			podEnv,
+			podCfgVols.clone().add(stateVol).add(shareVol),
+		))
 
+	ctdbMigrateVols := podCfgVols.clone().
+		add(stateVol).
+		add(ctdbSharedVol).
+		add(ctdbConfigVol).
+		add(ctdbPeristentVol)
 	initContainers = append(
 		initContainers,
-		buildCTDBMigrateCtr(planner, ctdbEnv, append(
-			podCfgVols,
-			stateVol,
-			ctdbSharedVol,
-			ctdbConfigVol,
-			ctdbPeristentVol,
-		)))
-
-	ctdbInitVols := dupVolMounts(podCfgVols)
-	ctdbInitVols = append(
-		ctdbInitVols,
-		stateVol,
-		ctdbSharedVol,
-		ctdbConfigVol,
+		buildCTDBMigrateCtr(planner, ctdbEnv, ctdbMigrateVols),
 	)
+
+	ctdbInitVols := podCfgVols.clone().
+		add(stateVol).
+		add(ctdbSharedVol).
+		add(ctdbConfigVol)
 	initContainers = append(
 		initContainers,
 		buildCTDBSetNodeCtr(planner, ctdbEnv, ctdbInitVols),
 		buildCTDBMustHaveNodeCtr(planner, ctdbEnv, ctdbInitVols),
 	)
 
-	ctdbdVols := dupVolMounts(podCfgVols)
-	ctdbdVols = append(
-		ctdbdVols,
-		ctdbConfigVol,
-		ctdbPeristentVol,
-		ctdbVolatileVol,
-		ctdbSocketsVol,
-		ctdbSharedVol,
-	)
+	ctdbdVols := podCfgVols.clone().
+		add(ctdbConfigVol).
+		add(ctdbPeristentVol).
+		add(ctdbVolatileVol).
+		add(ctdbSocketsVol).
+		add(ctdbSharedVol)
 	containers = append(
 		containers,
 		buildCTDBDaemonCtr(planner, ctdbEnv, ctdbdVols))
 
-	ctdbManageNodesVols := dupVolMounts(podCfgVols)
-	ctdbManageNodesVols = append(
-		ctdbManageNodesVols,
-		ctdbConfigVol,
-		ctdbSocketsVol,
-		ctdbSharedVol,
-	)
+	ctdbManageNodesVols := podCfgVols.clone().
+		add(ctdbConfigVol).
+		add(ctdbSocketsVol).
+		add(ctdbSharedVol)
 	containers = append(
 		containers,
 		buildCTDBManageNodesCtr(planner, ctdbEnv, ctdbManageNodesVols))
@@ -270,9 +262,11 @@ func buildClusteredUserPodSpec(
 		buildSmbdCtrs(planner, podEnv, volumes)...)
 
 	podSpec := defaultPodSpec(planner)
-	podSpec.Volumes = getVolumes(volumes)
+	podSpec.Volumes = getVolumes(volumes.all())
 	podSpec.InitContainers = initContainers
 	podSpec.Containers = containers
+	// we have no logger to log the json syntax error to. have to ignore it for now
+	podSpec.NodeSelector, _ = planner.NodeSelector()
 	return podSpec
 }
 
@@ -281,47 +275,47 @@ func buildClusteredADPodSpec(
 	dataPVCName, statePVCName string) corev1.PodSpec {
 	// ---
 	var (
-		volumes        []volMount
-		podCfgVols     []volMount
+		volumes        = newVolKeeper()
+		podCfgVols     = newVolKeeper()
 		initContainers []corev1.Container
 		containers     []corev1.Container
 	)
 
 	shareVol := shareVolumeAndMount(planner, dataPVCName)
-	volumes = append(volumes, shareVol)
+	volumes.add(shareVol)
 
 	configVol := configVolumeAndMount(planner)
-	volumes = append(volumes, configVol)
-	podCfgVols = append(podCfgVols, configVol)
+	volumes.add(configVol)
+	podCfgVols.add(configVol)
 
 	stateVol := sambaStateVolumeAndMount(planner)
-	volumes = append(volumes, stateVol)
+	volumes.add(stateVol)
 
 	ctdbConfigVol := ctdbConfigVolumeAndMount(planner)
-	volumes = append(volumes, ctdbConfigVol)
+	volumes.add(ctdbConfigVol)
 
 	ctdbPeristentVol := ctdbPersistentVolumeAndMount(planner)
-	volumes = append(volumes, ctdbPeristentVol)
+	volumes.add(ctdbPeristentVol)
 
 	ctdbVolatileVol := ctdbVolatileVolumeAndMount(planner)
-	volumes = append(volumes, ctdbVolatileVol)
+	volumes.add(ctdbVolatileVol)
 
 	ctdbSocketsVol := ctdbSocketsVolumeAndMount(planner)
-	volumes = append(volumes, ctdbSocketsVol)
+	volumes.add(ctdbSocketsVol)
 
 	ctdbSharedVol := ctdbSharedStateVolumeAndMount(planner, statePVCName)
-	volumes = append(volumes, ctdbSharedVol)
+	volumes.add(ctdbSharedVol)
 
 	// the winbind sockets volume is needed for winbind and clients (smbd)
 	wbSockVol := wbSocketsVolumeAndMount(planner)
-	volumes = append(volumes, wbSockVol)
+	volumes.add(wbSockVol)
 
 	jsrc := getJoinSources(planner)
 	joinEnv := []corev1.EnvVar{{
 		Name:  "SAMBACC_JOIN_FILES",
 		Value: joinEnvPaths(jsrc.paths),
 	}}
-	volumes = append(volumes, jsrc.volumes...)
+	volumes.extend(jsrc.volumes)
 
 	podEnv := defaultPodEnv(planner)
 	// nolint:gocritic
@@ -329,87 +323,77 @@ func buildClusteredADPodSpec(
 
 	initContainers = append(
 		initContainers,
-		buildInitCtr(planner, podEnv, append(
-			podCfgVols,
-			stateVol,
-			ctdbSharedVol, // needed to decide if real init or not
-		)))
+		buildInitCtr(
+			planner,
+			podEnv,
+			// ctdbSharedVol is needed to decide if real init or not
+			podCfgVols.clone().add(stateVol).add(ctdbSharedVol),
+		))
 
 	initContainers = append(
 		initContainers,
-		buildEnsureShareCtr(planner, podEnv, append(
-			podCfgVols,
-			stateVol,
-			shareVol,
-		)))
+		buildEnsureShareCtr(
+			planner,
+			podEnv,
+			podCfgVols.clone().add(stateVol).add(shareVol),
+		))
 
-	joinVols := append(
-		append(podCfgVols, stateVol, ctdbSharedVol),
-		jsrc.volumes...)
+	joinVols := podCfgVols.clone().
+		add(stateVol).
+		add(ctdbSharedVol).
+		extend(jsrc.volumes)
 	initContainers = append(
 		initContainers,
 		buildMustJoinCtr(planner, joinEnv, joinVols),
 	)
 
+	ctdbMigrateVols := podCfgVols.clone().
+		add(stateVol).
+		add(ctdbSharedVol).
+		add(ctdbConfigVol).
+		add(ctdbPeristentVol)
 	initContainers = append(
 		initContainers,
-		buildCTDBMigrateCtr(planner, ctdbEnv, append(
-			podCfgVols,
-			stateVol,
-			ctdbSharedVol,
-			ctdbConfigVol,
-			ctdbPeristentVol,
-		)))
-
-	ctdbInitVols := dupVolMounts(podCfgVols)
-	ctdbInitVols = append(
-		ctdbInitVols,
-		stateVol,
-		ctdbSharedVol,
-		ctdbConfigVol,
+		buildCTDBMigrateCtr(planner, ctdbEnv, ctdbMigrateVols),
 	)
+
+	ctdbInitVols := podCfgVols.clone().
+		add(stateVol).
+		add(ctdbSharedVol).
+		add(ctdbConfigVol)
 	initContainers = append(
 		initContainers,
 		buildCTDBSetNodeCtr(planner, ctdbEnv, ctdbInitVols),
 		buildCTDBMustHaveNodeCtr(planner, ctdbEnv, ctdbInitVols),
 	)
 
-	ctdbdVols := dupVolMounts(podCfgVols)
-	ctdbdVols = append(
-		ctdbdVols,
-		ctdbConfigVol,
-		ctdbPeristentVol,
-		ctdbVolatileVol,
-		ctdbSocketsVol,
-		ctdbSharedVol,
-	)
+	ctdbdVols := podCfgVols.clone().
+		add(ctdbConfigVol).
+		add(ctdbPeristentVol).
+		add(ctdbVolatileVol).
+		add(ctdbSocketsVol).
+		add(ctdbSharedVol)
 	containers = append(
 		containers,
 		buildCTDBDaemonCtr(planner, ctdbEnv, ctdbdVols))
 
-	ctdbManageNodesVols := dupVolMounts(podCfgVols)
-	ctdbManageNodesVols = append(
-		ctdbManageNodesVols,
-		ctdbConfigVol,
-		ctdbSocketsVol,
-		ctdbSharedVol,
-	)
+	ctdbManageNodesVols := podCfgVols.clone().
+		add(ctdbConfigVol).
+		add(ctdbSocketsVol).
+		add(ctdbSharedVol)
 	containers = append(
 		containers,
 		buildCTDBManageNodesCtr(planner, ctdbEnv, ctdbManageNodesVols))
 
 	// winbindd
-	wbVols := dupVolMounts(podCfgVols)
-	wbVols = append(
-		wbVols,
-		stateVol,
-		wbSockVol,
-		ctdbConfigVol,
-		ctdbPeristentVol,
-		ctdbVolatileVol,
-		ctdbSocketsVol,
-		ctdbSharedVol,
-	)
+	wbVols := podCfgVols.clone().
+		add(stateVol).
+		add(wbSockVol).
+		add(ctdbConfigVol).
+		add(ctdbPeristentVol).
+		add(ctdbVolatileVol).
+		add(ctdbSocketsVol).
+		add(ctdbSharedVol)
 	containers = append(
 		containers,
 		buildWinbinddCtr(planner, podEnv, wbVols))
@@ -424,10 +408,9 @@ func buildClusteredADPodSpec(
 		watchVol := svcWatchVolumeAndMount(
 			planner.Paths().ServiceWatchStateDir(),
 		)
-		volumes = append(volumes, watchVol)
-		svcWatchVols := []volMount{watchVol}
-		dnsRegVols := dupVolMounts(wbVols)
-		dnsRegVols = append(dnsRegVols, watchVol)
+		volumes.add(watchVol)
+		svcWatchVols := newVolKeeper().add(watchVol)
+		dnsRegVols := wbVols.clone().add(watchVol)
 		containers = append(
 			containers,
 			buildSvcWatchCtr(planner, svcWatchEnv(planner), svcWatchVols),
@@ -436,21 +419,32 @@ func buildClusteredADPodSpec(
 	}
 
 	podSpec := defaultPodSpec(planner)
-	podSpec.Volumes = getVolumes(volumes)
+	podSpec.Volumes = getVolumes(volumes.all())
 	podSpec.InitContainers = initContainers
 	podSpec.Containers = containers
+	// we have no logger to log the json syntax error to. have to ignore it for now
+	podSpec.NodeSelector, _ = planner.NodeSelector()
 	return podSpec
 }
 
 func buildSmbdCtrs(
 	planner *pln.Planner,
 	env []corev1.EnvVar,
-	vols []volMount) []corev1.Container {
+	vols *volKeeper) []corev1.Container {
 	// ---
 	ctrs := []corev1.Container{}
 	ctrs = append(ctrs, buildSmbdCtr(planner, env, vols))
+	metaOnlyVols := vols.exclude(tagData)
+	// Insert a container to watch for changes to the config json
+	// and apply those changes to samba.
+	// We need to pass data vols to the config update container as it is
+	// responsible for creating missing dirs and setting perms when new shares
+	// appear.
+	ctrs = append(ctrs, buildUpdateConfigWatchCtr(
+		planner, env, vols))
 	if withMetricsExporter(planner.GlobalConfig) {
-		ctrs = append(ctrs, buildSmbdMetricsCtr(planner, metaPodEnv(), vols))
+		ctrs = append(ctrs, buildSmbdMetricsCtr(
+			planner, metaPodEnv(), metaOnlyVols))
 	}
 	return ctrs
 }
@@ -458,59 +452,65 @@ func buildSmbdCtrs(
 func buildSmbdCtr(
 	planner *pln.Planner,
 	env []corev1.EnvVar,
-	vols []volMount) corev1.Container {
+	vols *volKeeper) corev1.Container {
 	// ---
 	portnum := planner.GlobalConfig.SmbdPort
+	mounts := getMounts(vols.all())
 	return corev1.Container{
-		Image:   planner.GlobalConfig.SmbdContainerImage,
-		Name:    planner.GlobalConfig.SmbdContainerName,
-		Command: []string{"samba-container"},
-		Args:    planner.Args().Run("smbd"),
-		Env:     env,
+		Image:           planner.GlobalConfig.SmbdContainerImage,
+		ImagePullPolicy: imagePullPolicy(planner),
+		Name:            planner.GlobalConfig.SmbdContainerName,
+		Command:         []string{"samba-container"},
+		Args:            planner.Args().Run("smbd"),
+		Env:             env,
 		Ports: []corev1.ContainerPort{{
 			ContainerPort: int32(portnum),
 			Name:          "smb",
 		}},
-		VolumeMounts: getMounts(vols),
+		VolumeMounts: mounts,
 		ReadinessProbe: &corev1.Probe{
-			Handler: corev1.Handler{
+			ProbeHandler: corev1.ProbeHandler{
 				TCPSocket: &corev1.TCPSocketAction{
 					Port: intstr.FromInt(portnum),
 				},
 			},
 		},
 		LivenessProbe: &corev1.Probe{
-			Handler: corev1.Handler{
+			ProbeHandler: corev1.ProbeHandler{
 				TCPSocket: &corev1.TCPSocketAction{
 					Port: intstr.FromInt(portnum),
 				},
 			},
 		},
+		SecurityContext: ctrPrivSecurityContext(),
 	}
 }
 
 func buildSmbdMetricsCtr(
 	planner *pln.Planner,
 	env []corev1.EnvVar,
-	vols []volMount) corev1.Container {
+	vols *volKeeper) corev1.Container {
 	// ---
+	mounts := getMounts(vols.all())
 	return buildSmbMetricsContainer(
-		planner.GlobalConfig.SmbdMetricsContainerImage, env, getMounts(vols))
+		planner.GlobalConfig.SmbdMetricsContainerImage, env, mounts)
 }
 
 func buildWinbinddCtr(
 	planner *pln.Planner,
 	env []corev1.EnvVar,
-	vols []volMount) corev1.Container {
+	vols *volKeeper) corev1.Container {
 	// ---
+	mounts := getMounts(vols.all())
 	return corev1.Container{
-		Image:        planner.GlobalConfig.SmbdContainerImage,
-		Name:         planner.GlobalConfig.WinbindContainerName,
-		Args:         planner.Args().Run("winbindd"),
-		Env:          env,
-		VolumeMounts: getMounts(vols),
+		Image:           planner.GlobalConfig.SmbdContainerImage,
+		ImagePullPolicy: imagePullPolicy(planner),
+		Name:            planner.GlobalConfig.WinbindContainerName,
+		Args:            planner.Args().Run("winbindd"),
+		Env:             env,
+		VolumeMounts:    mounts,
 		LivenessProbe: &corev1.Probe{
-			Handler: corev1.Handler{
+			ProbeHandler: corev1.ProbeHandler{
 				Exec: &corev1.ExecAction{
 					Command: []string{
 						"samba-container",
@@ -526,16 +526,18 @@ func buildWinbinddCtr(
 func buildCTDBDaemonCtr(
 	planner *pln.Planner,
 	env []corev1.EnvVar,
-	vols []volMount) corev1.Container {
+	vols *volKeeper) corev1.Container {
 	// ---
+	mounts := getMounts(vols.all())
 	return corev1.Container{
-		Image:        planner.GlobalConfig.SmbdContainerImage,
-		Name:         "ctdb",
-		Args:         planner.Args().CTDBDaemon(),
-		Env:          env,
-		VolumeMounts: getMounts(vols),
+		Image:           planner.GlobalConfig.SmbdContainerImage,
+		ImagePullPolicy: imagePullPolicy(planner),
+		Name:            "ctdb",
+		Args:            planner.Args().CTDBDaemon(),
+		Env:             env,
+		VolumeMounts:    mounts,
 		ReadinessProbe: &corev1.Probe{
-			Handler: corev1.Handler{
+			ProbeHandler: corev1.ProbeHandler{
 				Exec: &corev1.ExecAction{
 					Command: planner.Args().CTDBNodeStatus(),
 				},
@@ -547,125 +549,160 @@ func buildCTDBDaemonCtr(
 func buildCTDBManageNodesCtr(
 	planner *pln.Planner,
 	env []corev1.EnvVar,
-	vols []volMount) corev1.Container {
+	vols *volKeeper) corev1.Container {
 	// ---
+	mounts := getMounts(vols.all())
 	return corev1.Container{
-		Image:        planner.GlobalConfig.SmbdContainerImage,
-		Name:         "ctdb-manage-nodes",
-		Args:         planner.Args().CTDBManageNodes(),
-		Env:          env,
-		VolumeMounts: getMounts(vols),
+		Image:           planner.GlobalConfig.SmbdContainerImage,
+		ImagePullPolicy: imagePullPolicy(planner),
+		Name:            "ctdb-manage-nodes",
+		Args:            planner.Args().CTDBManageNodes(),
+		Env:             env,
+		VolumeMounts:    mounts,
 	}
 }
 
 func buildDNSRegCtr(
 	planner *pln.Planner,
 	env []corev1.EnvVar,
-	vols []volMount) corev1.Container {
+	vols *volKeeper) corev1.Container {
 	// ---
+	mounts := getMounts(vols.all())
 	return corev1.Container{
-		Image:        planner.GlobalConfig.SmbdContainerImage,
-		Name:         "dns-register",
-		Args:         planner.Args().DNSRegister(),
-		Env:          env,
-		VolumeMounts: getMounts(vols),
+		Image:           planner.GlobalConfig.SmbdContainerImage,
+		ImagePullPolicy: imagePullPolicy(planner),
+		Name:            "dns-register",
+		Args:            planner.Args().DNSRegister(),
+		Env:             env,
+		VolumeMounts:    mounts,
 	}
 }
 
 func buildSvcWatchCtr(
 	planner *pln.Planner,
 	env []corev1.EnvVar,
-	vols []volMount) corev1.Container {
+	vols *volKeeper) corev1.Container {
 	// ---
+	mounts := getMounts(vols.all())
 	return corev1.Container{
-		Image:        planner.GlobalConfig.SvcWatchContainerImage,
-		Name:         "svc-watch",
-		Env:          env,
-		VolumeMounts: getMounts(vols),
+		Image:           planner.GlobalConfig.SvcWatchContainerImage,
+		ImagePullPolicy: imagePullPolicy(planner),
+		Name:            "svc-watch",
+		Env:             env,
+		VolumeMounts:    mounts,
+		SecurityContext: ctrPrivSecurityContext(),
 	}
 }
 
 func buildInitCtr(
 	planner *pln.Planner,
 	env []corev1.EnvVar,
-	vols []volMount) corev1.Container {
+	vols *volKeeper) corev1.Container {
 	// ---
+	mounts := getMounts(vols.all())
 	return corev1.Container{
-		Image:        planner.GlobalConfig.SmbdContainerImage,
-		Name:         "init",
-		Args:         planner.Args().Initializer("init"),
-		Env:          env,
-		VolumeMounts: getMounts(vols),
+		Image:           planner.GlobalConfig.SmbdContainerImage,
+		ImagePullPolicy: imagePullPolicy(planner),
+		Name:            "init",
+		Args:            planner.Args().Initializer("init"),
+		Env:             env,
+		VolumeMounts:    mounts,
 	}
 }
 
 func buildEnsureShareCtr(
 	planner *pln.Planner,
 	env []corev1.EnvVar,
-	vols []volMount) corev1.Container {
+	vols *volKeeper) corev1.Container {
 	// ---
+	mounts := getMounts(vols.all())
 	return corev1.Container{
-		Image:        planner.GlobalConfig.SmbdContainerImage,
-		Name:         "ensure-share-paths",
-		Args:         planner.Args().EnsureSharePaths(),
-		Env:          env,
-		VolumeMounts: getMounts(vols),
+		Image:           planner.GlobalConfig.SmbdContainerImage,
+		ImagePullPolicy: imagePullPolicy(planner),
+		Name:            "ensure-share-paths",
+		Args:            planner.Args().EnsureSharePaths(),
+		Env:             env,
+		VolumeMounts:    mounts,
+		SecurityContext: ctrPrivSecurityContext(),
 	}
 }
 
 func buildMustJoinCtr(
 	planner *pln.Planner,
 	env []corev1.EnvVar,
-	vols []volMount) corev1.Container {
+	vols *volKeeper) corev1.Container {
 	// ---
+	mounts := getMounts(vols.all())
 	return corev1.Container{
-		Image:        planner.GlobalConfig.SmbdContainerImage,
-		Name:         "must-join",
-		Args:         planner.Args().Initializer("must-join"),
-		Env:          env,
-		VolumeMounts: getMounts(vols),
+		Image:           planner.GlobalConfig.SmbdContainerImage,
+		ImagePullPolicy: imagePullPolicy(planner),
+		Name:            "must-join",
+		Args:            planner.Args().Initializer("must-join"),
+		Env:             env,
+		VolumeMounts:    mounts,
 	}
 }
 
 func buildCTDBMigrateCtr(
 	planner *pln.Planner,
 	env []corev1.EnvVar,
-	vols []volMount) corev1.Container {
+	vols *volKeeper) corev1.Container {
 	// ---
+	mounts := getMounts(vols.all())
 	return corev1.Container{
-		Image:        planner.GlobalConfig.SmbdContainerImage,
-		Name:         "ctdb-migrate",
-		Args:         planner.Args().CTDBMigrate(),
-		Env:          env,
-		VolumeMounts: getMounts(vols),
+		Image:           planner.GlobalConfig.SmbdContainerImage,
+		ImagePullPolicy: imagePullPolicy(planner),
+		Name:            "ctdb-migrate",
+		Args:            planner.Args().CTDBMigrate(),
+		Env:             env,
+		VolumeMounts:    mounts,
 	}
 }
 
 func buildCTDBSetNodeCtr(
 	planner *pln.Planner,
 	env []corev1.EnvVar,
-	vols []volMount) corev1.Container {
+	vols *volKeeper) corev1.Container {
 	// ---
+	mounts := getMounts(vols.all())
 	return corev1.Container{
-		Image:        planner.GlobalConfig.SmbdContainerImage,
-		Name:         "ctdb-set-node",
-		Args:         planner.Args().CTDBSetNode(),
-		Env:          env,
-		VolumeMounts: getMounts(vols),
+		Image:           planner.GlobalConfig.SmbdContainerImage,
+		ImagePullPolicy: imagePullPolicy(planner),
+		Name:            "ctdb-set-node",
+		Args:            planner.Args().CTDBSetNode(),
+		Env:             env,
+		VolumeMounts:    mounts,
 	}
 }
 
 func buildCTDBMustHaveNodeCtr(
 	planner *pln.Planner,
 	env []corev1.EnvVar,
-	vols []volMount) corev1.Container {
+	vols *volKeeper) corev1.Container {
 	// ---
+	mounts := getMounts(vols.all())
+	return corev1.Container{
+		Image:           planner.GlobalConfig.SmbdContainerImage,
+		ImagePullPolicy: imagePullPolicy(planner),
+		Name:            "ctdb-must-have-node",
+		Args:            planner.Args().CTDBMustHaveNode(),
+		Env:             env,
+		VolumeMounts:    mounts,
+	}
+}
+
+func buildUpdateConfigWatchCtr(
+	planner *pln.Planner,
+	env []corev1.EnvVar,
+	vols *volKeeper) corev1.Container {
+	// ---
+	mounts := getMounts(vols.all())
 	return corev1.Container{
 		Image:        planner.GlobalConfig.SmbdContainerImage,
-		Name:         "ctdb-must-have-node",
-		Args:         planner.Args().CTDBMustHaveNode(),
+		Name:         "watch-update-config",
+		Args:         planner.Args().UpdateConfigWatch(),
 		Env:          env,
-		VolumeMounts: getMounts(vols),
+		VolumeMounts: mounts,
 	}
 }
 
@@ -746,10 +783,20 @@ func metaPodEnv() []corev1.EnvVar {
 
 func defaultPodSpec(planner *pln.Planner) corev1.PodSpec {
 	shareProcessNamespace := true
+	sambaServiceAccountName, automountServiceAccountToken := podServiceAccount(planner)
 	return corev1.PodSpec{
-		ServiceAccountName:    planner.GlobalConfig.ServiceAccountName,
-		ShareProcessNamespace: &shareProcessNamespace,
+		ServiceAccountName:           sambaServiceAccountName,
+		AutomountServiceAccountToken: automountServiceAccountToken,
+		ShareProcessNamespace:        &shareProcessNamespace,
 	}
+}
+
+func podServiceAccount(planner *pln.Planner) (string, *bool) {
+	if planner.GlobalConfig.ClusterType == conf.ClusterTypeOpenShift {
+		automountServiceAccountToken := true
+		return sambaServiceAccountName, &automountServiceAccountToken
+	}
+	return "default", nil
 }
 
 func ctdbHostnameEnv(_ *pln.Planner) []corev1.EnvVar {
@@ -793,6 +840,21 @@ func joinEnvPaths(p []string) string {
 	return strings.Join(p, ":")
 }
 
-func dupVolMounts(vols []volMount) []volMount {
-	return append(make([]volMount, 0, len(vols)), vols...)
+func imagePullPolicy(pl *pln.Planner) corev1.PullPolicy {
+	pullPolicy := corev1.PullPolicy(pl.GlobalConfig.ImagePullPolicy)
+	switch {
+	case pullPolicy == corev1.PullAlways:
+	case pullPolicy == corev1.PullNever:
+	case pullPolicy == corev1.PullIfNotPresent:
+	default:
+		pullPolicy = corev1.PullIfNotPresent
+	}
+	return pullPolicy
+}
+
+func ctrPrivSecurityContext() *corev1.SecurityContext {
+	return &corev1.SecurityContext{
+		Privileged:   &[]bool{true}[0],
+		RunAsNonRoot: &[]bool{false}[0],
+	}
 }
