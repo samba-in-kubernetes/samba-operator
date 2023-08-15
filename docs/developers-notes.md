@@ -4,7 +4,7 @@
 ## Build from source
 
 The top-level [Makefile](../Makefile) is the entry point for various build
-commands. The minimal required Go version is 1.18. A developer can verify the
+commands. The minimal required Go version is 1.19. A developer can verify the
 build environment by running:
 
 ```bash
