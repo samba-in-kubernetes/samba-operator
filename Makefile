@@ -206,9 +206,9 @@ bundle-build:
 	@false
 	# See vcs history for how this could be restored or adapted in the future.
 
-.PHONY: check check-revive check-golangci-lint check-format check-yaml check-gosec
+.PHONY: check check-revive check-golangci-lint check-format check-yaml check-gosec check-dockerfile-go-version
 
-check: check-revive check-golangci-lint check-format vet check-yaml check-gosec
+check: check-revive check-golangci-lint check-format vet check-yaml check-gosec check-dockerfile-go-version
 
 check-format:
 	! $(GOFMT_CMD) $(CHECK_GOFMT_FLAGS) . | sed 's,^,formatting error: ,' | grep 'go$$'
@@ -226,6 +226,10 @@ check-yaml:
 
 check-gosec: gosec
 	$(GOSEC) -quiet -exclude=G101 -fmt json ./...
+
+check-dockerfile-go-version:
+	# use go-version-check.sh --show to list vaild golang builder images
+	$(CURDIR)/hack/go-version-check.sh --check
 
 check-gitlint: gitlint
 	$(GITLINT) -C .gitlint --commits origin/master.. lint
