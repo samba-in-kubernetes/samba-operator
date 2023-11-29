@@ -6,7 +6,7 @@ resources:
   - bases/samba-operator.samba.org_smbsecurityconfigs.yaml
   - bases/samba-operator.samba.org_smbcommonconfigs.yaml
   # +kubebuilder:scaffold:crdkustomizeresource
-patchesStrategicMerge:
+patches:
 # [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix.
 # patches here are for enabling the conversion webhook for each CRD
 #- patches/webhook_in_smbshares.yaml

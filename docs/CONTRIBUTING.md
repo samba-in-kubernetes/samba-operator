@@ -17,7 +17,7 @@ resources.
 Development effort takes place using Linux environment and requires at
 minimum:
 
-1. [Go 1.18](https://golang.org/dl/) installed
+1. [Go 1.19](https://golang.org/dl/) installed
 2. [GitHub](https://github.com/) account
 3. Development tools: git, make, and podman or docker
 4. Testing: [minikube](https://minikube.sigs.k8s.io)
