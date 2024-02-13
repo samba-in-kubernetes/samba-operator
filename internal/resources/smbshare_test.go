@@ -162,7 +162,7 @@ func TestTransferOwnership(t *testing.T) {
 		ts := metav1.Now()
 		s3.SetDeletionTimestamp(&ts)
 		m.client.(*fakeClient).clientGet = func(
-			ctx context.Context,
+			_ context.Context,
 			nn types.NamespacedName,
 			obj rtclient.Object) error {
 			// ---
@@ -198,9 +198,9 @@ func TestTransferOwnership(t *testing.T) {
 		assert.True(t, changed)
 
 		m.client.(*fakeClient).clientGet = func(
-			ctx context.Context,
-			nn types.NamespacedName,
-			obj rtclient.Object) error {
+			_ context.Context,
+			_ types.NamespacedName,
+			_ rtclient.Object) error {
 			// ---
 			return fmt.Errorf("wild failure")
 		}
