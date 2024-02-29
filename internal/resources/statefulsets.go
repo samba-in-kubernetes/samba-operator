@@ -81,9 +81,10 @@ func buildOneSmbdPerNodeAffinity(
 
 	affinity := affinityForSmbPod(planner)
 	if affinity == nil {
-		affinity = &corev1.Affinity{
-			PodAntiAffinity: &corev1.PodAntiAffinity{},
-		}
+		affinity = &corev1.Affinity{}
+	}
+	if affinity.PodAntiAffinity == nil {
+		affinity.PodAntiAffinity = &corev1.PodAntiAffinity{}
 	}
 	affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution = append(
 		affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution,
