@@ -38,7 +38,7 @@ TAG?=latest
 IMG?=quay.io/samba.org/samba-operator:$(TAG)
 
 # Produce CRDs that work on Kubernetes 1.16 or later
-CRD_OPTIONS?="crd:trivialVersions=true,crdVersions=v1"
+CRD_OPTIONS?="crd:crdVersions=v1"
 
 CHECK_GOFMT_FLAGS?=-e -s -l
 

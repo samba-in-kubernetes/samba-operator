@@ -36,11 +36,11 @@ _install_kustomize() {
 }
 
 _install_controller_gen() {
-	_install_tool sigs.k8s.io/controller-tools/cmd/controller-gen@v0.6.2
+	_install_tool sigs.k8s.io/controller-tools/cmd/controller-gen@v0.14.0
 }
 
 _install_revive() {
-	_install_tool github.com/mgechev/revive@v1.2.3
+	_install_tool github.com/mgechev/revive@v1.3.7
 }
 
 _install_golangci_lint() {

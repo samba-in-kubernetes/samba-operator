@@ -31,6 +31,15 @@ spec:
         kubectl.kubernetes.io/default-logs-container: manager
         kubectl.kubernetes.io/default-container: manager
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/arch
+                    operator: In
+                    values:
+                      - amd64
       containers:
         - command:
             - /manager
