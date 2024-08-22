@@ -52,7 +52,7 @@ _install_yq() {
 }
 
 _install_gosec() {
-	_install_tool github.com/securego/gosec/v2/cmd/gosec@v2.13.1
+	_install_tool github.com/securego/gosec/v2/cmd/gosec@v2.20.0
 }
 
 _install_gitlint() {
