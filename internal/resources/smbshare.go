@@ -851,7 +851,7 @@ func (m *SmbShareManager) setServerGroup(
 				EventWarning,
 				ReasonInvalidConfiguration,
 				msg)
-			return false, fmt.Errorf(msg)
+			return false, fmt.Errorf("%s", msg)
 		}
 	case pln.GroupModeExplicit:
 		if reqGroupName == "" {
@@ -861,7 +861,7 @@ func (m *SmbShareManager) setServerGroup(
 				EventWarning,
 				ReasonInvalidConfiguration,
 				msg)
-			return false, fmt.Errorf(msg)
+			return false, fmt.Errorf("%s", msg)
 		}
 		serverGroup = reqGroupName
 	default:
@@ -871,7 +871,7 @@ func (m *SmbShareManager) setServerGroup(
 			EventWarning,
 			ReasonInvalidConfiguration,
 			msg)
-		return false, fmt.Errorf(msg)
+		return false, fmt.Errorf("%s", msg)
 	}
 
 	s.Status.ServerGroup = serverGroup
