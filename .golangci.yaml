@@ -9,7 +9,7 @@ linters:
     - dupl
     - errcheck
     - exhaustive
-    - exportloopref
+    - copyloopvar
     - funlen
     # - gci
     - goconst
@@ -23,7 +23,6 @@ linters:
     # - ineffassign
     # - ifshort
     - lll
-    - megacheck
     - misspell
     # - nlreturn
     # - nolintlint
@@ -42,7 +41,6 @@ linters-settings:
     lines: 188
     statements: 60
   govet:
-    check-shadowing: true
     enable-all: true
     disable:
       - fieldalignment

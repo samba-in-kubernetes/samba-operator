@@ -44,7 +44,7 @@ _install_revive() {
 }
 
 _install_golangci_lint() {
-	_install_tool github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.3
+	_install_tool github.com/golangci/golangci-lint/cmd/golangci-lint@v1.60.2
 }
 
 _install_yq() {
