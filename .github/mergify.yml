@@ -1,12 +1,4 @@
 ---
-defaults:
-  actions:
-    queue:
-      name: default
-      method: rebase
-      update_method: rebase
-
-
 # each test should be listed separately, do not use regular expressions:
 # https://docs.mergify.io/conditions.html#validating-all-status-check
 # TODO: Use mergify's recently added 'shared configuration support'
@@ -22,6 +14,8 @@ queue_rules:
       - check-success=test-kubernetes
       - check-success=centos-ci/sink-clustered/mini-k8s-latest
       - check-success=dpulls
+    merge_method: rebase
+    update_method: rebase
 
 
 pull_request_rules:

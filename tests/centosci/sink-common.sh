@@ -34,7 +34,7 @@ install_binaries() {
 	install minikube /usr/local/sbin/minikube
 
 	# Download and install kubectl
-	curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/"${KUBE_VERSION}"/bin/linux/"${MINIKUBE_ARCH}"/kubectl
+	curl -Lo kubectl https://dl.k8s.io/release/"${KUBE_VERSION}"/bin/linux/"${MINIKUBE_ARCH}"/kubectl
 	install kubectl /usr/local/sbin/kubectl
 }
 
@@ -293,7 +293,7 @@ dnf -y install go
 
 if [[ "${KUBE_VERSION}" == "latest" ]]; then
 	# update the version string from latest with the real version
-	KUBE_VERSION=$(curl -L https://storage.googleapis.com/kubernetes-release/release/stable.txt 2> /dev/null)
+	KUBE_VERSION=$(curl -L https://dl.k8s.io/release/stable.txt 2> /dev/null)
 else
 	KUBE_VERSION=$(curl -L https://api.github.com/repos/kubernetes/kubernetes/releases | \
 			jq -r '.[].tag_name' | grep "${KUBE_VERSION}" | \
