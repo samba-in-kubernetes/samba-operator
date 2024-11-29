@@ -18,8 +18,8 @@ const (
 
 // DefaultOperatorConfig holds the default values of OperatorConfig.
 var DefaultOperatorConfig = OperatorConfig{
-	SmbdContainerImage:        "quay.io/samba.org/samba-server:v0.5",
-	SmbdMetricsContainerImage: "quay.io/samba.org/samba-metrics:v0.5",
+	SmbdContainerImage:        "quay.io/samba.org/samba-server:v0.6",
+	SmbdMetricsContainerImage: "quay.io/samba.org/samba-metrics:v0.6",
 	SvcWatchContainerImage:    "quay.io/samba.org/svcwatch:v0.3",
 	SmbdContainerName:         "samba",
 	WinbindContainerName:      "wb",
