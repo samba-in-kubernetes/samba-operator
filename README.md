@@ -6,7 +6,7 @@ An operator for Samba as a service on PVCs in kubernetes.
 
 Maintainers and contributors wanted!
 
-We wish to thank everyone who has shown interest in using and/or contributing to the samba-operator! However, we feel it important to share the fact that samba-operator is now minimally maintained. This means that the current team tries to keep up with basic "housekeeping" tasks but has little to no time for working on features or even some non-critial bug fixes. This is at least partly due to changing priorities for our employer - and since most of us work on this project as $DAYJOB task we don't have as much time to spend on this operator.
+We wish to thank everyone who has shown interest in using and/or contributing to the samba-operator! However, we feel it is important to share the fact that samba-operator is now minimally maintained. This means that the current team tries to keep up with basic "housekeeping" tasks but has little to no time for working on features or even some non-critial bug fixes. This is at least partly due to changing priorities for our employer - and since most of us work on this project as $DAYJOB task we don't have as much time to spend on this operator.
 
 We'd like this to be otherwise and as such we highly encourange anyone with a basic knowledge of Kubernetes, Go, or Operators who wants to see a healthy samba-operator consider getting involved. Feel free to contact the team via the [GitHub discsussions for the project](https://github.com/samba-in-kubernetes/samba-operator/discussions).
 
