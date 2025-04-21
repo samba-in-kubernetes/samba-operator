@@ -96,6 +96,14 @@ func (pl *Planner) Update() (changed bool, err error) {
 		pl.ConfigState.Shares[shareKey] = share
 		changed = true
 	}
+	if pl.CommonConfig != nil {
+		if c := applyCustomGlobal(pl.ConfigState.Globals[smbcc.Globals], pl.CommonConfig.Spec); c {
+			changed = true
+		}
+	}
+	if c := applyCustomShare(share, pl.SmbShare.Spec); c {
+		changed = true
+	}
 	if c := applyShareValues(share, pl.SmbShare.Spec); c {
 		changed = true
 	}
@@ -163,6 +171,34 @@ func (pl *Planner) Prune() (changed bool, err error) {
 		changed = true
 	}
 	return
+}
+
+func applyCustomGlobal(globals smbcc.GlobalConfig, spec api.SmbCommonConfigSpec) bool {
+	changed := false
+	if spec.CustomGlobalConfig != nil {
+		for k, v := range spec.CustomGlobalConfig.Configs {
+			oriValue, ok := globals.Options[k]
+			if !ok || (ok && oriValue != v) {
+				globals.Options[k] = v
+				changed = true
+			}
+		}
+	}
+	return changed
+}
+
+func applyCustomShare(share smbcc.ShareConfig, spec api.SmbShareSpec) bool {
+	changed := false
+	if spec.CustomShareConfig != nil {
+		for k, v := range spec.CustomShareConfig.Configs {
+			oriValue, ok := share.Options[k]
+			if !ok || (ok && oriValue != v) {
+				share.Options[k] = v
+				changed = true
+			}
+		}
+	}
+	return changed
 }
 
 func applyShareValues(share smbcc.ShareConfig, spec api.SmbShareSpec) bool {

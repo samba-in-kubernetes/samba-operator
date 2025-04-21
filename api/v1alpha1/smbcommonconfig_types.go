@@ -38,6 +38,12 @@ type SmbCommonConfigSpec struct {
 	// under PodSettings allow admins and users to customize how pods
 	// are scheduled in a kubernetes cluster.
 	PodSettings *SmbCommonConfigPodSettings `json:"podSettings,omitempty"`
+
+	// GloabalConfig are configuration values that are applied to [gloabal]
+	// section in smb.conf for the smb server. This allows users to add or
+	// override default configurations.
+	// +opional
+	CustomGlobalConfig *SmbCommonConfigGlobalConfig `json:"customGlobalConfig,omitempty"`
 }
 
 // SmbCommonNetworkSpec values define networking properties for the services
@@ -59,6 +65,13 @@ type SmbCommonConfigPodSettings struct {
 	// Affinity values will be used as defaults for pods created by the
 	// samba operator.
 	Affinity *corev1.Affinity `json:"affinity,omitempty"`
+}
+
+// SmbCommonConfigGlobalConfig contains values for customizing configs in
+// [global] section in smb.conf
+type SmbCommonConfigGlobalConfig struct {
+	//Configs specify keys and values to smb.conf
+	Configs map[string]string `json:"configs,omitempty"`
 }
 
 // SmbCommonConfigStatus defines the observed state of SmbCommonConfig

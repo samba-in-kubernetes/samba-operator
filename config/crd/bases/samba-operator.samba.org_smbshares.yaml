@@ -54,6 +54,15 @@ spec:
                   description: CommonConfig specifies which SmbCommonConfig CR is to be used for this share. If left blank, the operator's default will be used.
                   minLength: 1
                   type: string
+                customShareConfig:
+                  description: custom configuration that are applied to [share] section in smb.conf for the smb server.
+                  properties:
+                    configs:
+                      additionalProperties:
+                        type: string
+                      description: configuration keys and values.
+                      type: object
+                  type: object
                 readOnly:
                   default: false
                   description: ReadOnly controls if this share is to be read-only or not.
