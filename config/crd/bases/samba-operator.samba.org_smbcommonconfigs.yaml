@@ -510,6 +510,15 @@ spec:
                       description: NodeSelector values will be assigned to a PodSpec's NodeSelector.
                       type: object
                   type: object
+                customGlobalConfig:
+                  description: custom configuration that are applied to [gloabal] section in smb.conf for the smb server.
+                  properties:
+                    configs:
+                      additionalProperties:
+                        type: string
+                      description: configuration keys and values.
+                      type: object
+                  type: object
               type: object
             status:
               description: SmbCommonConfigStatus defines the observed state of SmbCommonConfig

@@ -64,6 +64,11 @@ type SmbShareSpec struct {
 	// +optional
 	CommonConfig string `json:"commonConfig,omitempty"`
 
+	// CustomShareConfig specifies custom config values to be applied
+	// to share section in smb.conf
+	// +optional
+	CustomShareConfig *SmbShareConfig `json:"customShareConfig,omitempty"`
+
 	// Scaling specifies parameters relating to how share resources can and
 	// should be scaled.
 	Scaling *SmbShareScalingSpec `json:"scaling,omitempty"`
@@ -74,6 +79,11 @@ type SmbShareStorageSpec struct {
 	// Pvc defines PVC backed storage for this share.
 	// +optional
 	Pvc *SmbSharePvcSpec `json:"pvc,omitempty"`
+}
+
+type SmbShareConfig struct {
+	//Configs specify keys and values to smb.conf
+	Configs map[string]string `json:"configs,omitempty"`
 }
 
 // SmbSharePvcSpec defines how a PVC may be associated with a share.
