@@ -81,8 +81,11 @@ type SmbShareStorageSpec struct {
 	Pvc *SmbSharePvcSpec `json:"pvc,omitempty"`
 }
 
+// SmbShareConfig defines custom config values for share section
 type SmbShareConfig struct {
-	//Configs specify keys and values to smb.conf
+	// Check if the user wants to use custom configs
+	UseUnsafeCustomConfig bool `json:"useUnsafeCustomConfig,omitempty"`
+	// Configs specify keys and values to smb.conf
 	Configs map[string]string `json:"configs,omitempty"`
 }
 

@@ -55,13 +55,16 @@ spec:
                   minLength: 1
                   type: string
                 customShareConfig:
-                  description: custom configuration that are applied to [share] section in smb.conf for the smb server.
+                  description: CustomShareConfig specifies custom config values to be applied to share section in smb.conf
                   properties:
                     configs:
                       additionalProperties:
                         type: string
-                      description: configuration keys and values.
+                      description: Configs specify keys and values to smb.conf
                       type: object
+                    useUnsafeCustomConfig:
+                      description: Check if the user wants to use custom configs
+                      type: boolean
                   type: object
                 readOnly:
                   default: false
