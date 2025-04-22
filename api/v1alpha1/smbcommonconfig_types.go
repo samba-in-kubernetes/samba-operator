@@ -39,7 +39,7 @@ type SmbCommonConfigSpec struct {
 	// are scheduled in a kubernetes cluster.
 	PodSettings *SmbCommonConfigPodSettings `json:"podSettings,omitempty"`
 
-	// GloabalConfig are configuration values that are applied to [gloabal]
+	// GlobalConfig are configuration values that are applied to [global]
 	// section in smb.conf for the smb server. This allows users to add or
 	// override default configurations.
 	// +opional
@@ -70,7 +70,9 @@ type SmbCommonConfigPodSettings struct {
 // SmbCommonConfigGlobalConfig contains values for customizing configs in
 // [global] section in smb.conf
 type SmbCommonConfigGlobalConfig struct {
-	//Configs specify keys and values to smb.conf
+	// Check if the user wants to use custom configs
+	UseUnsafeCustomConfig bool `json:"useUnsafeCustomConfig,omitempty"`
+	// Configs specify keys and values to smb.conf
 	Configs map[string]string `json:"configs,omitempty"`
 }
 

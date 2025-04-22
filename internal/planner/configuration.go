@@ -97,7 +97,8 @@ func (pl *Planner) Update() (changed bool, err error) {
 		changed = true
 	}
 	if pl.CommonConfig != nil {
-		if c := applyCustomGlobal(pl.ConfigState.Globals[smbcc.Globals], pl.CommonConfig.Spec); c {
+		if c := applyCustomGlobal(pl.ConfigState.Globals[smbcc.Globals],
+			pl.CommonConfig.Spec); c {
 			changed = true
 		}
 	}
@@ -176,6 +177,11 @@ func (pl *Planner) Prune() (changed bool, err error) {
 func applyCustomGlobal(globals smbcc.GlobalConfig, spec api.SmbCommonConfigSpec) bool {
 	changed := false
 	if spec.CustomGlobalConfig != nil {
+		// check if the user wants to use custom configs
+		// if not, just return
+		if !spec.CustomGlobalConfig.UseUnsafeCustomConfig {
+			return changed
+		}
 		for k, v := range spec.CustomGlobalConfig.Configs {
 			oriValue, ok := globals.Options[k]
 			if !ok || (ok && oriValue != v) {
@@ -190,6 +196,11 @@ func applyCustomGlobal(globals smbcc.GlobalConfig, spec api.SmbCommonConfigSpec)
 func applyCustomShare(share smbcc.ShareConfig, spec api.SmbShareSpec) bool {
 	changed := false
 	if spec.CustomShareConfig != nil {
+		// check if the user wants to use custom configs
+		// if not, just return
+		if !spec.CustomShareConfig.UseUnsafeCustomConfig {
+			return changed
+		}
 		for k, v := range spec.CustomShareConfig.Configs {
 			oriValue, ok := share.Options[k]
 			if !ok || (ok && oriValue != v) {
