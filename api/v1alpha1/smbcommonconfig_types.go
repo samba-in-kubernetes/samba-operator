@@ -38,6 +38,11 @@ type SmbCommonConfigSpec struct {
 	// under PodSettings allow admins and users to customize how pods
 	// are scheduled in a kubernetes cluster.
 	PodSettings *SmbCommonConfigPodSettings `json:"podSettings,omitempty"`
+
+	// StateSCName specifies which StorageClass is to be used for this share.
+	// If left empty, the operator's default will be used.
+	// +optional
+	StatePVSCName string `json:"statePVSCName,omitempty"`
 }
 
 // SmbCommonNetworkSpec values define networking properties for the services
