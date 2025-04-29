@@ -510,6 +510,9 @@ spec:
                       description: NodeSelector values will be assigned to a PodSpec's NodeSelector.
                       type: object
                   type: object
+                statePVSCName:
+                  description: StateSCName specifies which StorageClass is to be used for this share. If left empty, the operator's default will be used.
+                  type: string
               type: object
             status:
               description: SmbCommonConfigStatus defines the observed state of SmbCommonConfig
