@@ -54,6 +54,18 @@ spec:
                   description: CommonConfig specifies which SmbCommonConfig CR is to be used for this share. If left blank, the operator's default will be used.
                   minLength: 1
                   type: string
+                customShareConfig:
+                  description: CustomShareConfig specifies custom config values to be applied to share section in smb.conf
+                  properties:
+                    configs:
+                      additionalProperties:
+                        type: string
+                      description: Configs specify keys and values to smb.conf
+                      type: object
+                    useUnsafeCustomConfig:
+                      description: Check if the user wants to use custom configs
+                      type: boolean
+                  type: object
                 readOnly:
                   default: false
                   description: ReadOnly controls if this share is to be read-only or not.
