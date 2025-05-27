@@ -83,6 +83,8 @@ pull_request_rules:
     conditions:
       - "updated-at<15 days ago"
       - "-draft"
+      - "-closed"
+      - "-merged"
     actions:
       label:
         add:
