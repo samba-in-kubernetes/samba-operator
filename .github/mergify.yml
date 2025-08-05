@@ -5,7 +5,7 @@
 # to dedup some of the check-x=y repetition in the future.
 queue_rules:
   - name: default
-    conditions:
+    queue_conditions:
       - check-success=check
       - check-success=build
       - check-success=podmanbuild
@@ -71,8 +71,9 @@ pull_request_rules:
       - conflict
     actions:
       comment:
-        message: "This pull request now has conflicts with the target branch.
-        Please resolve these conflicts and force push the updated branch."
+        message:
+          "This pull request now has conflicts with the target branch.
+          Please resolve these conflicts and force push the updated branch."
   # Label PRs that have been sitting there unchanged, aging like a fine wine
   #
   # NOTE: the updated-at "counter" resets every time the PR is changed so
