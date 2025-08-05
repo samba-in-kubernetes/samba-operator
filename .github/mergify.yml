@@ -90,3 +90,6 @@ pull_request_rules:
       label:
         add:
           - "priority-review"
+
+merge_queue:
+  max_parallel_checks: 1
