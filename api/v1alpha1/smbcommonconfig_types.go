@@ -39,7 +39,12 @@ type SmbCommonConfigSpec struct {
 	// are scheduled in a kubernetes cluster.
 	PodSettings *SmbCommonConfigPodSettings `json:"podSettings,omitempty"`
 
-	// GlobalConfig are configuration values that are applied to [global]
+	// StateSCName specifies which StorageClass is to be used for this share.
+	// If left empty, the operator's default will be used.
+	// +optional
+	StatePVSCName string `json:"statePVSCName,omitempty"`
+
+  // GlobalConfig are configuration values that are applied to [global]
 	// section in smb.conf for the smb server. This allows users to add or
 	// override default configurations.
 	// +opional
