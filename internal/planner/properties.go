@@ -99,7 +99,7 @@ func (pl *Planner) ClusterSize() int32 {
 	if pl.SmbShare.Spec.Scaling == nil {
 		return 1
 	}
-	return int32(pl.SmbShare.Spec.Scaling.MinClusterSize)
+	return int32(pl.SmbShare.Spec.Scaling.MinClusterSize) // #nosec G115
 }
 
 // Grouping returns the logical grouping mode and group name.
