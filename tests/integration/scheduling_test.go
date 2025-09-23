@@ -193,6 +193,9 @@ func (s *NodeSelectorSuite) createSmbCommonConfig(ctx context.Context) {
 					"mytestid":           s.testID,
 				},
 			},
+			Network: sambaoperatorv1alpha1.SmbCommonNetworkSpec{
+				Publish: "external",
+			},
 		},
 	}
 	err := s.tc.TypedObjectClient().Create(ctx, cc)
@@ -273,6 +276,9 @@ func (s *AffinityBasedSelectorSuite) createSmbCommonConfig(ctx context.Context) 
 						}},
 					},
 				},
+			},
+			Network: sambaoperatorv1alpha1.SmbCommonNetworkSpec{
+				Publish: "external",
 			},
 		},
 	}
