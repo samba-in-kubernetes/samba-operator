@@ -36,7 +36,7 @@ _install_kustomize() {
 }
 
 _install_controller_gen() {
-	_install_tool sigs.k8s.io/controller-tools/cmd/controller-gen@v0.14.0
+	_install_tool sigs.k8s.io/controller-tools/cmd/controller-gen@v0.19.0
 }
 
 _install_revive() {
