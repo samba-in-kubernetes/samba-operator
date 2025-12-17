@@ -36,9 +36,11 @@ func newServiceForSmb(planner *pln.Planner, ns string) *corev1.Service {
 		Spec: corev1.ServiceSpec{
 			Type: toServiceType(planner.ServiceType()),
 			Ports: []corev1.ServicePort{{
-				Name:       "smb",
-				Protocol:   corev1.ProtocolTCP,
-				Port:       int32(planner.GlobalConfig.SmbServicePort),
+				Name:     "smb",
+				Protocol: corev1.ProtocolTCP,
+				// revive:disable:line-length-limit gosec rule ignore
+				Port: int32(planner.GlobalConfig.SmbServicePort), // #nosec G115 – safe constant 445
+				// revive:enable:line-length-limit
 				TargetPort: intstr.FromInt(planner.GlobalConfig.SmbdPort),
 			}},
 			Selector: map[string]string{

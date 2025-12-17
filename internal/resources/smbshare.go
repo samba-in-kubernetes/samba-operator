@@ -373,7 +373,9 @@ func (m *SmbShareManager) updateClusteredState(
 
 	resized, err := m.updateStatefulSetSize(
 		ctx, statefulSet,
-		int32(planner.SmbShare.Spec.Scaling.MinClusterSize))
+		// revive:disable:line-length-limit gosec rule ignore
+		int32(planner.SmbShare.Spec.Scaling.MinClusterSize)) // #nosec G115
+	// revive:enable:line-length-limit
 	if err != nil {
 		return Result{err: err}
 	}

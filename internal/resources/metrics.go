@@ -53,7 +53,7 @@ func buildSmbMetricsContainer(image string,
 		Name:    "samba-metrics",
 		Command: []string{"/bin/smbmetrics"},
 		Ports: []corev1.ContainerPort{{
-			ContainerPort: int32(portnum),
+			ContainerPort: int32(portnum), // #nosec G115 – safe constant 8080
 			Name:          "smbmetrics",
 		}},
 		VolumeMounts: volmnts,
@@ -111,11 +111,11 @@ func (m *SmbShareManager) getOrCreateMetricsService(
 			Ports: []corev1.ServicePort{
 				{
 					Name:     defaultMetricsPortName,
-					Port:     int32(defaultMetricsPort),
+					Port:     int32(defaultMetricsPort), // #nosec G115 – safe constant 8080
 					Protocol: corev1.ProtocolTCP,
 					TargetPort: intstr.IntOrString{
 						Type:   intstr.Int,
-						IntVal: int32(defaultMetricsPort),
+						IntVal: int32(defaultMetricsPort), // #nosec G115 – safe constant 8080
 					},
 				},
 			},

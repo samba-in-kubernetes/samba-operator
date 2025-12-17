@@ -464,7 +464,7 @@ func buildSmbdCtr(
 		Args:            planner.Args().Run("smbd"),
 		Env:             env,
 		Ports: []corev1.ContainerPort{{
-			ContainerPort: int32(portnum),
+			ContainerPort: int32(portnum), // #nosec G115 – safe constant 445
 			Name:          "smb",
 		}},
 		VolumeMounts: mounts,

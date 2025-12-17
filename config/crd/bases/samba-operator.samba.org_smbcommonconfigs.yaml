@@ -30,6 +30,18 @@ spec:
             spec:
               description: SmbCommonConfigSpec values act as a template for properties of the services that will host shares.
               properties:
+                customGlobalConfig:
+                  description: GlobalConfig are configuration values that are applied to [global] section in smb.conf for the smb server. This allows users to add or override default configurations.
+                  properties:
+                    configs:
+                      additionalProperties:
+                        type: string
+                      description: Configs specify keys and values to smb.conf
+                      type: object
+                    useUnsafeCustomConfig:
+                      description: Check if the user wants to use custom configs
+                      type: boolean
+                  type: object
                 network:
                   description: Network specifies what kind of networking shares associated with this config will use.
                   properties:
