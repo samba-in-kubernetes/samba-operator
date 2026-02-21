@@ -18,7 +18,7 @@ jobs:
       - name: Determine image tags
         id: meta
         run: |
-          REPO="ghcr.io/${{ github.repository_owner }}/samba-operator"
+          REPO="ghcr.io/$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/samba-operator"
           TAGS="${REPO}:fix-smbmetrics-port"
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             VERSION="${GITHUB_REF#refs/tags/}"
