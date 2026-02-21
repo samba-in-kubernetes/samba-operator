@@ -1,0 +1,42 @@
+name: Publish fork image
+# Builds and pushes to ghcr.io on every commit to the fix branch,
+# and produces a versioned image when a v*-be tag is pushed.
+on:
+  push:
+    branches: [fix-smbmetrics-port]
+    tags: ["v*-be"]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determine image tags
+        id: meta
+        run: |
+          REPO="ghcr.io/${{ github.repository_owner }}/samba-operator"
+          TAGS="${REPO}:fix-smbmetrics-port"
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/}"
+            TAGS="${TAGS},${REPO}:${VERSION}"
+          fi
+          echo "tags=${TAGS}" >> "$GITHUB_OUTPUT"
+          echo "version=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          build-args: |
+            GIT_VERSION=${{ github.ref_name }}
