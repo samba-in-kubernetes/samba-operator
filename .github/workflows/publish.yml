@@ -4,7 +4,7 @@ name: Publish fork image
 on:
   push:
     branches: [fix-smbmetrics-port]
-    tags: ["v*-be"]
+    tags: ["v*-be-[0-9]*"]
 
 jobs:
   publish:
