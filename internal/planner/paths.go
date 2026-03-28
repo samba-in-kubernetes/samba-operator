@@ -18,6 +18,7 @@ package planner
 import (
 	"fmt"
 	"path"
+	"strings"
 )
 
 // Paths for relevant files and dirs within the containers.
@@ -44,10 +45,16 @@ func (p *Paths) ShareMountPath() string {
 // Share path.
 func (p *Paths) Share() string {
 	sharepath := p.planner.SmbShare.Spec.Storage.Pvc.Path
-	if sharepath != "" {
-		return path.Join(p.ShareMountPath(), "/", sharepath)
+	if sharepath == "" {
+		return p.ShareMountPath()
 	}
-	return p.ShareMountPath()
+	mountPath := p.ShareMountPath()
+	joined := path.Join(mountPath, sharepath)
+	// Ensure the resolved path stays within the mount path
+	if !strings.HasPrefix(joined, mountPath+"/") && joined != mountPath {
+		return mountPath
+	}
+	return joined
 }
 
 // ContainerConfigs returns a slice containing all configuration
