@@ -69,32 +69,21 @@ kubectl_retry() {
 	return ${ret}
 }
 
-minikube_load() {
-	for n in ${1}; do
-		${CONTAINER_CMD} image save "${2}" | ssh \
-			-o UserKnownHostsFile=/dev/null \
-			-o StrictHostKeyChecking=no \
-			-i "$(minikube ssh-key -n "$n")" \
-			-l docker "$(minikube ip -n "$n")" "docker image load"
-	done
-}
 
 setup_minikube() {
 	install_binaries
-	image_pull "${CI_IMG_REGISTRY}" "docker.io" "kindest/kindnetd:v20221004-44d545d1"
 
 	# Start a kuberentes cluster using minikube
 	# shellcheck disable=SC2086
 	minikube start --force --driver="${VM_DRIVER}" --nodes="${NODE_COUNT}" \
 		--memory="${MEMORY}" --cpus="${CPUS}" ${DISK_CONFIG} \
+		--container-runtime=containerd \
 		--delete-on-failure --install-addons=false -b kubeadm \
-		--kubernetes-version="${KUBE_VERSION}" --cache-images=false \
+		--kubernetes-version="${KUBE_VERSION}" \
 		${EXTRA_CONFIG}
 
 	nodes=$(kubectl get nodes \
 			-o jsonpath='{range.items[*].metadata}{.name} {end}')
-
-	minikube_load "${nodes}" "docker.io/kindest/kindnetd:v20221004-44d545d1"
 
 	echo "Wait for k8s cluster..."
 	for ((retry = 0; retry <= 20; retry = retry + 2)); do
