@@ -52,6 +52,7 @@ func buildSmbMetricsContainer(image string,
 		Image:   image,
 		Name:    "samba-metrics",
 		Command: []string{"/bin/smbmetrics"},
+		Args:    []string{fmt.Sprintf("--port=%d", portnum)},
 		Ports: []corev1.ContainerPort{{
 			ContainerPort: int32(portnum), // #nosec G115 – safe constant 8080
 			Name:          "smbmetrics",
