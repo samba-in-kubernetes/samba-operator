@@ -119,6 +119,11 @@ func (m *SmbShareManager) getOrCreateStatePVC(
 			},
 		},
 	}
+
+	if planner.CommonConfig.Spec.StatePVSCName != "" {
+		spec.StorageClassName = &planner.CommonConfig.Spec.StatePVSCName
+	}
+
 	pvc, cr, err := m.getOrCreateGenericPVC(
 		ctx, planner.SmbShare, spec, name, ns)
 	if err != nil {
