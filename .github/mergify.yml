@@ -16,6 +16,11 @@ queue_rules:
       - check-success=dpulls
     merge_method: rebase
     update_method: rebase
+    # A real GitHub user account is required to rebase/merge PRs opened by
+    # GitHub Apps (e.g. dependabot). GitHub restrictions prevent Mergify's own
+    # app from pushing the rebased commits on App-authored PRs.
+    merge_bot_account: samba-bot
+    update_bot_account: samba-bot
 
 
 pull_request_rules:
