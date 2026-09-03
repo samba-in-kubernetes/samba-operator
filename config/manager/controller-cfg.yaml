@@ -5,6 +5,5 @@ metadata:
   name: controller-cfg
   namespace: system
 data:
-
 # This config map is empty by default
 # Use kustomize generators to populate it with custom config vars.
