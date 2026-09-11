@@ -187,6 +187,28 @@ image-build-buildah: build
 	$(BUILDAH_CMD) config --entrypoint='["/manager"]' $$cn && \
 	$(BUILDAH_CMD) commit $$cn $(IMG)
 
+
+.PHONY: image-build-multiarch image-push-multiarch
+image-build-multiarch: image-build-multiarch-manifest \
+			image-build-arch-amd64 image-build-arch-arm64
+	$(BUILDAH_CMD) manifest inspect $(IMG)
+
+image-build-multiarch-manifest:
+	$(BUILDAH_CMD) manifest create $(IMG)
+
+image-build-arch-%:  qemu-utils
+	$(BUILDAH_CMD) bud \
+		--manifest $(IMG) \
+		--arch "$*" \
+		--tag "$(IMG)-$*" \
+		--build-arg=GIT_VERSION="$(GIT_VERSION)" \
+		--build-arg=COMMIT_ID="$(COMMIT_ID)" \
+		--build-arg=ARCH="$*" .
+
+image-push-multiarch:
+	$(BUILDAH_CMD) manifest push --all $(IMG) "docker://$(IMG)"
+
+
 # Push the container image
 docker-push: container-push
 container-push:
@@ -325,4 +347,13 @@ endif
 GITLINT=$(GOBIN_ALT)/gitlint
 else
 GITLINT=$(shell command -v gitlint ;)
+endif
+
+.PHONY: qemu-utils
+qemu-utils:
+ifeq (, $(shell command -v qemu-x86_64-static ;))
+	$(error "qemu-x86_64-static not found in PATH")
+endif
+ifeq (, $(shell command -v qemu-aarch64-static ;))
+	$(error "qemu-aarch64-static not found in PATH")
 endif
