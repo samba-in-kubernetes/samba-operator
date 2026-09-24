@@ -101,7 +101,9 @@ type SmbSharePvcSpec struct {
 	Spec *corev1.PersistentVolumeClaimSpec `json:"spec,omitempty"`
 
 	// Path within the PVC which should be exported.
-	// +kubebuilder:validation:Pattern=`^[^\/]+$`
+	// Must be a relative path. Path traversal ("..") is not allowed.
+	// +kubebuilder:validation:Pattern=`^[^\/].*$`
+	// +kubebuilder:validation:XValidation:rule="!self.matches('(^|\/)\.\.(\/|$)')",message="path must not contain '..' traversal"
 	// +optional
 	Path string `json:"path,omitempty"`
 }
