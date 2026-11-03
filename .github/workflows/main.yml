@@ -93,7 +93,7 @@ jobs:
     #runs-on: ubuntu-latest
     runs-on: ubuntu-latest
     env:
-      CONTAINER_CMD: docker
+      CONTAINER_CMD: podman
       PR_NUM: ${{ github.event.pull_request.number }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -137,7 +137,7 @@ jobs:
       - name: build image
         run: make image-build
       - name: push image to k3d registry
-        run: make container-push
+        run: make CONTAINER_PUSH_OPTS=--tls-verify=false container-push
       - name: configure kustomize
         run: make set-image
       - name: run tests
