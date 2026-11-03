@@ -129,10 +129,12 @@ deploy_rook() {
 
 	curl -o "${ROOK_TEMP_DIR}/crds.yaml" "${ROOK_URL}/crds.yaml"
 	curl -o "${ROOK_TEMP_DIR}/common.yaml" "${ROOK_URL}/common.yaml"
+	curl -o "${ROOK_TEMP_DIR}/csi-operator.yaml" "${ROOK_URL}/csi-operator.yaml"
 	curl -o "${ROOK_TEMP_DIR}/operator.yaml" "${ROOK_URL}/operator.yaml"
 
 	kubectl create -f "${ROOK_TEMP_DIR}/common.yaml"
 	kubectl create -f "${ROOK_TEMP_DIR}/crds.yaml"
+	kubectl create -f "${ROOK_TEMP_DIR}/csi-operator.yaml"
 	kubectl create -f "${ROOK_TEMP_DIR}/operator.yaml"
 
 	curl -o "${ROOK_TEMP_DIR}/cluster.yaml" "${ROOK_URL}/cluster.yaml"
@@ -151,6 +153,16 @@ deploy_rook() {
 	done
 
 	sed -i "/^ *useAllDevices/a ${dev_lst}" "${ROOK_TEMP_DIR}"/cluster.yaml
+
+	# Mute CephX warnings for AES client keys needed by older kernels
+	sed -i '/^ *healthCheck:/a\
+    muteHealthWarning:\
+      AUTH_INSECURE_CLIENT_KEY_TYPE:\
+        policy: mute\
+      AUTH_INSECURE_KEYS_ALLOWED:\
+        policy: mute\
+      AUTH_INSECURE_KEYS_CREATABLE:\
+        policy: mute' "${ROOK_TEMP_DIR}"/cluster.yaml
 
 	kubectl create -f "${ROOK_TEMP_DIR}/cluster.yaml"
 
