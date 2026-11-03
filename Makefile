@@ -57,6 +57,7 @@ GOBIN_ALT:=$(CURDIR)/.bin
 
 
 CONTAINER_BUILD_OPTS?=
+CONTAINER_PUSH_OPTS?=
 CONTAINER_CMD?=
 ifeq ($(CONTAINER_CMD),)
 	CONTAINER_CMD:=$(shell docker version >/dev/null 2>&1 && echo docker)
@@ -190,7 +191,7 @@ image-build-buildah: build
 # Push the container image
 docker-push: container-push
 container-push:
-	$(CONTAINER_CMD) push $(IMG)
+	$(CONTAINER_CMD) push $(CONTAINER_PUSH_OPTS) $(IMG)
 
 # Generate bundle manifests and metadata, then validate generated files.
 .PHONY: bundle
