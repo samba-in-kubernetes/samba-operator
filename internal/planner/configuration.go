@@ -17,6 +17,7 @@ package planner
 
 import (
 	"fmt"
+	"maps"
 
 	api "github.com/samba-in-kubernetes/samba-operator/api/v1alpha1"
 	"github.com/samba-in-kubernetes/samba-operator/internal/smbcc"
@@ -81,31 +82,27 @@ func (pl *Planner) idmapOptions() smbcc.SmbOptions {
 // Update the held configuration based on the state of the instance
 // configuration.
 func (pl *Planner) Update() (changed bool, err error) {
-	_, found := pl.ConfigState.Globals[smbcc.Globals]
-	if !found {
-		globalOptions := smbcc.NewGlobalOptions()
-		globalOptions.SmbPort = pl.GlobalConfig.SmbdPort
-		globals := smbcc.NewGlobals(globalOptions)
+	// Rebuild the globals and the share from the spec so that removed
+	// options are dropped. Every share in a server group has the same
+	// common config (see CheckCompatible), so they agree on the globals.
+	globalOptions := smbcc.NewGlobalOptions()
+	globalOptions.SmbPort = pl.GlobalConfig.SmbdPort
+	globals := smbcc.NewGlobals(globalOptions)
+	if pl.CommonConfig != nil {
+		applyCustomGlobal(globals, pl.CommonConfig.Spec)
+	}
+	if cur, found := pl.ConfigState.Globals[smbcc.Globals]; !found ||
+		!maps.Equal(cur.Options, globals.Options) {
 		pl.ConfigState.Globals[smbcc.Globals] = globals
 		changed = true
 	}
 	shareKey := smbcc.Key(pl.shareName())
-	share, found := pl.ConfigState.Shares[shareKey]
-	if !found {
-		share = smbcc.NewSimpleShare(pl.Paths().Share())
+	share := smbcc.NewSimpleShare(pl.Paths().Share())
+	applyCustomShare(share, pl.SmbShare.Spec)
+	applyShareValues(share, pl.SmbShare.Spec)
+	if cur, found := pl.ConfigState.Shares[shareKey]; !found ||
+		!maps.Equal(cur.Options, share.Options) {
 		pl.ConfigState.Shares[shareKey] = share
-		changed = true
-	}
-	if pl.CommonConfig != nil {
-		if c := applyCustomGlobal(pl.ConfigState.Globals[smbcc.Globals],
-			pl.CommonConfig.Spec); c {
-			changed = true
-		}
-	}
-	if c := applyCustomShare(share, pl.SmbShare.Spec); c {
-		changed = true
-	}
-	if c := applyShareValues(share, pl.SmbShare.Spec); c {
 		changed = true
 	}
 	cfgKey := pl.instanceID()
@@ -174,68 +171,33 @@ func (pl *Planner) Prune() (changed bool, err error) {
 	return
 }
 
-func applyCustomGlobal(globals smbcc.GlobalConfig, spec api.SmbCommonConfigSpec) bool {
-	changed := false
-	if spec.CustomGlobalConfig != nil {
-		// check if the user wants to use custom configs
-		// if not, just return
-		if !spec.CustomGlobalConfig.UseUnsafeCustomConfig {
-			return changed
-		}
-		for k, v := range spec.CustomGlobalConfig.Configs {
-			oriValue, ok := globals.Options[k]
-			if !ok || (ok && oriValue != v) {
-				globals.Options[k] = v
-				changed = true
-			}
-		}
+func applyCustomGlobal(globals smbcc.GlobalConfig, spec api.SmbCommonConfigSpec) {
+	// custom configs are only applied if the user opted in
+	if spec.CustomGlobalConfig == nil ||
+		!spec.CustomGlobalConfig.UseUnsafeCustomConfig {
+		return
 	}
-	return changed
+	maps.Copy(globals.Options, spec.CustomGlobalConfig.Configs)
 }
 
-func applyCustomShare(share smbcc.ShareConfig, spec api.SmbShareSpec) bool {
-	changed := false
-	if spec.CustomShareConfig != nil {
-		// check if the user wants to use custom configs
-		// if not, just return
-		if !spec.CustomShareConfig.UseUnsafeCustomConfig {
-			return changed
-		}
-		for k, v := range spec.CustomShareConfig.Configs {
-			oriValue, ok := share.Options[k]
-			if !ok || (ok && oriValue != v) {
-				share.Options[k] = v
-				changed = true
-			}
-		}
+func applyCustomShare(share smbcc.ShareConfig, spec api.SmbShareSpec) {
+	// custom configs are only applied if the user opted in
+	if spec.CustomShareConfig == nil ||
+		!spec.CustomShareConfig.UseUnsafeCustomConfig {
+		return
 	}
-	return changed
+	maps.Copy(share.Options, spec.CustomShareConfig.Configs)
 }
 
-func applyShareValues(share smbcc.ShareConfig, spec api.SmbShareSpec) bool {
-	changed := false
-
-	setBrowsable := smbcc.Yes
-	if !spec.Browseable {
-		setBrowsable = smbcc.No
+func applyShareValues(share smbcc.ShareConfig, spec api.SmbShareSpec) {
+	share.Options[smbcc.BrowseableParam] = smbcc.No
+	if spec.Browseable {
+		share.Options[smbcc.BrowseableParam] = smbcc.Yes
 	}
-
-	setReadOnly := smbcc.No
+	share.Options[smbcc.ReadOnlyParam] = smbcc.No
 	if spec.ReadOnly {
-		setReadOnly = smbcc.Yes
+		share.Options[smbcc.ReadOnlyParam] = smbcc.Yes
 	}
-
-	if share.Options[smbcc.BrowseableParam] != setBrowsable {
-		share.Options[smbcc.BrowseableParam] = setBrowsable
-		changed = true
-	}
-
-	if share.Options[smbcc.ReadOnlyParam] != setReadOnly {
-		share.Options[smbcc.ReadOnlyParam] = setReadOnly
-		changed = true
-	}
-
-	return changed
 }
 
 func hasShare(cfg *smbcc.ConfigSection, k smbcc.Key) bool {

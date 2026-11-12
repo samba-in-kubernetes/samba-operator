@@ -24,6 +24,12 @@ func TestUpdate(t *testing.T) {
 	t.Run("adShare", func(t *testing.T) {
 		testADShare(t, smbcc.New())
 	})
+	t.Run("removeCustomShareConfig", func(t *testing.T) {
+		testRemoveCustomShareConfig(t, smbcc.New())
+	})
+	t.Run("removeCustomGlobalConfig", func(t *testing.T) {
+		testRemoveCustomGlobalConfig(t, smbcc.New())
+	})
 }
 
 func TestPrune(t *testing.T) {
@@ -256,4 +262,96 @@ func testAddTwoPruneSame(t *testing.T, state *smbcc.SambaContainerConfig) {
 	assert.Len(t, state.Globals, 1)
 	assert.NotContains(t, state.Configs[p.instanceID()].Shares, smbcc.Key("share1"))
 	assert.Contains(t, state.Configs[p.instanceID()].Shares, smbcc.Key("share2"))
+}
+
+func sampleCommonConfig1() *sambaoperatorv1alpha1.SmbCommonConfig {
+	return &sambaoperatorv1alpha1.SmbCommonConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cc1",
+			Namespace: "smbshares",
+			UID:       "phonyccuid1",
+		},
+		Spec: sambaoperatorv1alpha1.SmbCommonConfigSpec{
+			CustomGlobalConfig: &sambaoperatorv1alpha1.SmbCommonConfigGlobalConfig{
+				UseUnsafeCustomConfig: true,
+				Configs: map[string]string{
+					"log level": "3",
+					"workgroup": "TEST",
+				},
+			},
+		},
+	}
+}
+
+func testRemoveCustomShareConfig(t *testing.T, state *smbcc.SambaContainerConfig) {
+	share := sampleSmbShare1()
+	share.Spec.CustomShareConfig = &sambaoperatorv1alpha1.SmbShareConfig{
+		UseUnsafeCustomConfig: true,
+		Configs: map[string]string{
+			"ea support":  "no",
+			"create mask": "0660",
+		},
+	}
+	p := New(InstanceConfiguration{
+		SmbShare:     share,
+		GlobalConfig: &conf.OperatorConfig{},
+	}, state)
+	changed, err := p.Update()
+	assert.NoError(t, err)
+	assert.True(t, changed)
+	opts := state.Shares[smbcc.Key("share1")].Options
+	assert.Equal(t, "no", opts["ea support"])
+	assert.Equal(t, "0660", opts["create mask"])
+
+	delete(share.Spec.CustomShareConfig.Configs, "ea support")
+	changed, err = p.Update()
+	assert.NoError(t, err)
+	assert.True(t, changed)
+	opts = state.Shares[smbcc.Key("share1")].Options
+	assert.NotContains(t, opts, "ea support")
+	assert.Equal(t, "0660", opts["create mask"])
+
+	changed, err = p.Update()
+	assert.NoError(t, err)
+	assert.False(t, changed)
+}
+
+func testRemoveCustomGlobalConfig(t *testing.T, state *smbcc.SambaContainerConfig) {
+	cc := sampleCommonConfig1()
+	share1 := sampleSmbShare1()
+	share1.Spec.CommonConfig = cc.Name
+	p := New(InstanceConfiguration{
+		SmbShare:     share1,
+		CommonConfig: cc,
+		GlobalConfig: &conf.OperatorConfig{},
+	}, state)
+	changed, err := p.Update()
+	assert.NoError(t, err)
+	assert.True(t, changed)
+	opts := state.Globals[smbcc.Globals].Options
+	assert.Equal(t, "3", opts["log level"])
+	assert.Equal(t, "TEST", opts["workgroup"])
+
+	delete(cc.Spec.CustomGlobalConfig.Configs, "log level")
+	changed, err = p.Update()
+	assert.NoError(t, err)
+	assert.True(t, changed)
+	opts = state.Globals[smbcc.Globals].Options
+	assert.NotContains(t, opts, "log level")
+	assert.Equal(t, "TEST", opts["workgroup"])
+
+	changed, err = p.Update()
+	assert.NoError(t, err)
+	assert.False(t, changed)
+
+	// dropping the common config reference drops its options too
+	share1.Spec.CommonConfig = ""
+	p = New(InstanceConfiguration{
+		SmbShare:     share1,
+		GlobalConfig: &conf.OperatorConfig{},
+	}, state)
+	changed, err = p.Update()
+	assert.NoError(t, err)
+	assert.True(t, changed)
+	assert.NotContains(t, state.Globals[smbcc.Globals].Options, "workgroup")
 }
